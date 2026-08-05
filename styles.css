@@ -144,3 +144,22 @@ footer .copyright {
   font-size: 14px;
   color: var(--muted);
 }
+
+.glossary-list {
+  margin: 0 0 32px;
+}
+
+.glossary-list dt {
+  color: var(--text);
+  font-weight: 600;
+  margin: 24px 0 6px;
+}
+
+.glossary-list dt:first-child {
+  margin-top: 0;
+}
+
+.glossary-list dd {
+  margin: 0;
+  color: var(--muted);
+}
