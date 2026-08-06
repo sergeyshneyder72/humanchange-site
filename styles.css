@@ -29,6 +29,24 @@ body {
   padding: 0 24px;
 }
 
+.lang-switch {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 24px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lang-switch a {
+  color: var(--muted);
+}
+
+.lang-switch span.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
 header.hero {
   padding: 96px 0 64px;
   border-bottom: 1px solid var(--line);
