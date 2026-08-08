@@ -39,15 +39,15 @@ const KNOWLEDGE_BASE = [
     key: "smoking",
     name: "Курение",
     active: true,
-    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Именно поэтому в приложении списание за сигарету увеличивается с возрастом.",
+    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Число сигарет в день, указанное при онбординге, становится вашей личной «ватерлинией» — точкой отсчёта. Она сама по себе не штрафует капитал: списание или депозит считается только от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
     source: "Источник: UCL, журнал Addiction (2024/2025).",
   },
   {
     key: "sport",
     name: "Физическая активность",
     active: true,
-    body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день — дальше это уже другие цели, не капитал здоровья.",
-    source: "Источник: D. Spiegelhalter, BMJ (2012).",
+    body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми — с возрастом этот разрыв увеличивается, поэтому в стартовом расчёте он учитывается сильнее у пользователей старшего возраста. Считается только активность, где пульс поднимается минимум на 50–60% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
+    source: "Источники: D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
   },
   {
     key: "sleep",
@@ -84,6 +84,8 @@ const READING_LIST = [
   "D. Spiegelhalter — BMJ (2012): концепция microlife для оценки риска в повседневных единицах.",
   "Cappuccio F. P. и соавт. — метаанализ продолжительности сна и смертности (~1.3–1.5 млн участников).",
   "WHO Global Health Observatory — таблицы дожития для базового расчёта капитала.",
+  "WHO — рекомендации по физической активности: риск недостаточной активности против достаточной.",
+  "Cleveland Clinic — определение умеренной и высокой интенсивности активности, тест разговором.",
 ];
 
 // Team-confirmed upcoming factors (added directly, no voting) vs.
@@ -122,6 +124,7 @@ function defaultState() {
   return {
     onboarding: null, // filled once onboarding completes
     startingCapitalDays: null,
+    smokingWaterline: 0, // reference point for the daily smoking factor, set once at onboarding
     createdAt: null,
     ledger: {}, // { 'YYYY-MM-DD': { cigarettes, activityMinutes } }
     ideas: [],
@@ -195,10 +198,20 @@ function interpolateLifeExpectancyYears(gender, age) {
   return source[ages[ages.length - 1]];
 }
 
+// Only activity clearing the "talk test" bar counts (TZ update): raises
+// heart rate to ~50-60% above resting (Cleveland Clinic definition of
+// moderate-or-above intensity) — can talk but not sing, or can't talk at
+// all. A slow park walk doesn't qualify; brisk walking, manual labor,
+// or a workout does. This is a self-reported number at onboarding, so
+// the qualifying bar is communicated in copy rather than measured.
+function activityMinutesPerWeekFromOnboarding(ob) {
+  if (ob.activityUnit === "minutes") return Number(ob.activityValue) || 0;
+  if (ob.activityUnit === "workouts") return (Number(ob.activityValue) || 0) * 45;
+  return 0;
+}
+
 function activityLevelFromOnboarding(ob) {
-  let minutesPerWeek = 0;
-  if (ob.activityUnit === "minutes") minutesPerWeek = Number(ob.activityValue) || 0;
-  else if (ob.activityUnit === "workouts") minutesPerWeek = (Number(ob.activityValue) || 0) * 45;
+  const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
   if (minutesPerWeek < 90) return "low";
   if (minutesPerWeek <= 300) return "moderate";
   return "high";
@@ -226,14 +239,25 @@ function sleepAdjustmentPct(sleepHours, activityLevel) {
   return 0;
 }
 
-// Baseline smoking-status penalty (separate from the daily per-cigarette
-// active factor in section 3.1) — approximate tiers reflecting the
-// well-documented ~10-year life expectancy gap for heavy lifelong smokers.
-function smokingStatusPct(cigsPerDay) {
-  if (!cigsPerDay || cigsPerDay <= 0) return 0;
-  if (cigsPerDay <= 10) return -0.05;
-  if (cigsPerDay <= 20) return -0.11;
-  return -0.18;
+// Smoking no longer applies a one-time status penalty to the starting
+// capital: the onboarding cigarettes/day figure becomes a "waterline"
+// (reference point) used only by the daily active-factor formula, so
+// the habit isn't charged twice (once at onboarding, once per day). See
+// dailyDeltaDays() below.
+
+// Physical activity as a full starting-capital factor (TZ update): WHO
+// reports ~20-30% higher all-cause mortality for insufficiently active
+// people vs. sufficiently active (>=150 qualifying min/week). The gap
+// is scaled by the same age-multiplier curve used for smoking (section
+// 3.1), since several studies show the active/inactive gap widening
+// with age.
+function activityAdjustmentPct(minutesPerWeek, age) {
+  const threshold = 150;
+  if (minutesPerWeek >= threshold) return 0;
+  const t = 1 - minutesPerWeek / threshold; // 0 at threshold, 1 at zero activity
+  const basePct = -0.2 - 0.1 * t; // -20% near threshold, up to -30% at zero
+  const scaled = basePct * ageMultiplier(age);
+  return Math.max(scaled, -0.5);
 }
 
 function alcoholGramsPerWeek(ob) {
@@ -268,15 +292,16 @@ function computeStartingCapitalDays(ob) {
   const baselineDays = baselineYears * 365.25;
 
   const activityLevel = activityLevelFromOnboarding(ob);
+  const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
   const sleepPct = sleepAdjustmentPct(Number(ob.sleepHours), activityLevel);
-  const smokingPct = smokingStatusPct(Number(ob.cigarettesPerDay));
+  const activityPct = activityAdjustmentPct(minutesPerWeek, Number(ob.age));
   const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
 
   const days =
     baselineDays *
     (1 + sleepPct) *
-    (1 + smokingPct) *
+    (1 + activityPct) *
     (1 + alcoholPct) *
     (1 + illnessPct);
 
@@ -284,11 +309,18 @@ function computeStartingCapitalDays(ob) {
 }
 
 // Daily active-factor delta for the "Портфель здоровья" ledger — TZ
-// section 4, exact formula.
-function dailyDeltaDays(cigarettesToday, activityMinutesToday, age) {
-  const smokingCost = (Number(cigarettesToday) || 0) * 0.014 * ageMultiplier(age);
+// section 4, updated formula. Smoking is no longer an absolute cost:
+// the onboarding cigarettes/day figure is a personal "waterline"
+// (reference point). Smoking less than the waterline today is a
+// deposit, smoking more is a withdrawal, smoking exactly at the
+// waterline is neutral — the waterline itself never costs anything by
+// existing, only deviations from it do.
+function dailyDeltaDays(cigarettesToday, activityMinutesToday, age, smokingWaterline) {
+  const waterline = Number(smokingWaterline) || 0;
+  const today = Number(cigarettesToday) || 0;
+  const smokingTerm = (waterline - today) * 0.014 * ageMultiplier(age);
   const activityGain = Math.min((Number(activityMinutesToday) || 0) / 60 * 3, 4.5) / 24;
-  return activityGain - smokingCost;
+  return activityGain + smokingTerm;
 }
 
 function sortedLedgerDates() {
@@ -408,6 +440,7 @@ function renderOnboarding() {
       <div class="field">
         <label>Сигарет в день (0, если не курите)</label>
         <input type="number" min="0" id="f_cigarettesPerDay" value="${draft.cigarettesPerDay ?? ""}">
+        <div class="hint">Это станет вашей личной "ватерлинией" — точкой отсчёта. Курите сегодня меньше неё — плюс к капиталу, больше — минус. Само число не штрафует стартовый капитал.</div>
       </div>
       <div class="field">
         <label>Вейп / кальян — используете?</label>
@@ -441,6 +474,7 @@ function renderOnboarding() {
     body = `
       <div class="onboarding-header">
         <h1>Физическая активность <span class="optional-badge">необязательно</span></h1>
+        <p>Считается только активность, поднимающая пульс минимум на 50–60% выше уровня покоя (Cleveland Clinic). Медленная прогулка не в счёт.</p>
       </div>
       <div class="field">
         <label>Как удобнее указать?</label>
@@ -452,6 +486,7 @@ function renderOnboarding() {
       <div class="field">
         <label id="f_activityValueLabel">Значение</label>
         <input type="number" min="0" id="f_activityValue" value="${draft.activityValue ?? ""}">
+        <div class="hint">Тест разговором: можете говорить, но не петь — считается. Не можете говорить — тем более считается. Свободно поёте — не считается.</div>
       </div>
     `;
   } else if (step === "illness") {
@@ -507,6 +542,7 @@ function renderOnboarding() {
     document.getElementById("finish-onboarding").addEventListener("click", () => {
       state.onboarding = draft;
       state.startingCapitalDays = revealDays;
+      state.smokingWaterline = Number(draft.cigarettesPerDay) || 0;
       state.createdAt = state.createdAt || todayStr();
       state.onboardingStep = null;
       state.onboardingDraft = null;
@@ -653,10 +689,12 @@ function renderDashboard(screen) {
         <div class="field">
           <label>Сигарет сегодня</label>
           <input type="number" min="0" id="log_cigarettes" value="${todayEntry.cigarettes ?? ""}">
+          <div class="hint">Ваша ватерлиния: ${state.smokingWaterline ?? 0} шт.</div>
         </div>
         <div class="field">
           <label>Минут активности сегодня</label>
           <input type="number" min="0" id="log_activity" value="${todayEntry.activityMinutes ?? ""}">
+          <div class="hint">Считается активность, где можно говорить, но не петь (или сложнее) — не медленная прогулка.</div>
         </div>
       </div>
       <button class="btn" id="log-save" style="width:100%">Сохранить</button>
@@ -701,7 +739,7 @@ function renderDashboard(screen) {
     const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
     const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
     const age = Number(state.onboarding.age);
-    const deltaDays = dailyDeltaDays(cigarettes, activityMinutes, age);
+    const deltaDays = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
     state.ledger[today] = { cigarettes, activityMinutes, deltaDays };
     saveState();
     renderDashboard(screen);
@@ -716,13 +754,17 @@ function formatDays(value) {
 function nextStepRecommendation(todayEntry) {
   const activity = Number(todayEntry.activityMinutes) || 0;
   const cigarettes = Number(todayEntry.cigarettes) || 0;
+  const waterline = Number(state.smokingWaterline) || 0;
   if (activity < 30) {
-    return "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
+    return "Добавьте 30 минут активности сегодня (в темпе, когда можно говорить, но не петь) — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
   }
-  if (cigarettes > 0) {
-    return "Попробуйте сегодня выкурить на одну сигарету меньше, чем вчера.";
+  if (cigarettes > waterline) {
+    return `Сегодня выше вашей ватерлинии (${waterline} шт.) — попробуйте вернуться к ней или ниже, это уже плюс к капиталу.`;
   }
-  return "Хороший день — активность отмечена, курение под контролем. Так держать.";
+  if (cigarettes < waterline) {
+    return "Вы уже ниже своей обычной нормы по курению — это доход в капитал, продолжайте в том же духе.";
+  }
+  return "Хороший день — активность отмечена, курение на обычном уровне. Так держать.";
 }
 
 function periodCutoffDate(period) {
@@ -777,10 +819,13 @@ function renderFeed() {
       .map((date) => {
         const e = state.ledger[date];
         const items = [];
-        if (e.cigarettes > 0) {
-          const cost = e.cigarettes * 0.014 * ageMultiplier(Number(state.onboarding.age));
+        const waterline = Number(state.smokingWaterline) || 0;
+        const smokingTerm = (waterline - (Number(e.cigarettes) || 0)) * 0.014 * ageMultiplier(Number(state.onboarding.age));
+        if (smokingTerm !== 0) {
+          const sign = smokingTerm > 0 ? "positive" : "negative";
+          const arrow = smokingTerm > 0 ? "+" : "−";
           items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon smoke">К</span>Курение: ${e.cigarettes} шт.</span><span class="amount negative">−${cost.toFixed(2)} дн.</span></li>`
+            `<li class="feed-item"><span class="badge"><span class="icon smoke">К</span>Курение: ${e.cigarettes} шт. (ватерлиния ${waterline})</span><span class="amount ${sign}">${arrow}${Math.abs(smokingTerm).toFixed(2)} дн.</span></li>`
           );
         }
         if (e.activityMinutes > 0) {
