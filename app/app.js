@@ -717,6 +717,15 @@ function renderApp() {
 
 /* ---- Dashboard ---- */
 
+// "Активные годы" (renamed from "Экономия на медицине", TZ section 2
+// update): the second chart's methodology is now QALY (Quality-Adjusted
+// Life Year — 1.0 = a year in full health, 0 = death, fractional values
+// in between), not a currency estimate. TODO: the formula converting
+// tracked factors (smoking, activity, later sleep/alcohol) into a QALY
+// increment is still an open question — needs real published QALY
+// figures per factor, not an invented coefficient. Not implemented yet;
+// only the "coming soon" placeholder card below exists until that
+// formula is sourced.
 function renderDashboard(screen) {
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
@@ -787,7 +796,7 @@ function renderDashboard(screen) {
         )
         .join("")}
       <div class="factor-card disabled">
-        <div class="name">Экономия на медицине</div>
+        <div class="name">Активные годы</div>
         <div class="soon">скоро</div>
       </div>
     </div>
