@@ -34,6 +34,43 @@ const LIFE_EXPECTANCY_TABLE = {
   female: { 30: 51.4, 40: 41.6, 50: 32.6, 60: 24.0, 70: 16.4, 80: 9.8 },
 };
 
+// Region select for onboarding (TZ section 1: "регион (страна/город
+// регистрации)"). Kept as a closed list rather than free text so the
+// value is both validated at input time and directly usable as a lookup
+// key for the actuarial adjustment below. "other" is the explicit
+// catch-all for anything not in the list.
+const REGION_OPTIONS = [
+  { value: "us", label: "США" },
+  { value: "ru", label: "Россия" },
+  { value: "by", label: "Беларусь" },
+  { value: "ua", label: "Украина" },
+  { value: "kz", label: "Казахстан" },
+  { value: "de", label: "Германия" },
+  { value: "gb", label: "Великобритания" },
+  { value: "fr", label: "Франция" },
+  { value: "es", label: "Испания" },
+  { value: "it", label: "Италия" },
+  { value: "pl", label: "Польша" },
+  { value: "il", label: "Израиль" },
+  { value: "ca", label: "Канада" },
+  { value: "au", label: "Австралия" },
+  { value: "other", label: "Другая страна" },
+];
+
+// Region adjustment to the starting-capital baseline (TZ section 1:
+// "Источник — актуарная таблица: SSA Period Life Table (US) либо WHO
+// Global Health Observatory. Fallback на глобальные показатели WHO при
+// отсутствии данных по региону."). LIFE_EXPECTANCY_TABLE above already
+// IS the US SSA-magnitude table, so "us" gets no adjustment; every other
+// region falls back to an illustrative WHO-global-average discount vs.
+// that US baseline. This is a placeholder ratio, not a verified
+// per-country dataset — TODO: replace with real WHO GHO country tables.
+const REGION_GLOBAL_FALLBACK_PCT = -0.07;
+
+function regionAdjustmentPct(region) {
+  return region === "us" ? 0 : REGION_GLOBAL_FALLBACK_PCT;
+}
+
 const KNOWLEDGE_BASE = [
   {
     key: "smoking",
@@ -291,15 +328,25 @@ function computeStartingCapitalDays(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
   const baselineDays = baselineYears * 365.25;
 
+  const regionPct = regionAdjustmentPct(ob.region);
   const activityLevel = activityLevelFromOnboarding(ob);
   const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
   const sleepPct = sleepAdjustmentPct(Number(ob.sleepHours), activityLevel);
-  const activityPct = activityAdjustmentPct(minutesPerWeek, Number(ob.age));
+  // Activity is an optional onboarding field (TZ section 1: optional
+  // fields "ничего не блокирует прохождение онбординга"). An unanswered
+  // field must stay neutral like sleep/alcohol/illness above — it must
+  // NOT be treated as a confirmed 0 minutes/week, which would otherwise
+  // trigger activityAdjustmentPct's near-max inactivity penalty for
+  // simply skipping the question.
+  const activityProvided =
+    ob.activityValue !== undefined && ob.activityValue !== null && ob.activityValue !== "";
+  const activityPct = activityProvided ? activityAdjustmentPct(minutesPerWeek, Number(ob.age)) : 0;
   const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
 
   const days =
     baselineDays *
+    (1 + regionPct) *
     (1 + sleepPct) *
     (1 + activityPct) *
     (1 + alcoholPct) *
@@ -350,6 +397,23 @@ function sevenDayTrend() {
  * Rendering
  * ------------------------------------------------------------------- */
 
+// All free-text user input (onboarding text/number fields, idea fund
+// submissions, etc.) must go through this before landing in innerHTML —
+// whether as element content or inside a quoted attribute — so a value
+// like `<iframe src="javascript:...">` renders as inert text instead of
+// executing. Applied at render time (every value is untrusted again on
+// each re-render, e.g. after loading from localStorage), not just once
+// at submission time.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]));
+}
+
 const root = document.getElementById("app");
 
 function render() {
@@ -383,7 +447,7 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Возраст</label>
-        <input type="number" min="1" max="120" id="f_age" value="${draft.age ?? ""}">
+        <input type="number" min="1" max="120" id="f_age" value="${escapeHtml(draft.age ?? "")}">
       </div>
       <div class="field">
         <label>Пол</label>
@@ -395,8 +459,13 @@ function renderOnboarding() {
         </select>
       </div>
       <div class="field">
-        <label>Регион (страна/город)</label>
-        <input type="text" id="f_region" placeholder="Например: Россия, Москва" value="${draft.region ?? ""}">
+        <label>Регион (страна)</label>
+        <select id="f_region">
+          <option value="">Выбрать...</option>
+          ${REGION_OPTIONS.map(
+            (r) => `<option value="${r.value}" ${draft.region === r.value ? "selected" : ""}>${r.label}</option>`
+          ).join("")}
+        </select>
       </div>
     `;
   } else if (step === "body") {
@@ -407,15 +476,15 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Вес, кг</label>
-        <input type="number" id="f_weight" value="${draft.weight ?? ""}">
+        <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
       <div class="field">
         <label>Рост, см</label>
-        <input type="number" id="f_height" value="${draft.height ?? ""}">
+        <input type="number" id="f_height" value="${escapeHtml(draft.height ?? "")}">
       </div>
       <div class="field">
         <label>Объём талии, см</label>
-        <input type="number" id="f_waist" value="${draft.waist ?? ""}">
+        <input type="number" id="f_waist" value="${escapeHtml(draft.waist ?? "")}">
       </div>
     `;
   } else if (step === "sleep") {
@@ -425,11 +494,11 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Среднее количество часов сна</label>
-        <input type="number" step="0.5" id="f_sleepHours" value="${draft.sleepHours ?? ""}">
+        <input type="number" step="0.5" id="f_sleepHours" value="${escapeHtml(draft.sleepHours ?? "")}">
       </div>
       <div class="field">
         <label>Обычное время отхода ко сну (если есть устойчивый режим)</label>
-        <input type="time" id="f_bedtime" value="${draft.bedtime ?? ""}">
+        <input type="time" id="f_bedtime" value="${escapeHtml(draft.bedtime ?? "")}">
       </div>
     `;
   } else if (step === "smoking") {
@@ -439,7 +508,7 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Сигарет в день (0, если не курите)</label>
-        <input type="number" min="0" id="f_cigarettesPerDay" value="${draft.cigarettesPerDay ?? ""}">
+        <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
         <div class="hint">Это станет вашей личной "ватерлинией" — точкой отсчёта. Курите сегодня меньше неё — плюс к капиталу, больше — минус. Само число не штрафует стартовый капитал.</div>
       </div>
       <div class="field">
@@ -459,15 +528,15 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Крепкий алкоголь, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholSpirits" value="${draft.alcoholSpirits ?? ""}">
+        <input type="number" min="0" id="f_alcoholSpirits" value="${escapeHtml(draft.alcoholSpirits ?? "")}">
       </div>
       <div class="field">
         <label>Вино, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholWine" value="${draft.alcoholWine ?? ""}">
+        <input type="number" min="0" id="f_alcoholWine" value="${escapeHtml(draft.alcoholWine ?? "")}">
       </div>
       <div class="field">
         <label>Пиво и слабоалкогольные коктейли, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholBeer" value="${draft.alcoholBeer ?? ""}">
+        <input type="number" min="0" id="f_alcoholBeer" value="${escapeHtml(draft.alcoholBeer ?? "")}">
       </div>
     `;
   } else if (step === "activity") {
@@ -485,7 +554,7 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label id="f_activityValueLabel">Значение</label>
-        <input type="number" min="0" id="f_activityValue" value="${draft.activityValue ?? ""}">
+        <input type="number" min="0" id="f_activityValue" value="${escapeHtml(draft.activityValue ?? "")}">
         <div class="hint">Тест разговором: можете говорить, но не петь — считается. Не можете говорить — тем более считается. Свободно поёте — не считается.</div>
       </div>
     `;
@@ -503,7 +572,7 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>Уточнение (по желанию)</label>
-        <input type="text" id="f_illnessDetail" value="${draft.illnessDetail ?? ""}">
+        <input type="text" id="f_illnessDetail" value="${escapeHtml(draft.illnessDetail ?? "")}">
         <div class="hint">Этот пункт всегда можно пропустить.</div>
       </div>
     `;
@@ -688,12 +757,12 @@ function renderDashboard(screen) {
       <div class="log-row">
         <div class="field">
           <label>Сигарет сегодня</label>
-          <input type="number" min="0" id="log_cigarettes" value="${todayEntry.cigarettes ?? ""}">
+          <input type="number" min="0" id="log_cigarettes" value="${escapeHtml(todayEntry.cigarettes ?? "")}">
           <div class="hint">Ваша ватерлиния: ${state.smokingWaterline ?? 0} шт.</div>
         </div>
         <div class="field">
           <label>Минут активности сегодня</label>
-          <input type="number" min="0" id="log_activity" value="${todayEntry.activityMinutes ?? ""}">
+          <input type="number" min="0" id="log_activity" value="${escapeHtml(todayEntry.activityMinutes ?? "")}">
           <div class="hint">Считается активность, где можно говорить, но не петь (или сложнее) — не медленная прогулка.</div>
         </div>
       </div>
@@ -932,9 +1001,9 @@ function renderIdeas(screen) {
         .reverse()
         .map(
           (i) => `<div class="idea-item">
-            <span class="date">${i.date}</span>
-            <div class="cat">${i.category}</div>
-            <div>${i.text}</div>
+            <span class="date">${escapeHtml(i.date)}</span>
+            <div class="cat">${escapeHtml(i.category)}</div>
+            <div>${escapeHtml(i.text)}</div>
           </div>`
         )
         .join("");
