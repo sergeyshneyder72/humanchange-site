@@ -639,7 +639,7 @@ function renderOnboarding() {
     body = `
       <div class="onboarding-header">
         <h1>Добро пожаловать</h1>
-        <p>Сначала — три обязательных вопроса, дальше всё по желанию.</p>
+        <p>Три обязательных вопроса.</p>
       </div>
       <div class="field">
         <label>Возраст ${reqMark()}</label>
