@@ -117,6 +117,42 @@ button {
   margin-left: 6px;
 }
 
+.required-mark {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.step-reminder {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.checkbox-list input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 15px;
+  background: var(--surface);
+  color: var(--text);
+}
+
 /* Onboarding */
 .onboarding-header {
   margin-bottom: 24px;
@@ -165,6 +201,13 @@ button {
 .reveal-number .label {
   color: var(--muted);
   margin-top: 8px;
+}
+
+.reveal-number .reveal-phrase {
+  margin-top: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 /* Nav */
@@ -297,6 +340,25 @@ button {
   letter-spacing: 0.05em;
   color: var(--accent);
   margin-bottom: 4px;
+}
+
+.engagement-card {
+  text-align: center;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  margin-bottom: 20px;
+}
+
+.engagement-card.positive {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.engagement-card.negative {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .factor-grid {

@@ -71,6 +71,127 @@ function regionAdjustmentPct(region) {
   return region === "us" ? 0 : REGION_GLOBAL_FALLBACK_PCT;
 }
 
+// Range-picker options for onboarding (TZ section 1, 10.08.2026 update:
+// "везде, где не требуется точное число для формулы — выбор из диапазона
+// вместо свободного ввода/точной цифры"). Age and cigarettes/day stay
+// exact numbers (formula needs precision there); everything else below
+// is a bucket. Where a bucket feeds a formula that wants one number
+// (activity minutes/week, sleep hours, alcohol ml/week), `midpoint*`
+// gives the bucket's midpoint — an explicit, disclosed approximation,
+// not a value stated by the spec itself.
+
+// WHO activity thresholds (TZ section 3.2 / section 1 step 2), required.
+const ACTIVITY_RANGE_OPTIONS = [
+  { value: "lt150", label: "менее 150 мин/нед", midpointMinutes: 75 },
+  { value: "150to300", label: "150–300 мин/нед", midpointMinutes: 225 },
+  { value: "gt300", label: "более 300 мин/нед", midpointMinutes: 400 },
+];
+
+// Not fed into any formula (waist isn't used in the calc) — thresholds
+// taken as-is from the TZ text. TZ itself flags these as "ориентировочные,
+// скорректировать под пол при реализации" but doesn't give gender-split
+// numbers, so this is a single unisex set until that's specified.
+const WAIST_RANGE_OPTIONS = [
+  { value: "lt80", label: "до 80 см" },
+  { value: "80to95", label: "80–95 см" },
+  { value: "95to110", label: "95–110 см" },
+  { value: "gt110", label: "более 110 см" },
+];
+
+// Cappuccio meta-analysis buckets (TZ section 1 step 3) — feeds sleepAdjustmentPct.
+const SLEEP_HOURS_RANGE_OPTIONS = [
+  { value: "lt5", label: "менее 5ч", midpointHours: 4.5 },
+  { value: "5to6", label: "5–6ч", midpointHours: 5.5 },
+  { value: "6to7", label: "6–7ч", midpointHours: 6.5 },
+  { value: "7to8", label: "7–8ч", midpointHours: 7.5 },
+  { value: "8to9", label: "8–9ч", midpointHours: 8.5 },
+  { value: "gt9", label: "более 9ч", midpointHours: 9.5 },
+];
+
+// Descriptive only, not used in any formula.
+const BEDTIME_RANGE_OPTIONS = [
+  { value: "before22", label: "до 22:00" },
+  { value: "22to24", label: "22:00–24:00" },
+  { value: "afterMidnight", label: "после полуночи" },
+  { value: "varies", label: "когда как" },
+];
+
+// TZ section 1 step 3: "на MVP-этапе фиксировать только факт
+// использования" — booleans, no coefficient. "other" also feeds the
+// Idea Fund signal (repeated free-text mentions become a factor
+// candidate), so it gets a short text field alongside the checkbox.
+const RECOVERY_PRACTICES = [
+  { key: "yoga", label: "Йога" },
+  { key: "breathing", label: "Дыхательные практики" },
+  { key: "hardening", label: "Закаливание" },
+  { key: "nailBoard", label: "Гвоздестояние" },
+  { key: "banya", label: "Баня" },
+  { key: "massage", label: "Массаж" },
+];
+
+// Nutrition step (TZ section 1 step 4) — all descriptive/collected for
+// future use, none feed the current formula (nutrition factor is
+// disabled, see KNOWLEDGE_BASE below).
+const WATER_RANGE_OPTIONS = [
+  { value: "0to500", label: "0–500 мл" },
+  { value: "500to1500", label: "0.5–1.5 л" },
+  { value: "gt1500", label: "более 1.5 л" },
+];
+
+const LAST_MEAL_TIME_OPTIONS = [
+  { value: "before18", label: "до 18:00" },
+  { value: "18to20", label: "18:00–20:00" },
+  { value: "after20", label: "после 20:00" },
+  { value: "varies", label: "когда как" },
+];
+
+const MEALS_PER_DAY_OPTIONS = [
+  { value: "1to2", label: "1–2" },
+  { value: "3", label: "3" },
+  { value: "4to5", label: "4–5" },
+  { value: "moreIrregular", label: "больше, нерегулярно" },
+];
+
+const HOURS_BETWEEN_MEALS_OPTIONS = [
+  { value: "lt3", label: "менее 3ч" },
+  { value: "3to5", label: "3–5ч" },
+  { value: "gt5", label: "более 5ч" },
+  { value: "irregular", label: "нерегулярно" },
+];
+
+const EATING_WINDOW_OPTIONS = [
+  { value: "lt10", label: "менее 10ч" },
+  { value: "10to14", label: "10–14ч" },
+  { value: "gt14", label: "более 14ч" },
+  { value: "varies", label: "когда как" },
+];
+
+const SUPPLEMENTS_REGULARITY_OPTIONS = [
+  { value: "daily", label: "Ежедневно" },
+  { value: "fewPerWeek", label: "Несколько раз в неделю" },
+  { value: "sometimes", label: "Иногда" },
+  { value: "none", label: "Не принимаю" },
+];
+
+// Alcohol (TZ section 1 step 5) — same 5 buckets reused for all three
+// beverage types. Per product decision: these ml/week cutoffs are just
+// convenient round numbers for the UI: bucket → midpoint ml → existing
+// density conversion → summed grams of ethanol across all three types
+// → existing 100/200/350 GRAM thresholds in alcoholAdjustmentPct below.
+// Methodology unchanged from before this field became a range picker.
+const ALCOHOL_RANGE_OPTIONS = [
+  { value: "0", label: "0", midpointMl: 0 },
+  { value: "lt100", label: "до 100 мл/нед", midpointMl: 50 },
+  { value: "100to200", label: "100–200 мл/нед", midpointMl: 150 },
+  { value: "200to350", label: "200–350 мл/нед", midpointMl: 275 },
+  { value: "gt350", label: "более 350 мл/нед", midpointMl: 450 },
+];
+
+function rangeLookup(options, value, field) {
+  const opt = options.find((o) => o.value === value);
+  return opt ? opt[field] : undefined;
+}
+
 const KNOWLEDGE_BASE = [
   {
     key: "smoking",
@@ -146,6 +267,53 @@ const IDEA_CATEGORIES = [
   "Идея нового фактора",
   "Общая идея",
 ];
+
+// "Фразы вовлечения" (TZ section 8, 10.08.2026) — base tone only, exactly
+// the example phrases given in the spec (not invented copy). Style
+// customization (дружеский/официально-деловой/с юмором/лаконичный) is
+// explicitly out of scope for this pass — one neutral tone everywhere.
+const ONBOARDING_RESULT_PHRASES = {
+  top: ["Редкий профиль", "Статистическая аномалия — в хорошем смысле", "Потенциальный долгожитель"],
+  good: ["Сильный старт", "Выше среднего по всем фронтам"],
+  medium: ["Крепкая база — и есть, куда расти"],
+  low: ["Точка отсчёта, а не приговор", "Отсюда есть куда расти — и это хорошая новость", "Лучшее время начать — сегодня"],
+};
+
+const DAILY_GOOD_PHRASES = ["Депозит принят", "Капитал растёт", "Ещё один кирпичик", "Вклад засчитан"];
+const DAILY_BAD_PHRASES = ["Списание учтено — завтра наверстаем", "Не идеально, но это данные, а не приговор"];
+const DAILY_RECORD_PHRASE = "Лучший результат за всё время";
+
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function pickPhrase(pool, seed) {
+  return pool[simpleHash(seed) % pool.length];
+}
+
+// Which ONBOARDING_RESULT_PHRASES tier to show — TZ section 8 gives
+// example phrases per tier ("спектр по силе") but no numeric cutoffs, so
+// this heuristic is a disclosed placeholder, not a spec requirement.
+// It grades the combined BEHAVIORAL adjustment (sleep + activity +
+// alcohol + illness) relative to its own best case — deliberately
+// excludes the region factor, which is demographic, not something to
+// praise or blame the user for. All four behavioral factors are
+// penalty-only in the current formula (never a bonus), so 0% combined
+// penalty is the best achievable score, hence the tier boundaries below.
+function onboardingResultTier(ob) {
+  const activityLevel = activityLevelFromOnboarding(ob);
+  const sleepPct = sleepAdjustmentPct(rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours"), activityLevel);
+  const activityPct = activityAdjustmentPct(activityMinutesPerWeekFromOnboarding(ob), Number(ob.age));
+  const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
+  const illnessPct = illnessAdjustmentPct(ob);
+  const combinedPct = (1 + sleepPct) * (1 + activityPct) * (1 + alcoholPct) * (1 + illnessPct) - 1;
+  if (combinedPct >= 0) return "top";
+  if (combinedPct >= -0.1) return "good";
+  if (combinedPct >= -0.25) return "medium";
+  return "low";
+}
 
 /* ---------------------------------------------------------------------
  * Storage
@@ -250,12 +418,11 @@ function interpolateLifeExpectancyYears(gender, age) {
 // heart rate to ~50-60% above resting (Cleveland Clinic definition of
 // moderate-or-above intensity) — can talk but not sing, or can't talk at
 // all. A slow park walk doesn't qualify; brisk walking, manual labor,
-// or a workout does. This is a self-reported number at onboarding, so
-// the qualifying bar is communicated in copy rather than measured.
+// or a workout does. This is a self-reported range at onboarding (TZ
+// section 1 step 2, WHO thresholds), converted to its bucket midpoint —
+// see ACTIVITY_RANGE_OPTIONS.
 function activityMinutesPerWeekFromOnboarding(ob) {
-  if (ob.activityUnit === "minutes") return Number(ob.activityValue) || 0;
-  if (ob.activityUnit === "workouts") return (Number(ob.activityValue) || 0) * 45;
-  return 0;
+  return rangeLookup(ACTIVITY_RANGE_OPTIONS, ob.activityRange, "midpointMinutes") || 0;
 }
 
 function activityLevelFromOnboarding(ob) {
@@ -309,9 +476,9 @@ function activityAdjustmentPct(minutesPerWeek, age) {
 }
 
 function alcoholGramsPerWeek(ob) {
-  const spirits = Number(ob.alcoholSpirits) || 0;
-  const wine = Number(ob.alcoholWine) || 0;
-  const beer = Number(ob.alcoholBeer) || 0;
+  const spirits = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholSpirits, "midpointMl") || 0;
+  const wine = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholWine, "midpointMl") || 0;
+  const beer = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholBeer, "midpointMl") || 0;
   const density = 0.789; // g/ml ethanol
   return (
     spirits * 0.4 * density +
@@ -342,15 +509,15 @@ function computeStartingCapitalDays(ob) {
   const regionPct = regionAdjustmentPct(ob.region);
   const activityLevel = activityLevelFromOnboarding(ob);
   const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
-  const sleepPct = sleepAdjustmentPct(Number(ob.sleepHours), activityLevel);
-  // Activity is an optional onboarding field (TZ section 1: optional
-  // fields "ничего не блокирует прохождение онбординга"). An unanswered
-  // field must stay neutral like sleep/alcohol/illness above — it must
+  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
+  const sleepPct = sleepAdjustmentPct(sleepHours, activityLevel);
+  // Activity is now a required onboarding field (TZ section 1 step 2),
+  // but keep the same neutral-if-unanswered guard as sleep/alcohol/
+  // illness above as a defensive fallback — an unanswered field must
   // NOT be treated as a confirmed 0 minutes/week, which would otherwise
   // trigger activityAdjustmentPct's near-max inactivity penalty for
-  // simply skipping the question.
-  const activityProvided =
-    ob.activityValue !== undefined && ob.activityValue !== null && ob.activityValue !== "";
+  // simply not having a value.
+  const activityProvided = ob.activityRange !== undefined && ob.activityRange !== null && ob.activityRange !== "";
   const activityPct = activityProvided ? activityAdjustmentPct(minutesPerWeek, Number(ob.age)) : 0;
   const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
@@ -437,7 +604,33 @@ function render() {
 
 /* ---- Onboarding ---- */
 
-const ONBOARDING_STEPS = ["basics", "body", "sleep", "smoking", "alcohol", "activity", "illness", "reveal"];
+// TZ section 1, 10.08.2026 restructure: 6 input steps (was 7) — "body"
+// and "activity" merged into one step, "nutrition" is new, "smoking" and
+// "alcohol" merged into one "habits" step — plus the "reveal" result.
+const ONBOARDING_STEPS = ["basics", "activity_form", "recovery", "nutrition", "habits", "health", "reveal"];
+
+function reqMark() {
+  return `<span class="required-mark">*</span>`;
+}
+
+function optHint() {
+  return `<span class="optional-badge">необязательно</span>`;
+}
+
+// TZ section 1, "UX-задача (по о/с от Дениса)": a short reminder at the
+// top of steps 2-6, since required/optional fields are now mixed on the
+// same screen (unlike step 1, where everything is required).
+function stepReminder(requiredCount) {
+  return requiredCount > 0
+    ? `<p class="step-reminder">Один обязательный вопрос, остальное — по желанию.</p>`
+    : `<p class="step-reminder">Все поля на этом шаге — по желанию.</p>`;
+}
+
+function selectOptionsHtml(options, selectedValue) {
+  return options
+    .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
+    .join("");
+}
 
 function renderOnboarding() {
   const step = state.onboardingStep || ONBOARDING_STEPS[0];
@@ -457,11 +650,11 @@ function renderOnboarding() {
         <p>Сначала — три обязательных вопроса, дальше всё по желанию.</p>
       </div>
       <div class="field">
-        <label>Возраст</label>
+        <label>Возраст ${reqMark()}</label>
         <input type="number" min="1" max="120" id="f_age" value="${escapeHtml(draft.age ?? "")}">
       </div>
       <div class="field">
-        <label>Пол</label>
+        <label>Пол ${reqMark()}</label>
         <select id="f_gender">
           <option value="">Выбрать...</option>
           <option value="male" ${draft.gender === "male" ? "selected" : ""}>Мужской</option>
@@ -470,125 +663,203 @@ function renderOnboarding() {
         </select>
       </div>
       <div class="field">
-        <label>Регион (страна)</label>
+        <label>Регион (страна) ${reqMark()}</label>
         <select id="f_region">
           <option value="">Выбрать...</option>
-          ${REGION_OPTIONS.map(
-            (r) => `<option value="${r.value}" ${draft.region === r.value ? "selected" : ""}>${r.label}</option>`
-          ).join("")}
+          ${selectOptionsHtml(REGION_OPTIONS, draft.region)}
         </select>
       </div>
     `;
-  } else if (step === "body") {
+  } else if (step === "activity_form") {
     body = `
       <div class="onboarding-header">
-        <h1>Тело <span class="optional-badge">необязательно</span></h1>
-        <p>Уточняет стартовый расчёт капитала. Можно пропустить.</p>
+        <h1>Активность и форма</h1>
+        ${stepReminder(1)}
       </div>
       <div class="field">
-        <label>Вес, кг</label>
+        <label>Физическая активность, мин/нед ${reqMark()}</label>
+        <select id="f_activityRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ACTIVITY_RANGE_OPTIONS, draft.activityRange)}
+        </select>
+        <div class="hint">Считается только активность, поднимающая пульс минимум на 50–60% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.</div>
+      </div>
+      <div class="field">
+        <label>Вес, кг ${optHint()}</label>
         <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
       <div class="field">
-        <label>Рост, см</label>
+        <label>Рост, см ${optHint()}</label>
         <input type="number" id="f_height" value="${escapeHtml(draft.height ?? "")}">
       </div>
       <div class="field">
-        <label>Объём талии, см</label>
-        <input type="number" id="f_waist" value="${escapeHtml(draft.waist ?? "")}">
+        <label>Объём талии ${optHint()}</label>
+        <select id="f_waistRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(WAIST_RANGE_OPTIONS, draft.waistRange)}
+        </select>
       </div>
     `;
-  } else if (step === "sleep") {
+  } else if (step === "recovery") {
     body = `
       <div class="onboarding-header">
-        <h1>Сон <span class="optional-badge">необязательно</span></h1>
+        <h1>Восстановление</h1>
+        ${stepReminder(0)}
       </div>
       <div class="field">
-        <label>Среднее количество часов сна</label>
-        <input type="number" step="0.5" id="f_sleepHours" value="${escapeHtml(draft.sleepHours ?? "")}">
+        <label>Среднее количество часов сна ${optHint()}</label>
+        <select id="f_sleepHoursRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, draft.sleepHoursRange)}
+        </select>
       </div>
       <div class="field">
-        <label>Обычное время отхода ко сну (если есть устойчивый режим)</label>
-        <input type="time" id="f_bedtime" value="${escapeHtml(draft.bedtime ?? "")}">
+        <label>Обычное время отхода ко сну ${optHint()}</label>
+        <select id="f_bedtimeRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(BEDTIME_RANGE_OPTIONS, draft.bedtimeRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Практики восстановления ${optHint()}</label>
+        <div class="checkbox-list">
+          ${RECOVERY_PRACTICES.map(
+            (p) =>
+              `<label class="checkbox-row"><input type="checkbox" id="f_recovery_${p.key}" ${draft.recoveryPractices?.[p.key] ? "checked" : ""}> ${p.label}</label>`
+          ).join("")}
+          <label class="checkbox-row"><input type="checkbox" id="f_recovery_other" ${draft.recoveryPractices?.other ? "checked" : ""}> Другое</label>
+          <input type="text" id="f_recovery_otherText" placeholder="Что именно?" value="${escapeHtml(draft.recoveryPractices?.otherText ?? "")}">
+        </div>
+        <div class="hint">Пока фиксируем только факт использования, без влияния на расчёт.</div>
       </div>
     `;
-  } else if (step === "smoking") {
+  } else if (step === "nutrition") {
     body = `
       <div class="onboarding-header">
-        <h1>Курение <span class="optional-badge">необязательно</span></h1>
+        <h1>Питание</h1>
+        ${stepReminder(0)}
       </div>
       <div class="field">
-        <label>Сигарет в день (0, если не курите)</label>
+        <label>Объём чистой воды в сутки ${optHint()}</label>
+        <select id="f_waterRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(WATER_RANGE_OPTIONS, draft.waterRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Время последнего приёма пищи ${optHint()}</label>
+        <select id="f_lastMealTimeRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(LAST_MEAL_TIME_OPTIONS, draft.lastMealTimeRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Количество приёмов пищи в день ${optHint()}</label>
+        <select id="f_mealsPerDayRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(MEALS_PER_DAY_OPTIONS, draft.mealsPerDayRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Часы между приёмами пищи (в среднем) ${optHint()}</label>
+        <select id="f_hoursBetweenMealsRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(HOURS_BETWEEN_MEALS_OPTIONS, draft.hoursBetweenMealsRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Окно между первым и последним приёмом пищи ${optHint()}</label>
+        <select id="f_eatingWindowRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(EATING_WINDOW_OPTIONS, draft.eatingWindowRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Перекусы бывают? ${optHint()}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_snacksHas" value="yes" ${draft.snacksHas === true ? "checked" : ""}> Да</label>
+          <label><input type="radio" name="f_snacksHas" value="no" ${draft.snacksHas === false ? "checked" : ""}> Нет</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>БАДы — регулярность приёма ${optHint()}</label>
+        <select id="f_supplementsRegularity">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(SUPPLEMENTS_REGULARITY_OPTIONS, draft.supplementsRegularity)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Считаете своё питание сбалансированным? ${optHint()}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_nutritionBalanceSelf" value="yes" ${draft.nutritionBalanceSelf === true ? "checked" : ""}> Да</label>
+          <label><input type="radio" name="f_nutritionBalanceSelf" value="no" ${draft.nutritionBalanceSelf === false ? "checked" : ""}> Нет</label>
+        </div>
+      </div>
+    `;
+  } else if (step === "habits") {
+    body = `
+      <div class="onboarding-header">
+        <h1>Вредные привычки</h1>
+        ${stepReminder(1)}
+      </div>
+      <div class="field">
+        <label>Сигарет в день (0, если не курите) ${reqMark()}</label>
         <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
         <div class="hint">Это станет вашей личной "ватерлинией" — точкой отсчёта. Курите сегодня меньше неё — плюс к капиталу, больше — минус. Само число не штрафует стартовый капитал.</div>
       </div>
       <div class="field">
-        <label>Вейп / кальян — используете?</label>
+        <label>Вейп / кальян — используете? ${optHint()}</label>
         <div class="radio-row">
           <label><input type="radio" name="f_vape" value="yes" ${draft.vapeHookah === "yes" ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_vape" value="no" ${draft.vapeHookah === "no" ? "checked" : ""}> Нет</label>
         </div>
         <div class="hint">Пока фиксируем только факт использования, без влияния на расчёт.</div>
       </div>
-    `;
-  } else if (step === "alcohol") {
-    body = `
-      <div class="onboarding-header">
-        <h1>Алкоголь <span class="optional-badge">необязательно</span></h1>
-        <p>Объём в мл в неделю, по категориям.</p>
+      <div class="field">
+        <label>Крепкий алкоголь, мл/нед ${optHint()}</label>
+        <select id="f_alcoholSpiritsRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholSpirits)}
+        </select>
       </div>
       <div class="field">
-        <label>Крепкий алкоголь, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholSpirits" value="${escapeHtml(draft.alcoholSpirits ?? "")}">
+        <label>Вино, мл/нед ${optHint()}</label>
+        <select id="f_alcoholWineRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholWine)}
+        </select>
       </div>
       <div class="field">
-        <label>Вино, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholWine" value="${escapeHtml(draft.alcoholWine ?? "")}">
-      </div>
-      <div class="field">
-        <label>Пиво и слабоалкогольные коктейли, мл/нед</label>
-        <input type="number" min="0" id="f_alcoholBeer" value="${escapeHtml(draft.alcoholBeer ?? "")}">
-      </div>
-    `;
-  } else if (step === "activity") {
-    body = `
-      <div class="onboarding-header">
-        <h1>Физическая активность <span class="optional-badge">необязательно</span></h1>
-        <p>Считается только активность, поднимающая пульс минимум на 50–60% выше уровня покоя (Cleveland Clinic). Медленная прогулка не в счёт.</p>
-      </div>
-      <div class="field">
-        <label>Как удобнее указать?</label>
-        <div class="radio-row">
-          <label><input type="radio" name="f_activityUnit" value="minutes" ${draft.activityUnit !== "workouts" ? "checked" : ""}> Минуты в неделю</label>
-          <label><input type="radio" name="f_activityUnit" value="workouts" ${draft.activityUnit === "workouts" ? "checked" : ""}> Тренировок в неделю</label>
-        </div>
-      </div>
-      <div class="field">
-        <label id="f_activityValueLabel">Значение</label>
-        <input type="number" min="0" id="f_activityValue" value="${escapeHtml(draft.activityValue ?? "")}">
-        <div class="hint">Тест разговором: можете говорить, но не петь — считается. Не можете говорить — тем более считается. Свободно поёте — не считается.</div>
+        <label>Пиво и слабоалкогольные коктейли, мл/нед ${optHint()}</label>
+        <select id="f_alcoholBeerRange">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholBeer)}
+        </select>
       </div>
     `;
-  } else if (step === "illness") {
+  } else if (step === "health") {
     body = `
       <div class="onboarding-header">
-        <h1>Здоровье <span class="optional-badge">необязательно</span></h1>
+        <h1>Здоровье</h1>
+        ${stepReminder(0)}
       </div>
       <div class="field">
-        <label>Есть ли серьёзные заболевания?</label>
+        <label>Есть ли серьёзные заболевания? ${optHint()}</label>
         <div class="radio-row">
           <label><input type="radio" name="f_illnessHas" value="yes" ${draft.illnessHas === true ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_illnessHas" value="no" ${draft.illnessHas === false ? "checked" : ""}> Нет</label>
         </div>
       </div>
       <div class="field">
-        <label>Уточнение (по желанию)</label>
+        <label>Уточнение ${optHint()}</label>
         <input type="text" id="f_illnessDetail" value="${escapeHtml(draft.illnessDetail ?? "")}">
         <div class="hint">Этот пункт всегда можно пропустить.</div>
       </div>
     `;
   } else if (step === "reveal") {
     revealDays = computeStartingCapitalDays(draft);
+    const tier = onboardingResultTier(draft);
+    const resultPhrase = pickPhrase(ONBOARDING_RESULT_PHRASES[tier], JSON.stringify(draft));
     body = `
       <div class="onboarding-header">
         <h1>Ваш стартовый капитал готов</h1>
@@ -596,6 +867,7 @@ function renderOnboarding() {
       <div class="reveal-number">
         <div class="value" id="reveal-value">0</div>
         <div class="label">дней ожидаемого капитала здоровья</div>
+        <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
       </div>
       <div class="disclaimer">Статистическая оценка на основе научных исследований, не медицинский прогноз для конкретного человека.</div>
       <button class="btn" id="finish-onboarding" style="width:100%">Перейти в приложение</button>
@@ -636,6 +908,14 @@ function renderOnboarding() {
         alert("Возраст, пол и регион обязательны для продолжения.");
         return;
       }
+      if (step === "activity_form" && !draft.activityRange) {
+        alert("Физическая активность обязательна для продолжения.");
+        return;
+      }
+      if (step === "habits" && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
+        alert("Сигарет в день обязательно для продолжения (0, если не курите).");
+        return;
+      }
       state.onboardingDraft = draft;
       state.onboardingStep = ONBOARDING_STEPS[stepIndex + 1];
       saveState();
@@ -656,31 +936,49 @@ function renderOnboarding() {
 
 function collectStepFields(step, draft) {
   const val = (id) => document.getElementById(id)?.value;
+  const checkedRadio = (name) => document.querySelector(`input[name="${name}"]:checked`);
   if (step === "basics") {
     draft.age = Number(val("f_age")) || null;
     draft.gender = val("f_gender") || null;
     draft.region = val("f_region") || "";
-  } else if (step === "body") {
+  } else if (step === "activity_form") {
+    draft.activityRange = val("f_activityRange") || "";
     draft.weight = val("f_weight");
     draft.height = val("f_height");
-    draft.waist = val("f_waist");
-  } else if (step === "sleep") {
-    draft.sleepHours = val("f_sleepHours");
-    draft.bedtime = val("f_bedtime");
-  } else if (step === "smoking") {
+    draft.waistRange = val("f_waistRange") || "";
+  } else if (step === "recovery") {
+    draft.sleepHoursRange = val("f_sleepHoursRange") || "";
+    draft.bedtimeRange = val("f_bedtimeRange") || "";
+    draft.recoveryPractices = {
+      yoga: !!document.getElementById("f_recovery_yoga")?.checked,
+      breathing: !!document.getElementById("f_recovery_breathing")?.checked,
+      hardening: !!document.getElementById("f_recovery_hardening")?.checked,
+      nailBoard: !!document.getElementById("f_recovery_nailBoard")?.checked,
+      banya: !!document.getElementById("f_recovery_banya")?.checked,
+      massage: !!document.getElementById("f_recovery_massage")?.checked,
+      other: !!document.getElementById("f_recovery_other")?.checked,
+      otherText: val("f_recovery_otherText") || "",
+    };
+  } else if (step === "nutrition") {
+    draft.waterRange = val("f_waterRange") || "";
+    draft.lastMealTimeRange = val("f_lastMealTimeRange") || "";
+    draft.mealsPerDayRange = val("f_mealsPerDayRange") || "";
+    draft.hoursBetweenMealsRange = val("f_hoursBetweenMealsRange") || "";
+    draft.eatingWindowRange = val("f_eatingWindowRange") || "";
+    const snacksChecked = checkedRadio("f_snacksHas");
+    draft.snacksHas = snacksChecked ? snacksChecked.value === "yes" : undefined;
+    draft.supplementsRegularity = val("f_supplementsRegularity") || "";
+    const balanceChecked = checkedRadio("f_nutritionBalanceSelf");
+    draft.nutritionBalanceSelf = balanceChecked ? balanceChecked.value === "yes" : undefined;
+  } else if (step === "habits") {
     draft.cigarettesPerDay = val("f_cigarettesPerDay");
-    const checked = document.querySelector('input[name="f_vape"]:checked');
-    draft.vapeHookah = checked ? checked.value : draft.vapeHookah;
-  } else if (step === "alcohol") {
-    draft.alcoholSpirits = val("f_alcoholSpirits");
-    draft.alcoholWine = val("f_alcoholWine");
-    draft.alcoholBeer = val("f_alcoholBeer");
-  } else if (step === "activity") {
-    const unitChecked = document.querySelector('input[name="f_activityUnit"]:checked');
-    draft.activityUnit = unitChecked ? unitChecked.value : "minutes";
-    draft.activityValue = val("f_activityValue");
-  } else if (step === "illness") {
-    const checked = document.querySelector('input[name="f_illnessHas"]:checked');
+    const vapeChecked = checkedRadio("f_vape");
+    draft.vapeHookah = vapeChecked ? vapeChecked.value : draft.vapeHookah;
+    draft.alcoholSpirits = val("f_alcoholSpiritsRange") || "";
+    draft.alcoholWine = val("f_alcoholWineRange") || "";
+    draft.alcoholBeer = val("f_alcoholBeerRange") || "";
+  } else if (step === "health") {
+    const checked = checkedRadio("f_illnessHas");
     draft.illnessHas = checked ? checked.value === "yes" : undefined;
     draft.illnessDetail = val("f_illnessDetail");
   }
@@ -737,6 +1035,23 @@ function renderApp() {
 // figures per factor, not an invented coefficient. Not implemented yet;
 // only the "coming soon" placeholder card below exists until that
 // formula is sourced.
+// TZ section 8 daily-input category: "Хорошее действие / Плохое действие
+// / Личный рекорд". Personal record takes priority over the good/bad
+// framing. Phrase choice is seeded by the date (not Math.random()) so it
+// stays stable across re-renders of the same day instead of flickering.
+function dailyEngagementPhrase(today, todayEntry) {
+  if (todayEntry.deltaDays === undefined) return null;
+  const priorMax = Object.entries(state.ledger)
+    .filter(([date]) => date !== today)
+    .reduce((max, [, e]) => Math.max(max, e.deltaDays), -Infinity);
+  if (priorMax !== -Infinity && todayEntry.deltaDays > priorMax) {
+    return { text: DAILY_RECORD_PHRASE, positive: true };
+  }
+  const positive = todayEntry.deltaDays >= 0;
+  const pool = positive ? DAILY_GOOD_PHRASES : DAILY_BAD_PHRASES;
+  return { text: pickPhrase(pool, `${today}:${positive ? "g" : "b"}`), positive };
+}
+
 function renderDashboard(screen) {
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
@@ -745,6 +1060,7 @@ function renderDashboard(screen) {
 
   const today = todayStr();
   const todayEntry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
+  const engagement = dailyEngagementPhrase(today, todayEntry);
 
   screen.innerHTML = `
     <div class="capital-header">
@@ -788,6 +1104,12 @@ function renderDashboard(screen) {
       </div>
       <button class="btn" id="log-save" style="width:100%">Сохранить</button>
     </div>
+
+    ${
+      engagement
+        ? `<div class="engagement-card ${engagement.positive ? "positive" : "negative"}">${escapeHtml(engagement.text)}</div>`
+        : ""
+    }
 
     <div class="factor-grid">
       <div class="factor-card">
