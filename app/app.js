@@ -801,7 +801,6 @@ function renderOnboarding() {
       <div class="field">
         <label>Сигарет в день (0, если не курите) ${reqMark()}</label>
         <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
-        <div class="hint">Это станет вашей личной "ватерлинией" — точкой отсчёта. Курите сегодня меньше неё — плюс к капиталу, больше — минус. Само число не штрафует стартовый капитал.</div>
       </div>
       <div class="field" id="f_smokingGoalBlock" style="display:${Number(draft.cigarettesPerDay) > 0 ? "block" : "none"}">
         <label>Хотите бросить курить? ${reqMark()}</label>
