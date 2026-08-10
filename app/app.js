@@ -306,7 +306,8 @@ function pickPhrase(pool, seed) {
 function onboardingResultTier(ob) {
   const activityLevel = activityLevelFromOnboarding(ob);
   const sleepPct = sleepAdjustmentPct(rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours"), activityLevel);
-  const activityPct = activityAdjustmentPct(activityMinutesPerWeekFromOnboarding(ob), Number(ob.age));
+  const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
+  const activityPct = activityProvided ? activityAdjustmentPct(activityMinutesPerWeekFromOnboarding(ob), Number(ob.age)) : 0;
   const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
   const combinedPct = (1 + sleepPct) * (1 + activityPct) * (1 + alcoholPct) * (1 + illnessPct) - 1;
@@ -499,6 +500,21 @@ function illnessAdjustmentPct(ob) {
   return ob.illnessHas ? -0.15 : 0;
 }
 
+// TODO(methodology, flagged 11.08.2026, question sent to I-Min Lee for
+// the activity piece specifically): sleepAdjustmentPct, activityAdjustmentPct,
+// alcoholAdjustmentPct, and illnessAdjustmentPct all take a literature
+// relative-risk/hazard-ratio figure and apply it as a DIRECT percentage
+// of total remaining life-expectancy years (baselineDays * (1 + pct)).
+// That's not how RR converts into a life-expectancy change — it needs
+// actuarial recalculation through survival curves, not a linear
+// percentage-of-years multiplication. The current formula overstates
+// each factor's effect. Region (regionAdjustmentPct) is NOT the same
+// issue — it scales by an actual life-expectancy-YEARS ratio between
+// countries, not a converted RR. Smoking doesn't apply here at all (it's
+// waterline-only, see dailyDeltaDays below). Do not invent the correct
+// conversion here — waiting on real methodology before touching the
+// numbers themselves.
+
 // One-time starting capital, computed at the end of onboarding (TZ
 // section 1-2). Multiplicative combination of independent adjustments
 // keeps the result bounded and avoids a single field dominating the
@@ -514,11 +530,15 @@ function computeStartingCapitalDays(ob) {
   const sleepPct = sleepAdjustmentPct(sleepHours, activityLevel);
   // Activity is now a required onboarding field (TZ section 1 step 2),
   // but keep the same neutral-if-unanswered guard as sleep/alcohol/
-  // illness above as a defensive fallback — an unanswered field must
-  // NOT be treated as a confirmed 0 minutes/week, which would otherwise
-  // trigger activityAdjustmentPct's near-max inactivity penalty for
-  // simply not having a value.
-  const activityProvided = ob.activityRange !== undefined && ob.activityRange !== null && ob.activityRange !== "";
+  // illness above as a defensive fallback — an unanswered OR unrecognized
+  // value must NOT be treated as a confirmed 0 minutes/week, which would
+  // otherwise trigger activityAdjustmentPct's near-max inactivity penalty.
+  // Checking against the actual bucket list (not just "is this string
+  // non-empty") matters: a stray/stale activityRange value that doesn't
+  // match any real bucket used to silently fall through to 0 via
+  // activityMinutesPerWeekFromOnboarding's `|| 0`, masquerading as a
+  // confirmed zero-activity report instead of staying neutral.
+  const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
   const activityPct = activityProvided ? activityAdjustmentPct(minutesPerWeek, Number(ob.age)) : 0;
   const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
