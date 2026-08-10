@@ -153,6 +153,17 @@ const IDEA_CATEGORIES = [
 
 const STORAGE_KEY = "hc_state_v1";
 
+// Temporary dev/test-only reset hook — not a finished UX (no confirm
+// dialog, nothing in the visible UI). Visiting the app with ?reset=true
+// wipes all local state and drops back into onboarding from scratch.
+// Deliberately NOT a button in the main interface: there's no backend
+// yet, so a real user's accidental tap would be unrecoverable. TODO:
+// replace with a proper settings-screen confirmation before launch.
+if (new URLSearchParams(location.search).get("reset") === "true") {
+  localStorage.removeItem(STORAGE_KEY);
+  location.replace(location.pathname);
+}
+
 function todayStr(d = new Date()) {
   return d.toISOString().slice(0, 10);
 }
