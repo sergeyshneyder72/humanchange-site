@@ -114,6 +114,7 @@ const BEDTIME_RANGE_OPTIONS = [
   { value: "22to24", label: "22:00–24:00" },
   { value: "afterMidnight", label: "после полуночи" },
   { value: "varies", label: "когда как" },
+  { value: "custom", label: "свой вариант" },
 ];
 
 // TZ section 1 step 3: "на MVP-этапе фиксировать только факт
@@ -204,7 +205,7 @@ const KNOWLEDGE_BASE = [
     key: "sport",
     name: "Физическая активность",
     active: true,
-    body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми — с возрастом этот разрыв увеличивается, поэтому в стартовом расчёте он учитывается сильнее у пользователей старшего возраста. Считается только активность, где пульс поднимается минимум на 50–60% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
+    body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми — с возрастом этот разрыв увеличивается, поэтому в стартовом расчёте он учитывается сильнее у пользователей старшего возраста. Считается только активность, где пульс поднимается минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
     source: "Источники: D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
   },
   {
@@ -415,7 +416,7 @@ function interpolateLifeExpectancyYears(gender, age) {
 }
 
 // Only activity clearing the "talk test" bar counts (TZ update): raises
-// heart rate to ~50-60% above resting (Cleveland Clinic definition of
+// heart rate to ~50% above resting (Cleveland Clinic definition of
 // moderate-or-above intensity) — can talk but not sing, or can't talk at
 // all. A slow park walk doesn't qualify; brisk walking, manual labor,
 // or a workout does. This is a self-reported range at onboarding (TZ
@@ -617,15 +618,6 @@ function optHint() {
   return `<span class="optional-badge">необязательно</span>`;
 }
 
-// TZ section 1, "UX-задача (по о/с от Дениса)": a short reminder at the
-// top of steps 2-6, since required/optional fields are now mixed on the
-// same screen (unlike step 1, where everything is required).
-function stepReminder(requiredCount) {
-  return requiredCount > 0
-    ? `<p class="step-reminder">Один обязательный вопрос, остальное — по желанию.</p>`
-    : `<p class="step-reminder">Все поля на этом шаге — по желанию.</p>`;
-}
-
 function selectOptionsHtml(options, selectedValue) {
   return options
     .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
@@ -674,7 +666,6 @@ function renderOnboarding() {
     body = `
       <div class="onboarding-header">
         <h1>Активность и форма</h1>
-        ${stepReminder(1)}
       </div>
       <div class="field">
         <label>Физическая активность, мин/нед ${reqMark()}</label>
@@ -682,7 +673,14 @@ function renderOnboarding() {
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(ACTIVITY_RANGE_OPTIONS, draft.activityRange)}
         </select>
-        <div class="hint">Считается только активность, поднимающая пульс минимум на 50–60% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.</div>
+        <div class="hint">Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.</div>
+      </div>
+      <div class="field" id="f_activityGoalBlock" style="display:${draft.activityRange === "lt150" ? "block" : "none"}">
+        <label>Хотите начать регулярно двигаться? ${reqMark()}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_activityGoal" value="yes" ${draft.activityGoalConfirmed === true ? "checked" : ""}> Да, хочу</label>
+          <label><input type="radio" name="f_activityGoal" value="no" ${draft.activityGoalConfirmed === false ? "checked" : ""}> Не сейчас</label>
+        </div>
       </div>
       <div class="field">
         <label>Вес, кг ${optHint()}</label>
@@ -698,13 +696,13 @@ function renderOnboarding() {
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(WAIST_RANGE_OPTIONS, draft.waistRange)}
         </select>
+        <input type="number" id="f_waistExact" placeholder="или точное значение, см" value="${escapeHtml(draft.waistExact ?? "")}" style="margin-top:8px">
       </div>
     `;
   } else if (step === "recovery") {
     body = `
       <div class="onboarding-header">
         <h1>Восстановление</h1>
-        ${stepReminder(0)}
       </div>
       <div class="field">
         <label>Среднее количество часов сна ${optHint()}</label>
@@ -719,6 +717,7 @@ function renderOnboarding() {
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(BEDTIME_RANGE_OPTIONS, draft.bedtimeRange)}
         </select>
+        <input type="time" id="f_bedtimeExact" value="${escapeHtml(draft.bedtimeExact ?? "")}" style="margin-top:8px; display:${draft.bedtimeRange === "custom" ? "block" : "none"}">
       </div>
       <div class="field">
         <label>Практики восстановления ${optHint()}</label>
@@ -730,14 +729,12 @@ function renderOnboarding() {
           <label class="checkbox-row"><input type="checkbox" id="f_recovery_other" ${draft.recoveryPractices?.other ? "checked" : ""}> Другое</label>
           <input type="text" id="f_recovery_otherText" placeholder="Что именно?" value="${escapeHtml(draft.recoveryPractices?.otherText ?? "")}">
         </div>
-        <div class="hint">Пока фиксируем только факт использования, без влияния на расчёт.</div>
       </div>
     `;
   } else if (step === "nutrition") {
     body = `
       <div class="onboarding-header">
         <h1>Питание</h1>
-        ${stepReminder(0)}
       </div>
       <div class="field">
         <label>Объём чистой воды в сутки ${optHint()}</label>
@@ -800,12 +797,18 @@ function renderOnboarding() {
     body = `
       <div class="onboarding-header">
         <h1>Вредные привычки</h1>
-        ${stepReminder(1)}
       </div>
       <div class="field">
         <label>Сигарет в день (0, если не курите) ${reqMark()}</label>
         <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
         <div class="hint">Это станет вашей личной "ватерлинией" — точкой отсчёта. Курите сегодня меньше неё — плюс к капиталу, больше — минус. Само число не штрафует стартовый капитал.</div>
+      </div>
+      <div class="field" id="f_smokingGoalBlock" style="display:${Number(draft.cigarettesPerDay) > 0 ? "block" : "none"}">
+        <label>Хотите бросить курить? ${reqMark()}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_smokingGoal" value="yes" ${draft.smokingGoalConfirmed === true ? "checked" : ""}> Да, хочу</label>
+          <label><input type="radio" name="f_smokingGoal" value="no" ${draft.smokingGoalConfirmed === false ? "checked" : ""}> Не сейчас</label>
+        </div>
       </div>
       <div class="field">
         <label>Вейп / кальян — используете? ${optHint()}</label>
@@ -813,7 +816,6 @@ function renderOnboarding() {
           <label><input type="radio" name="f_vape" value="yes" ${draft.vapeHookah === "yes" ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_vape" value="no" ${draft.vapeHookah === "no" ? "checked" : ""}> Нет</label>
         </div>
-        <div class="hint">Пока фиксируем только факт использования, без влияния на расчёт.</div>
       </div>
       <div class="field">
         <label>Крепкий алкоголь, мл/нед ${optHint()}</label>
@@ -841,7 +843,6 @@ function renderOnboarding() {
     body = `
       <div class="onboarding-header">
         <h1>Здоровье</h1>
-        ${stepReminder(0)}
       </div>
       <div class="field">
         <label>Есть ли серьёзные заболевания? ${optHint()}</label>
@@ -902,6 +903,25 @@ function renderOnboarding() {
       render();
     });
   } else {
+    // Goal-confirmation blocks (Evan Forman feedback, 08.08.2026): shown
+    // only when relevant (insufficient activity / actually smokes), and
+    // must react live to the triggering field without a full step
+    // re-render, so the radio choice already made isn't lost mid-edit.
+    if (step === "activity_form") {
+      document.getElementById("f_activityRange").addEventListener("change", (e) => {
+        document.getElementById("f_activityGoalBlock").style.display = e.target.value === "lt150" ? "block" : "none";
+      });
+    }
+    if (step === "habits") {
+      document.getElementById("f_cigarettesPerDay").addEventListener("input", (e) => {
+        document.getElementById("f_smokingGoalBlock").style.display = Number(e.target.value) > 0 ? "block" : "none";
+      });
+    }
+    if (step === "recovery") {
+      document.getElementById("f_bedtimeRange").addEventListener("change", (e) => {
+        document.getElementById("f_bedtimeExact").style.display = e.target.value === "custom" ? "block" : "none";
+      });
+    }
     document.getElementById("ob-next").addEventListener("click", () => {
       collectStepFields(step, draft);
       if (step === "basics" && (!draft.age || !draft.gender || !draft.region)) {
@@ -912,8 +932,16 @@ function renderOnboarding() {
         alert("Физическая активность обязательна для продолжения.");
         return;
       }
+      if (step === "activity_form" && draft.activityRange === "lt150" && draft.activityGoalConfirmed === undefined) {
+        alert("Пожалуйста, ответьте на вопрос про цель по активности.");
+        return;
+      }
       if (step === "habits" && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
         alert("Сигарет в день обязательно для продолжения (0, если не курите).");
+        return;
+      }
+      if (step === "habits" && Number(draft.cigarettesPerDay) > 0 && draft.smokingGoalConfirmed === undefined) {
+        alert("Пожалуйста, ответьте на вопрос про цель по курению.");
         return;
       }
       state.onboardingDraft = draft;
@@ -946,9 +974,17 @@ function collectStepFields(step, draft) {
     draft.weight = val("f_weight");
     draft.height = val("f_height");
     draft.waistRange = val("f_waistRange") || "";
+    draft.waistExact = val("f_waistExact");
+    if (draft.activityRange === "lt150") {
+      const goalChecked = checkedRadio("f_activityGoal");
+      draft.activityGoalConfirmed = goalChecked ? goalChecked.value === "yes" : draft.activityGoalConfirmed;
+    } else {
+      draft.activityGoalConfirmed = undefined;
+    }
   } else if (step === "recovery") {
     draft.sleepHoursRange = val("f_sleepHoursRange") || "";
     draft.bedtimeRange = val("f_bedtimeRange") || "";
+    draft.bedtimeExact = val("f_bedtimeExact");
     draft.recoveryPractices = {
       yoga: !!document.getElementById("f_recovery_yoga")?.checked,
       breathing: !!document.getElementById("f_recovery_breathing")?.checked,
@@ -977,6 +1013,12 @@ function collectStepFields(step, draft) {
     draft.alcoholSpirits = val("f_alcoholSpiritsRange") || "";
     draft.alcoholWine = val("f_alcoholWineRange") || "";
     draft.alcoholBeer = val("f_alcoholBeerRange") || "";
+    if (Number(draft.cigarettesPerDay) > 0) {
+      const goalChecked = checkedRadio("f_smokingGoal");
+      draft.smokingGoalConfirmed = goalChecked ? goalChecked.value === "yes" : draft.smokingGoalConfirmed;
+    } else {
+      draft.smokingGoalConfirmed = undefined;
+    }
   } else if (step === "health") {
     const checked = checkedRadio("f_illnessHas");
     draft.illnessHas = checked ? checked.value === "yes" : undefined;

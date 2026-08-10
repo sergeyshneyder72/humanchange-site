@@ -122,12 +122,6 @@ button {
   margin-left: 2px;
 }
 
-.step-reminder {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 4px 0 0;
-}
-
 .checkbox-list {
   display: flex;
   flex-direction: column;
