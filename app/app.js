@@ -457,7 +457,7 @@ function sleepShortAdjustmentPct(sleepHours, activityLevel) {
 }
 
 function illnessAdjustmentPct(ob) {
-  return ob.illnessHas ? -0.15 : 0;
+  return ob.illnessHas === true ? -0.15 : 0;
 }
 
 // TODO(methodology, flagged 11.08.2026): illnessAdjustmentPct and
