@@ -400,6 +400,16 @@ function ageMultiplier(age) {
   return 1.0;
 }
 
+// TODO(hardening, flagged 11.08.2026, not reachable via the current UI):
+// `age` is used raw in the comparisons below, not Number()-coerced. A
+// non-numeric age silently falls through every branch to the oldest
+// bracket in the table (minimum remaining years) instead of failing
+// loudly or staying neutral — same "invalid input reads as a worst-case
+// answer" pattern as the activityRange/alcohol bugs fixed this session.
+// Currently unreachable: collectStepFields always sets draft.age via
+// `Number(val) || null`, and step 1 blocks onboarding on a falsy age.
+// Revisit if an admin panel or any other path can write onboarding data
+// without going through that UI validation (TZ section 16).
 function interpolateLifeExpectancyYears(gender, age) {
   const table =
     gender === "male" || gender === "female"
@@ -441,6 +451,17 @@ function activityMinutesPerWeekFromOnboarding(ob) {
   return rangeLookup(ACTIVITY_RANGE_OPTIONS, ob.activityRange, "midpointMinutes") || 0;
 }
 
+// TODO(hardening, flagged 11.08.2026, not reachable via the current UI):
+// unlike the "provided" guards added this session for the actual
+// starting-capital penalty calculations, this function doesn't validate
+// activityRange against ACTIVITY_RANGE_OPTIONS — an unrecognized value
+// silently reads as "low" (0 minutes/week via the `|| 0` fallback in
+// activityMinutesPerWeekFromOnboarding), which shifts sleepWindow()'s
+// bounds and so the short-sleep percentage in sleepShortAdjustmentPct.
+// Confirmed a real (non-worst-case, just inaccurate) discrepancy in
+// testing. Not reachable normally: activityRange is a required field
+// validated at onboarding step 2. Revisit alongside the age TODO above
+// if an admin panel or other non-UI write path appears (TZ section 16).
 function activityLevelFromOnboarding(ob) {
   const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
   if (minutesPerWeek < 90) return "low";
