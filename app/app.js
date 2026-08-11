@@ -174,18 +174,33 @@ const SUPPLEMENTS_REGULARITY_OPTIONS = [
   { value: "none", label: "Не принимаю" },
 ];
 
-// Alcohol (TZ section 1 step 5) — same 5 buckets reused for all three
-// beverage types. midpointMl is currently unused by the starting-capital
-// calc (11.08.2026: alcohol switched to a binary years-lost factor, see
-// isRegularDrinkerApprox/tsaiYearsLostTotal below) — kept on the off
-// chance a future factor wants a volume estimate; only the bucket value
-// itself ("0" vs anything else) matters for the current formula.
-const ALCOHOL_RANGE_OPTIONS = [
+// Alcohol (TZ section 1 step 5, ranges finalized 11.08.2026) — each
+// beverage type gets its own thresholds (a 100ml spirits pour and 100ml
+// of beer aren't comparable volumes) rather than one shared scale.
+// midpointMl is currently unused by the starting-capital calc (alcohol
+// is a binary years-lost factor, see isRegularDrinkerApprox/
+// tsaiYearsLostTotal below) — kept on the off chance a future factor
+// wants a volume estimate; only the bucket value itself ("0" vs
+// anything else) matters for the current formula.
+const ALCOHOL_SPIRITS_RANGE_OPTIONS = [
   { value: "0", label: "0", midpointMl: 0 },
   { value: "lt100", label: "до 100 мл/нед", midpointMl: 50 },
-  { value: "100to200", label: "100–200 мл/нед", midpointMl: 150 },
-  { value: "200to350", label: "200–350 мл/нед", midpointMl: 275 },
+  { value: "100to350", label: "100–350 мл/нед", midpointMl: 225 },
   { value: "gt350", label: "более 350 мл/нед", midpointMl: 450 },
+];
+
+const ALCOHOL_WINE_RANGE_OPTIONS = [
+  { value: "0", label: "0", midpointMl: 0 },
+  { value: "lt350", label: "до 350 мл/нед", midpointMl: 175 },
+  { value: "350to1000", label: "350–1000 мл/нед", midpointMl: 675 },
+  { value: "gt1000", label: "более 1000 мл/нед", midpointMl: 1300 },
+];
+
+const ALCOHOL_BEER_RANGE_OPTIONS = [
+  { value: "0", label: "0", midpointMl: 0 },
+  { value: "lt700", label: "до 0.7 л/нед", midpointMl: 350 },
+  { value: "700to2000", label: "0.7–2 л/нед", midpointMl: 1350 },
+  { value: "gt2000", label: "более 2 л/нед", midpointMl: 2500 },
 ];
 
 function rangeLookup(options, value, field) {
@@ -198,7 +213,7 @@ const KNOWLEDGE_BASE = [
     key: "smoking",
     name: "Курение",
     active: true,
-    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится вашей личной «ватерлинией» — точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
+    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится Вашей личной «ватерлинией» — точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
     source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
   },
   {
@@ -501,8 +516,21 @@ function yearsLostForGender(factor, gender) {
 // bucket" to "regular drinker". That's our own mapping rule, not a
 // finding of the study.
 function isRegularDrinkerApprox(ob) {
-  const isDrinkingBucket = (v) => !!v && v !== "0";
-  return isDrinkingBucket(ob.alcoholSpirits) || isDrinkingBucket(ob.alcoholWine) || isDrinkingBucket(ob.alcoholBeer);
+  // Same guard as ACTIVITY_RANGE_OPTIONS.some(...) elsewhere: validate
+  // against each field's own real bucket list, not just "is this
+  // non-empty and not literally '0'". An unrecognized string used to be
+  // treated as "drinking" (full penalty) instead of neutral — confirmed
+  // live: an invalid value produced the identical result to a genuine
+  // "lt100"-equivalent answer instead of matching the empty/unanswered
+  // case. Each beverage type now has its own options/thresholds (see
+  // ALCOHOL_SPIRITS/WINE/BEER_RANGE_OPTIONS above), so each is checked
+  // against its own list.
+  const isDrinkingBucket = (options, v) => options.some((o) => o.value === v) && v !== "0";
+  return (
+    isDrinkingBucket(ALCOHOL_SPIRITS_RANGE_OPTIONS, ob.alcoholSpirits) ||
+    isDrinkingBucket(ALCOHOL_WINE_RANGE_OPTIONS, ob.alcoholWine) ||
+    isDrinkingBucket(ALCOHOL_BEER_RANGE_OPTIONS, ob.alcoholBeer)
+  );
 }
 
 function tsaiYearsLostTotal(ob) {
@@ -840,21 +868,21 @@ function renderOnboarding() {
         <label>Крепкий алкоголь, мл/нед ${optHint()}</label>
         <select id="f_alcoholSpiritsRange">
           <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholSpirits)}
+          ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, draft.alcoholSpirits)}
         </select>
       </div>
       <div class="field">
         <label>Вино, мл/нед ${optHint()}</label>
         <select id="f_alcoholWineRange">
           <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholWine)}
+          ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, draft.alcoholWine)}
         </select>
       </div>
       <div class="field">
-        <label>Пиво и слабоалкогольные коктейли, мл/нед ${optHint()}</label>
+        <label>Пиво и слабоалкогольные коктейли ${optHint()}</label>
         <select id="f_alcoholBeerRange">
           <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_RANGE_OPTIONS, draft.alcoholBeer)}
+          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
         </select>
       </div>
     `;
@@ -1231,7 +1259,7 @@ function nextStepRecommendation(todayEntry) {
     return "Добавьте 30 минут активности сегодня (в темпе, когда можно говорить, но не петь) — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
   }
   if (cigarettes > waterline) {
-    return `Сегодня выше вашей ватерлинии (${waterline} шт.) — попробуйте вернуться к ней или ниже, это уже плюс к капиталу.`;
+    return `Сегодня выше Вашей ватерлинии (${waterline} шт.) — попробуйте вернуться к ней или ниже, это уже плюс к капиталу.`;
   }
   if (cigarettes < waterline) {
     return "Вы уже ниже своей обычной нормы по курению — это доход в капитал, продолжайте в том же духе.";
@@ -1380,7 +1408,7 @@ function renderIdeas(screen) {
         <label>Текст</label>
         <textarea id="idea_text" placeholder="Опишите идею или проблему..."></textarea>
       </div>
-      <div class="hint" style="margin-bottom:16px;">Идею видите только вы и команда. Авторство не раскрывается другим пользователям.</div>
+      <div class="hint" style="margin-bottom:16px;">Идею видите только Вы и команда. Авторство не раскрывается другим пользователям.</div>
       <button class="btn" id="idea-submit" style="width:100%">Отправить</button>
     `;
     document.getElementById("idea-submit").addEventListener("click", () => {
