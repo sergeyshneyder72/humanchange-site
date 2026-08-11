@@ -175,11 +175,11 @@ const SUPPLEMENTS_REGULARITY_OPTIONS = [
 ];
 
 // Alcohol (TZ section 1 step 5) — same 5 buckets reused for all three
-// beverage types. Per product decision: these ml/week cutoffs are just
-// convenient round numbers for the UI: bucket → midpoint ml → existing
-// density conversion → summed grams of ethanol across all three types
-// → existing 100/200/350 GRAM thresholds in alcoholAdjustmentPct below.
-// Methodology unchanged from before this field became a range picker.
+// beverage types. midpointMl is currently unused by the starting-capital
+// calc (11.08.2026: alcohol switched to a binary years-lost factor, see
+// isRegularDrinkerApprox/tsaiYearsLostTotal below) — kept on the off
+// chance a future factor wants a volume estimate; only the bucket value
+// itself ("0" vs anything else) matters for the current formula.
 const ALCOHOL_RANGE_OPTIONS = [
   { value: "0", label: "0", midpointMl: 0 },
   { value: "lt100", label: "до 100 мл/нед", midpointMl: 50 },
@@ -198,8 +198,8 @@ const KNOWLEDGE_BASE = [
     key: "smoking",
     name: "Курение",
     active: true,
-    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Число сигарет в день, указанное при онбординге, становится вашей личной «ватерлинией» — точкой отсчёта. Она сама по себе не штрафует капитал: списание или депозит считается только от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
-    source: "Источник: UCL, журнал Addiction (2024/2025).",
+    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится вашей личной «ватерлинией» — точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
+    source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
   },
   {
     key: "sport",
@@ -297,20 +297,19 @@ function pickPhrase(pool, seed) {
 // Which ONBOARDING_RESULT_PHRASES tier to show — TZ section 8 gives
 // example phrases per tier ("спектр по силе") but no numeric cutoffs, so
 // this heuristic is a disclosed placeholder, not a spec requirement.
-// It grades the combined BEHAVIORAL adjustment (sleep + activity +
-// alcohol + illness) relative to its own best case — deliberately
-// excludes the region factor, which is demographic, not something to
-// praise or blame the user for. All four behavioral factors are
-// penalty-only in the current formula (never a bonus), so 0% combined
-// penalty is the best achievable score, hence the tier boundaries below.
+// Recomputed the same way as computeStartingCapitalDays below (years-lost
+// factors expressed as a fraction of baseline, combined with the two
+// factors still on the old percentage mechanism) — deliberately excludes
+// the region factor, which is demographic, not something to praise or
+// blame the user for.
 function onboardingResultTier(ob) {
+  const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
   const activityLevel = activityLevelFromOnboarding(ob);
-  const sleepPct = sleepAdjustmentPct(rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours"), activityLevel);
-  const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
-  const activityPct = activityProvided ? activityAdjustmentPct(activityMinutesPerWeekFromOnboarding(ob), Number(ob.age)) : 0;
-  const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
+  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
+  const shortSleepPct = sleepShortAdjustmentPct(sleepHours, activityLevel);
   const illnessPct = illnessAdjustmentPct(ob);
-  const combinedPct = (1 + sleepPct) * (1 + activityPct) * (1 + alcoholPct) * (1 + illnessPct) - 1;
+  const yearsLostPct = baselineYears > 0 ? tsaiYearsLostTotal(ob) / baselineYears : 0;
+  const combinedPct = (1 + shortSleepPct) * (1 + illnessPct) * (1 - yearsLostPct) - 1;
   if (combinedPct >= 0) return "top";
   if (combinedPct >= -0.1) return "good";
   if (combinedPct >= -0.25) return "medium";
@@ -442,116 +441,117 @@ function sleepWindow(activityLevel) {
   return [7, 8];
 }
 
-function sleepAdjustmentPct(sleepHours, activityLevel) {
+// Short-sleep side only (Cappuccio meta-analysis, unchanged from before).
+// The long-sleep (>8h) side used to live here too as a symmetric percentage
+// penalty; it's now a binary years-lost factor sourced from Tsai et al.
+// 2021, see tsaiYearsLostTotal() below — kept separate per that source
+// (see Source_Chiang_Tsai_2021.md), not merged into one curve.
+function sleepShortAdjustmentPct(sleepHours, activityLevel) {
   if (!sleepHours) return 0;
-  const [lo, hi] = sleepWindow(activityLevel);
+  const [lo] = sleepWindow(activityLevel);
   if (sleepHours < lo) {
     const pct = -0.12 * ((lo - sleepHours) / lo);
     return Math.max(pct, -0.3);
   }
-  if (sleepHours > hi) {
-    const pct = -0.3 * ((sleepHours - hi) / hi);
-    return Math.max(pct, -0.35);
-  }
   return 0;
-}
-
-// Smoking no longer applies a one-time status penalty to the starting
-// capital: the onboarding cigarettes/day figure becomes a "waterline"
-// (reference point) used only by the daily active-factor formula, so
-// the habit isn't charged twice (once at onboarding, once per day). See
-// dailyDeltaDays() below.
-
-// Physical activity as a full starting-capital factor (TZ update): WHO
-// reports ~20-30% higher all-cause mortality for insufficiently active
-// people vs. sufficiently active (>=150 qualifying min/week). The gap
-// is scaled by the same age-multiplier curve used for smoking (section
-// 3.1), since several studies show the active/inactive gap widening
-// with age.
-function activityAdjustmentPct(minutesPerWeek, age) {
-  const threshold = 150;
-  if (minutesPerWeek >= threshold) return 0;
-  const t = 1 - minutesPerWeek / threshold; // 0 at threshold, 1 at zero activity
-  const basePct = -0.2 - 0.1 * t; // -20% near threshold, up to -30% at zero
-  const scaled = basePct * ageMultiplier(age);
-  return Math.max(scaled, -0.5);
-}
-
-function alcoholGramsPerWeek(ob) {
-  const spirits = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholSpirits, "midpointMl") || 0;
-  const wine = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholWine, "midpointMl") || 0;
-  const beer = rangeLookup(ALCOHOL_RANGE_OPTIONS, ob.alcoholBeer, "midpointMl") || 0;
-  const density = 0.789; // g/ml ethanol
-  return (
-    spirits * 0.4 * density +
-    wine * 0.12 * density +
-    beer * 0.05 * density
-  );
-}
-
-function alcoholAdjustmentPct(gramsPerWeek) {
-  if (gramsPerWeek <= 100) return 0;
-  if (gramsPerWeek <= 200) return -0.05;
-  if (gramsPerWeek <= 350) return -0.1;
-  return -0.18;
 }
 
 function illnessAdjustmentPct(ob) {
   return ob.illnessHas ? -0.15 : 0;
 }
 
-// TODO(methodology, flagged 11.08.2026, question sent to I-Min Lee for
-// the activity piece specifically): sleepAdjustmentPct, activityAdjustmentPct,
-// alcoholAdjustmentPct, and illnessAdjustmentPct all take a literature
-// relative-risk/hazard-ratio figure and apply it as a DIRECT percentage
-// of total remaining life-expectancy years (baselineDays * (1 + pct)).
-// That's not how RR converts into a life-expectancy change — it needs
-// actuarial recalculation through survival curves, not a linear
-// percentage-of-years multiplication. The current formula overstates
-// each factor's effect. Region (regionAdjustmentPct) is NOT the same
-// issue — it scales by an actual life-expectancy-YEARS ratio between
-// countries, not a converted RR. Smoking doesn't apply here at all (it's
-// waterline-only, see dailyDeltaDays below). Do not invent the correct
-// conversion here — waiting on real methodology before touching the
-// numbers themselves.
+// TODO(methodology, flagged 11.08.2026): illnessAdjustmentPct and
+// sleepShortAdjustmentPct (short-sleep side) still apply a literature
+// relative-risk figure as a direct percentage of remaining life-expectancy
+// years, which isn't how RR actually converts into a life-expectancy
+// change (needs actuarial recalculation via survival curves, not linear
+// multiplication). Smoking, alcohol, activity, and long-sleep no longer
+// have this problem — see tsaiYearsLostTotal() below, sourced from real
+// years-of-life-lost data (Tsai et al. 2021) instead of a converted RR.
+// Region (regionAdjustmentPct) was never the same issue — it scales by an
+// actual life-expectancy-YEARS ratio between countries. Do not invent the
+// illness/short-sleep conversion yourself — no sourced years-lost figure
+// for either yet.
+
+// Binary years-of-life-lost factors from Tsai et al. 2021 ("Converting
+// health risks into loss of life years", Aging (Albany NY) 13(17):21513-
+// 21525 — see Source_Chiang_Tsai_2021.md for the full table and every
+// approximation disclosed below). The source only reports BINARY,
+// sex-specific figures (risk factor present/absent) — no dose grading —
+// so these are applied as flat years subtracted from baseline, not scaled
+// by dose or age (the source's HRs are already age-adjusted).
+const TSAI_YEARS_LOST = {
+  smoking: { male: 5.66, female: 7.02 }, // current smoker vs never smoker
+  alcohol: { male: 6.86, female: 6.35 }, // "regular drinker" vs non-drinker
+  activity: { male: 4.74, female: 5.07 }, // <3.75 MET-h/wk vs >=7.5 MET-h/wk
+  longSleep: { male: 5.04, female: 5.34 }, // >8h/day vs 6-7h/day
+};
+
+function yearsLostForGender(factor, gender) {
+  const v = TSAI_YEARS_LOST[factor];
+  if (gender === "male") return v.male;
+  if (gender === "female") return v.female;
+  return (v.male + v.female) / 2; // non-binary/unspecified: same averaging as interpolateLifeExpectancyYears
+}
+
+// Approximation, NOT from the source (see Source_Chiang_Tsai_2021.md):
+// the paper defines "regular drinker" as >=2 drinks, >=3x/week — a
+// frequency, not a volume. Our onboarding only collects ml/week buckets
+// per beverage type, so this maps "any beverage type above the '0'
+// bucket" to "regular drinker". That's our own mapping rule, not a
+// finding of the study.
+function isRegularDrinkerApprox(ob) {
+  const isDrinkingBucket = (v) => !!v && v !== "0";
+  return isDrinkingBucket(ob.alcoholSpirits) || isDrinkingBucket(ob.alcoholWine) || isDrinkingBucket(ob.alcoholBeer);
+}
+
+function tsaiYearsLostTotal(ob) {
+  const smokingYears = Number(ob.cigarettesPerDay) > 0 ? yearsLostForGender("smoking", ob.gender) : 0;
+  const alcoholYears = isRegularDrinkerApprox(ob) ? yearsLostForGender("alcohol", ob.gender) : 0;
+  // Approximation, NOT from the source: the paper measures inactivity in
+  // MET-hours/week (<3.75 vs a >=7.5 reference); we only collect WHO
+  // minutes/week buckets. "lt150" is used as a working proxy for the
+  // paper's inactivity threshold, not a verified unit conversion.
+  const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
+  const activityYears = activityProvided && ob.activityRange === "lt150" ? yearsLostForGender("activity", ob.gender) : 0;
+  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
+  const longSleepYears = sleepHours !== undefined && sleepHours > 8 ? yearsLostForGender("longSleep", ob.gender) : 0;
+  return smokingYears + alcoholYears + activityYears + longSleepYears;
+}
 
 // One-time starting capital, computed at the end of onboarding (TZ
-// section 1-2). Multiplicative combination of independent adjustments
-// keeps the result bounded and avoids a single field dominating the
-// number.
+// section 1-2, updated 11.08.2026 per Source_Chiang_Tsai_2021.md).
+// Years-lost factors (smoking, alcohol, activity, long sleep) are
+// subtracted directly from baseline years first — that's the Chiang/Tsai
+// formula shape (Капитал(лет) = Базовая − Σyears_lost). Region, illness,
+// and short-sleep stay on the older percentage-multiplier mechanism
+// (still on the methodology TODO above) and are applied to what's left
+// after the years-lost subtraction.
 function computeStartingCapitalDays(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
-  const baselineDays = baselineYears * 365.25;
 
   const regionPct = regionAdjustmentPct(ob.region);
-  const activityLevel = activityLevelFromOnboarding(ob);
-  const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
-  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
-  const sleepPct = sleepAdjustmentPct(sleepHours, activityLevel);
-  // Activity is now a required onboarding field (TZ section 1 step 2),
-  // but keep the same neutral-if-unanswered guard as sleep/alcohol/
-  // illness above as a defensive fallback — an unanswered OR unrecognized
-  // value must NOT be treated as a confirmed 0 minutes/week, which would
-  // otherwise trigger activityAdjustmentPct's near-max inactivity penalty.
-  // Checking against the actual bucket list (not just "is this string
-  // non-empty") matters: a stray/stale activityRange value that doesn't
-  // match any real bucket used to silently fall through to 0 via
-  // activityMinutesPerWeekFromOnboarding's `|| 0`, masquerading as a
-  // confirmed zero-activity report instead of staying neutral.
-  const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
-  const activityPct = activityProvided ? activityAdjustmentPct(minutesPerWeek, Number(ob.age)) : 0;
-  const alcoholPct = alcoholAdjustmentPct(alcoholGramsPerWeek(ob));
   const illnessPct = illnessAdjustmentPct(ob);
+  const activityLevel = activityLevelFromOnboarding(ob);
+  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
+  const shortSleepPct = sleepShortAdjustmentPct(sleepHours, activityLevel);
+
+  const yearsLost = tsaiYearsLostTotal(ob);
+  const yearsAfterLost = baselineYears - yearsLost;
 
   const days =
-    baselineDays *
+    yearsAfterLost *
+    365.25 *
     (1 + regionPct) *
-    (1 + sleepPct) *
-    (1 + activityPct) *
-    (1 + alcoholPct) *
-    (1 + illnessPct);
+    (1 + illnessPct) *
+    (1 + shortSleepPct);
 
-  return Math.round(days);
+  // Defensive floor: at older ages (this app's stated audience is 30-60,
+  // TZ section 6) combined years-lost can exceed the remaining baseline
+  // for someone hitting every risk factor at once, going negative. Not a
+  // sourced number — just preventing a nonsensical negative/zero result
+  // from reaching the UI.
+  return Math.max(Math.round(days), 0);
 }
 
 // Daily active-factor delta for the "Портфель здоровья" ledger — TZ
