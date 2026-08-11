@@ -683,10 +683,6 @@ function reqMark() {
   return `<span class="required-mark">*</span>`;
 }
 
-function optHint() {
-  return `<span class="optional-badge">необязательно</span>`;
-}
-
 function selectOptionsHtml(options, selectedValue) {
   return options
     .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
@@ -752,15 +748,15 @@ function renderOnboarding() {
         </div>
       </div>
       <div class="field">
-        <label>Вес, кг ${optHint()}</label>
+        <label>Вес, кг</label>
         <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
       <div class="field">
-        <label>Рост, см ${optHint()}</label>
+        <label>Рост, см</label>
         <input type="number" id="f_height" value="${escapeHtml(draft.height ?? "")}">
       </div>
       <div class="field">
-        <label>Объём талии ${optHint()}</label>
+        <label>Объём талии</label>
         <select id="f_waistRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(WAIST_RANGE_OPTIONS, draft.waistRange)}
@@ -774,14 +770,14 @@ function renderOnboarding() {
         <h1>Восстановление</h1>
       </div>
       <div class="field">
-        <label>Среднее количество часов сна ${optHint()}</label>
+        <label>Среднее количество часов сна</label>
         <select id="f_sleepHoursRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, draft.sleepHoursRange)}
         </select>
       </div>
       <div class="field">
-        <label>Обычное время отхода ко сну ${optHint()}</label>
+        <label>Обычное время отхода ко сну</label>
         <select id="f_bedtimeRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(BEDTIME_RANGE_OPTIONS, draft.bedtimeRange)}
@@ -789,7 +785,7 @@ function renderOnboarding() {
         <input type="time" id="f_bedtimeExact" value="${escapeHtml(draft.bedtimeExact ?? "")}" style="margin-top:8px; display:${draft.bedtimeRange === "custom" ? "block" : "none"}">
       </div>
       <div class="field">
-        <label>Практики восстановления ${optHint()}</label>
+        <label>Практики восстановления</label>
         <div class="checkbox-list">
           ${RECOVERY_PRACTICES.map(
             (p) =>
@@ -806,56 +802,56 @@ function renderOnboarding() {
         <h1>Питание</h1>
       </div>
       <div class="field">
-        <label>Объём чистой воды в сутки ${optHint()}</label>
+        <label>Объём чистой воды в сутки</label>
         <select id="f_waterRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(WATER_RANGE_OPTIONS, draft.waterRange)}
         </select>
       </div>
       <div class="field">
-        <label>Время последнего приёма пищи ${optHint()}</label>
+        <label>Время последнего приёма пищи</label>
         <select id="f_lastMealTimeRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(LAST_MEAL_TIME_OPTIONS, draft.lastMealTimeRange)}
         </select>
       </div>
       <div class="field">
-        <label>Количество приёмов пищи в день ${optHint()}</label>
+        <label>Количество приёмов пищи в день</label>
         <select id="f_mealsPerDayRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(MEALS_PER_DAY_OPTIONS, draft.mealsPerDayRange)}
         </select>
       </div>
       <div class="field">
-        <label>Часы между приёмами пищи (в среднем) ${optHint()}</label>
+        <label>Часы между приёмами пищи (в среднем)</label>
         <select id="f_hoursBetweenMealsRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(HOURS_BETWEEN_MEALS_OPTIONS, draft.hoursBetweenMealsRange)}
         </select>
       </div>
       <div class="field">
-        <label>Окно между первым и последним приёмом пищи ${optHint()}</label>
+        <label>Окно между первым и последним приёмом пищи</label>
         <select id="f_eatingWindowRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(EATING_WINDOW_OPTIONS, draft.eatingWindowRange)}
         </select>
       </div>
       <div class="field">
-        <label>Перекусы бывают? ${optHint()}</label>
+        <label>Перекусы бывают?</label>
         <div class="radio-row">
           <label><input type="radio" name="f_snacksHas" value="yes" ${draft.snacksHas === true ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_snacksHas" value="no" ${draft.snacksHas === false ? "checked" : ""}> Нет</label>
         </div>
       </div>
       <div class="field">
-        <label>БАДы — регулярность приёма ${optHint()}</label>
+        <label>БАДы — регулярность приёма</label>
         <select id="f_supplementsRegularity">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(SUPPLEMENTS_REGULARITY_OPTIONS, draft.supplementsRegularity)}
         </select>
       </div>
       <div class="field">
-        <label>Считаете своё питание сбалансированным? ${optHint()}</label>
+        <label>Считаете своё питание сбалансированным?</label>
         <div class="radio-row">
           <label><input type="radio" name="f_nutritionBalanceSelf" value="yes" ${draft.nutritionBalanceSelf === true ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_nutritionBalanceSelf" value="no" ${draft.nutritionBalanceSelf === false ? "checked" : ""}> Нет</label>
@@ -879,28 +875,28 @@ function renderOnboarding() {
         </div>
       </div>
       <div class="field">
-        <label>Вейп / кальян — используете? ${optHint()}</label>
+        <label>Вейп / кальян — используете?</label>
         <div class="radio-row">
           <label><input type="radio" name="f_vape" value="yes" ${draft.vapeHookah === "yes" ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_vape" value="no" ${draft.vapeHookah === "no" ? "checked" : ""}> Нет</label>
         </div>
       </div>
       <div class="field">
-        <label>Крепкий алкоголь, мл/нед ${optHint()}</label>
+        <label>Крепкий алкоголь, мл/нед</label>
         <select id="f_alcoholSpiritsRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, draft.alcoholSpirits)}
         </select>
       </div>
       <div class="field">
-        <label>Вино, мл/нед ${optHint()}</label>
+        <label>Вино, мл/нед</label>
         <select id="f_alcoholWineRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, draft.alcoholWine)}
         </select>
       </div>
       <div class="field">
-        <label>Пиво и слабоалкогольные коктейли ${optHint()}</label>
+        <label>Пиво и слабоалкогольные коктейли</label>
         <select id="f_alcoholBeerRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
@@ -913,14 +909,14 @@ function renderOnboarding() {
         <h1>Здоровье</h1>
       </div>
       <div class="field">
-        <label>Есть ли серьёзные заболевания? ${optHint()}</label>
+        <label>Есть ли серьёзные заболевания?</label>
         <div class="radio-row">
           <label><input type="radio" name="f_illnessHas" value="yes" ${draft.illnessHas === true ? "checked" : ""}> Да</label>
           <label><input type="radio" name="f_illnessHas" value="no" ${draft.illnessHas === false ? "checked" : ""}> Нет</label>
         </div>
       </div>
       <div class="field">
-        <label>Уточнение ${optHint()}</label>
+        <label>Уточнение</label>
         <input type="text" id="f_illnessDetail" value="${escapeHtml(draft.illnessDetail ?? "")}">
         <div class="hint">Этот пункт всегда можно пропустить.</div>
       </div>
@@ -938,7 +934,7 @@ function renderOnboarding() {
         <div class="label">дней ожидаемого капитала здоровья</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
       </div>
-      <div class="disclaimer">Статистическая оценка на основе научных исследований, не медицинский прогноз для конкретного человека.</div>
+      <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз. Число — игровой показатель для мотивации, не медицинская рекомендация. Если у Вас есть реальные проблемы со здоровьем — обратитесь к врачу.</div>
       <button class="btn" id="finish-onboarding" style="width:100%">Перейти в приложение</button>
     `;
   }
@@ -1178,7 +1174,7 @@ function renderDashboard(screen) {
       <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
     </div>
     <div class="starting-ref">Стартовый капитал из онбординга: ${state.startingCapitalDays?.toLocaleString("ru-RU")} дней (справочно, не пересчитывается)</div>
-    <div class="disclaimer">Статистическая оценка на основе научных исследований, не медицинский прогноз для конкретного человека.</div>
+    <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз.</div>
 
     <div class="period-switch">
       ${["week", "month", "year"]
