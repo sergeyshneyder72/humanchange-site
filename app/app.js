@@ -355,6 +355,7 @@ function todayStr(d = new Date()) {
 function defaultState() {
   return {
     onboarding: null, // filled once onboarding completes
+    onboardingWelcomeAccepted: false, // gates the pre-step-1 welcome/consent screen, TZ section 1 item 6
     startingCapitalDays: null,
     smokingWaterline: 0, // reference point for the daily smoking factor, set once at onboarding
     createdAt: null,
@@ -618,6 +619,56 @@ function dailyDeltaDays(cigarettesToday, activityMinutesToday, age, smokingWater
   return activityGain + smokingTerm;
 }
 
+// Monday of the ISO week containing dateStr ('YYYY-MM-DD'). Parses and
+// formats entirely in UTC (not local time) — 'YYYY-MM-DD' here is an
+// abstract calendar label, the same convention todayStr()'s
+// toISOString()-based formatting already uses for ledger keys. Mixing a
+// local-time parse with a UTC-formatted result shifts the date by a day
+// for any user east of UTC (confirmed: Europe/Moscow, UTC+3) — this is
+// the same class of local/UTC mismatch, just caught before it shipped.
+function mondayOfWeek(dateStr) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  const day = d.getUTCDay(); // 0=Sun..6=Sat
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().slice(0, 10);
+}
+
+function weekDatesFrom(mondayStr) {
+  const start = new Date(mondayStr + "T00:00:00Z");
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setUTCDate(d.getUTCDate() + i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+// Weekly activity catch-up (TZ section 3.2, 10.08.2026): the daily 90-min
+// cap loses minutes for someone who trains hard 2-3x/week rather than a
+// little every day. On Sunday, compare the week's RAW (uncapped) activity
+// minutes against what daily entries already credited (each still capped
+// at 90 min/day) and pay out the difference, capped at 630 (=90×7) raw
+// minutes for the week. Only triggers on Sunday saves — a week with no
+// Sunday entry never gets its catch-up, an accepted limitation of this
+// manual, once-per-save client-only app (no background job to run it
+// retroactively). Always >= 0: the cap only ever trims, never inflates.
+function weeklyActivityTopUpDays(sundayDateStr) {
+  const monday = mondayOfWeek(sundayDateStr);
+  let rawMinutes = 0;
+  let creditedMinutes = 0;
+  for (const date of weekDatesFrom(monday)) {
+    const entry = state.ledger[date];
+    if (!entry) continue;
+    const minutes = Number(entry.activityMinutes) || 0;
+    rawMinutes += minutes;
+    creditedMinutes += Math.min(minutes, 90);
+  }
+  const weeklyEffective = Math.min(rawMinutes, 630);
+  const topUpMinutes = Math.max(0, weeklyEffective - creditedMinutes);
+  return ((topUpMinutes / 60) * 3) / 24;
+}
+
 function sortedLedgerDates() {
   return Object.keys(state.ledger).sort();
 }
@@ -666,13 +717,52 @@ const root = document.getElementById("app");
 
 function render() {
   if (!state.onboarding) {
-    renderOnboarding();
+    if (!state.onboardingWelcomeAccepted) {
+      renderWelcomeScreen();
+    } else {
+      renderOnboarding();
+    }
   } else {
     renderApp();
   }
 }
 
 /* ---- Onboarding ---- */
+
+// Pre-step-1 welcome/consent screen (TZ section 1, item 6, 11.08.2026).
+// Not one of the 6 form steps — no progress dots — a plain text screen
+// that covers three requirements in one place: welcome/question-count
+// framing, data-collection consent (TZ section 13's minimal notice for
+// this pilot), and the playful-number disclaimer (TZ section 5). Text is
+// the TZ's own draft, not paraphrased. "Начать" stays disabled until the
+// checkbox is checked — this is the only gate; nothing here is saved to
+// state.onboarding, only the acceptance flag.
+function renderWelcomeScreen() {
+  root.innerHTML = `
+    <div class="wrap">
+      <div class="onboarding-header">
+        <h1>Добро пожаловать в «Капитал здоровья»</h1>
+        <p>Пять обязательных вопросов, и ещё несколько — по желанию. Чем больше заполните, тем точнее будет результат.</p>
+      </div>
+      <p>Мы собираем эти данные, чтобы рассчитать Ваш персональный капитал здоровья. Сейчас всё хранится локально на Вашем устройстве и никуда не передаётся.</p>
+      <p>Это статистическая оценка на основе научных исследований — не медицинский диагноз и не прогноз лично для Вас.</p>
+      <div class="field">
+        <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> Я прочитал(а) и согласен(на)</label>
+      </div>
+      <button class="btn" id="welcome-start" style="width:100%" disabled>Начать →</button>
+    </div>
+  `;
+  const checkbox = document.getElementById("welcome-consent");
+  const startBtn = document.getElementById("welcome-start");
+  checkbox.addEventListener("change", () => {
+    startBtn.disabled = !checkbox.checked;
+  });
+  startBtn.addEventListener("click", () => {
+    state.onboardingWelcomeAccepted = true;
+    saveState();
+    render();
+  });
+}
 
 // TZ section 1, 10.08.2026 restructure: 6 input steps (was 7) — "body"
 // and "activity" merged into one step, "nutrition" is new, "smoking" and
@@ -703,8 +793,7 @@ function renderOnboarding() {
   if (step === "basics") {
     body = `
       <div class="onboarding-header">
-        <h1>Добро пожаловать</h1>
-        <p>Три обязательных вопроса.</p>
+        <h1>Основные данные</h1>
       </div>
       <div class="field">
         <label>Возраст ${reqMark()}</label>
@@ -1258,6 +1347,16 @@ function renderDashboard(screen) {
     const age = Number(state.onboarding.age);
     const deltaDays = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
     state.ledger[today] = { cigarettes, activityMinutes, deltaDays };
+    // Weekly catch-up (TZ section 3.2) only evaluates on Sunday saves —
+    // today's entry must already be in state.ledger (set above) so its
+    // own minutes count toward the week's raw sum.
+    if (new Date(today + "T00:00:00").getDay() === 0) {
+      const bonus = weeklyActivityTopUpDays(today);
+      if (bonus > 0) {
+        state.ledger[today].weeklyBonusDays = bonus;
+        state.ledger[today].deltaDays += bonus;
+      }
+    }
     saveState();
     renderDashboard(screen);
   });
@@ -1349,6 +1448,11 @@ function renderFeed() {
           const gain = Math.min((e.activityMinutes / 60) * 3, 4.5) / 24;
           items.push(
             `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Активность: ${e.activityMinutes} мин.</span><span class="amount positive">+${gain.toFixed(2)} дн.</span></li>`
+          );
+        }
+        if (e.weeklyBonusDays > 0) {
+          items.push(
+            `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Недельная доплата за спорт</span><span class="amount positive">+${e.weeklyBonusDays.toFixed(2)} дн.</span></li>`
           );
         }
         return items.join("");
