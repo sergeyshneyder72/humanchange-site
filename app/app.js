@@ -213,7 +213,7 @@ const KNOWLEDGE_BASE = [
     key: "smoking",
     name: "Курение",
     active: true,
-    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится Вашей личной «ватерлинией» — точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
+    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
     source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
     sourceKeys: ["ucl-smoking", "tsai-aging"],
   },
@@ -228,19 +228,17 @@ const KNOWLEDGE_BASE = [
   {
     key: "sleep",
     name: "Сон",
-    active: false,
-    note: "разово, при онбординге",
-    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском. У людей с высокой физической нагрузкой оптимальное окно немного смещается в сторону более долгого сна. Короткий сон учитывается в стартовом капитале через тот же механизм, что и активность (см. выше); долгий сон (>8ч) — через отдельные годы жизни по тому же когортному исследованию, что и курение/алкоголь/активность. Ежедневно сон пока не отслеживается.",
-    source: "Источники: метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников); Tsai et al., Aging (Albany NY), 2021 — долгий сон.",
+    active: true,
+    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском. Ежедневно: отклонение от окна 7–8ч даёт грубую дельту капитала, отдельно нормированную для короткого и для длинного сна (три ступени вниз от окна, две вверх) — приблизительная оценка, точная ежедневная методология для сна пока уточняется, в отличие от курения и спорта.",
+    source: "Источники: метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников); Tsai et al., Aging (Albany NY), 2021.",
     sourceKeys: ["cappuccio-sleep", "tsai-aging"],
   },
   {
     key: "alcohol",
     name: "Алкоголь",
-    active: false,
-    note: "разово, при онбординге",
-    body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует. Статус «регулярно пьёт» учитывается один раз при расчёте стартового капитала (годы жизни по тому же когортному исследованию, что и курение/активность/долгий сон). Ежедневно алкоголь пока не отслеживается.",
-    source: "Источники: обзоры WHO и Lancet (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021 — годы жизни у «регулярно пьющих».",
+    active: true,
+    body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует. Ежедневно: сам факт употребления сегодня (источник не даёт дозозависимых дневных данных) даёт грубую дельту капитала — приблизительная оценка, точная ежедневная методология для алкоголя пока уточняется, в отличие от курения и спорта.",
+    source: "Источники: обзоры WHO и Lancet (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021.",
     sourceKeys: ["tsai-aging"],
   },
   {
@@ -331,8 +329,6 @@ const READING_LIST = [
 // Fund voting threshold. Vote counts here are EXAMPLE data — real
 // aggregation is manual, done by the team (TZ section 10), not live.
 const UPCOMING_FACTORS = [
-  { name: "Сон", status: "team", note: "в разработке" },
-  { name: "Алкоголь", status: "team", note: "в разработке" },
   { name: "Питание", status: "team", note: "в разработке" },
   { name: "Стресс", status: "team", note: "в разработке" },
 ];
@@ -387,12 +383,9 @@ function pickPhrase(pool, seed) {
 // blame the user for.
 function onboardingResultTier(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
-  const activityLevel = activityLevelFromOnboarding(ob);
-  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
-  const shortSleepPct = sleepShortAdjustmentPct(sleepHours, activityLevel);
   const illnessPct = illnessAdjustmentPct(ob);
   const yearsLostPct = baselineYears > 0 ? tsaiYearsLostTotal(ob) / baselineYears : 0;
-  const combinedPct = (1 + shortSleepPct) * (1 + illnessPct) * (1 - yearsLostPct) - 1;
+  const combinedPct = (1 + illnessPct) * (1 - yearsLostPct) - 1;
   if (combinedPct >= 0) return "top";
   if (combinedPct >= -0.1) return "good";
   if (combinedPct >= -0.25) return "medium";
@@ -511,74 +504,24 @@ function interpolateLifeExpectancyYears(gender, age) {
   return source[ages[ages.length - 1]];
 }
 
-// Only activity clearing the "talk test" bar counts (TZ update): raises
-// heart rate to ~50% above resting (Cleveland Clinic definition of
-// moderate-or-above intensity) — can talk but not sing, or can't talk at
-// all. A slow park walk doesn't qualify; brisk walking, manual labor,
-// or a workout does. This is a self-reported range at onboarding (TZ
-// section 1 step 2, WHO thresholds), converted to its bucket midpoint —
-// see ACTIVITY_RANGE_OPTIONS.
-function activityMinutesPerWeekFromOnboarding(ob) {
-  return rangeLookup(ACTIVITY_RANGE_OPTIONS, ob.activityRange, "midpointMinutes") || 0;
-}
-
-// TODO(hardening, flagged 11.08.2026, not reachable via the current UI):
-// unlike the "provided" guards added this session for the actual
-// starting-capital penalty calculations, this function doesn't validate
-// activityRange against ACTIVITY_RANGE_OPTIONS — an unrecognized value
-// silently reads as "low" (0 minutes/week via the `|| 0` fallback in
-// activityMinutesPerWeekFromOnboarding), which shifts sleepWindow()'s
-// bounds and so the short-sleep percentage in sleepShortAdjustmentPct.
-// Confirmed a real (non-worst-case, just inaccurate) discrepancy in
-// testing. Not reachable normally: activityRange is a required field
-// validated at onboarding step 2. Revisit alongside the age TODO above
-// if an admin panel or other non-UI write path appears (TZ section 16).
-function activityLevelFromOnboarding(ob) {
-  const minutesPerWeek = activityMinutesPerWeekFromOnboarding(ob);
-  if (minutesPerWeek < 90) return "low";
-  if (minutesPerWeek <= 300) return "moderate";
-  return "high";
-}
-
-// U-shaped sleep risk curve (TZ section 1): minimum risk at 7-8h, window
-// shifts right for higher habitual activity level.
-function sleepWindow(activityLevel) {
-  if (activityLevel === "high") return [7.5, 9];
-  if (activityLevel === "moderate") return [7, 8.5];
-  return [7, 8];
-}
-
-// Short-sleep side only (Cappuccio meta-analysis, unchanged from before).
-// The long-sleep (>8h) side used to live here too as a symmetric percentage
-// penalty; it's now a binary years-lost factor sourced from Tsai et al.
-// 2021, see tsaiYearsLostTotal() below — kept separate per that source
-// (see Source_Chiang_Tsai_2021.md), not merged into one curve.
-function sleepShortAdjustmentPct(sleepHours, activityLevel) {
-  if (!sleepHours) return 0;
-  const [lo] = sleepWindow(activityLevel);
-  if (sleepHours < lo) {
-    const pct = -0.12 * ((lo - sleepHours) / lo);
-    return Math.max(pct, -0.3);
-  }
-  return 0;
-}
-
 function illnessAdjustmentPct(ob) {
   return ob.illnessHas === true ? -0.15 : 0;
 }
 
-// TODO(methodology, flagged 11.08.2026): illnessAdjustmentPct and
-// sleepShortAdjustmentPct (short-sleep side) still apply a literature
-// relative-risk figure as a direct percentage of remaining life-expectancy
-// years, which isn't how RR actually converts into a life-expectancy
-// change (needs actuarial recalculation via survival curves, not linear
-// multiplication). Smoking, alcohol, activity, and long-sleep no longer
+// TODO(methodology, flagged 11.08.2026): illnessAdjustmentPct still
+// applies a literature relative-risk figure as a direct percentage of
+// remaining life-expectancy years, which isn't how RR actually converts
+// into a life-expectancy change (needs actuarial recalculation via
+// survival curves, not linear multiplication). Smoking and activity don't
 // have this problem — see tsaiYearsLostTotal() below, sourced from real
 // years-of-life-lost data (Tsai et al. 2021) instead of a converted RR.
-// Region (regionAdjustmentPct) was never the same issue — it scales by an
-// actual life-expectancy-YEARS ratio between countries. Do not invent the
-// illness/short-sleep conversion yourself — no sourced years-lost figure
-// for either yet.
+// Sleep and alcohol don't either, but for a different reason: they moved
+// to the daily bucket-coefficient/binary mechanic (TZ section 3.3, see
+// dailySleepDelta/dailyAlcoholDelta below) — its own disclosed rough
+// approximation, not this issue. Region (regionAdjustmentPct) was never
+// the same issue — it scales by an actual life-expectancy-YEARS ratio
+// between countries. Do not invent the illness conversion yourself — no
+// sourced years-lost figure for it yet.
 
 // Binary years-of-life-lost factors from Tsai et al. 2021 ("Converting
 // health risks into loss of life years", Aging (Albany NY) 13(17):21513-
@@ -625,46 +568,40 @@ function isRegularDrinkerApprox(ob) {
   );
 }
 
+// Smoking and activity are the only factors left here (TZ section 3.3,
+// 11.08.2026): sleep and alcohol's one-time onboarding contribution was
+// REMOVED, not kept alongside their new daily mechanic — replaces,
+// doesn't add, same principle as smoking's onboarding value being a pure
+// reference point rather than a separate standing penalty. See
+// dailySleepDelta/dailyAlcoholDelta below for where they live now.
 function tsaiYearsLostTotal(ob) {
   const smokingYears = Number(ob.cigarettesPerDay) > 0 ? yearsLostForGender("smoking", ob.gender) : 0;
-  const alcoholYears = isRegularDrinkerApprox(ob) ? yearsLostForGender("alcohol", ob.gender) : 0;
   // Approximation, NOT from the source: the paper measures inactivity in
   // MET-hours/week (<3.75 vs a >=7.5 reference); we only collect WHO
   // minutes/week buckets. "lt150" is used as a working proxy for the
   // paper's inactivity threshold, not a verified unit conversion.
   const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
   const activityYears = activityProvided && ob.activityRange === "lt150" ? yearsLostForGender("activity", ob.gender) : 0;
-  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
-  const longSleepYears = sleepHours !== undefined && sleepHours > 8 ? yearsLostForGender("longSleep", ob.gender) : 0;
-  return smokingYears + alcoholYears + activityYears + longSleepYears;
+  return smokingYears + activityYears;
 }
 
 // One-time starting capital, computed at the end of onboarding (TZ
 // section 1-2, updated 11.08.2026 per Source_Chiang_Tsai_2021.md).
-// Years-lost factors (smoking, alcohol, activity, long sleep) are
-// subtracted directly from baseline years first — that's the Chiang/Tsai
-// formula shape (Капитал(лет) = Базовая − Σyears_lost). Region, illness,
-// and short-sleep stay on the older percentage-multiplier mechanism
-// (still on the methodology TODO above) and are applied to what's left
-// after the years-lost subtraction.
+// Years-lost factors (smoking, activity) are subtracted directly from
+// baseline years first — that's the Chiang/Tsai formula shape
+// (Капитал(лет) = Базовая − Σyears_lost). Region and illness stay on the
+// older percentage-multiplier mechanism (still on the methodology TODO
+// above) and are applied to what's left after the years-lost subtraction.
 function computeStartingCapitalDays(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
 
   const regionPct = regionAdjustmentPct(ob.region);
   const illnessPct = illnessAdjustmentPct(ob);
-  const activityLevel = activityLevelFromOnboarding(ob);
-  const sleepHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, ob.sleepHoursRange, "midpointHours");
-  const shortSleepPct = sleepShortAdjustmentPct(sleepHours, activityLevel);
 
   const yearsLost = tsaiYearsLostTotal(ob);
   const yearsAfterLost = baselineYears - yearsLost;
 
-  const days =
-    yearsAfterLost *
-    365.25 *
-    (1 + regionPct) *
-    (1 + illnessPct) *
-    (1 + shortSleepPct);
+  const days = yearsAfterLost * 365.25 * (1 + regionPct) * (1 + illnessPct);
 
   // Defensive floor: at older ages (this app's stated audience is 30-60,
   // TZ section 6) combined years-lost can exceed the remaining baseline
@@ -687,6 +624,50 @@ function dailyDeltaDays(cigarettesToday, activityMinutesToday, age, smokingWater
   const smokingTerm = (waterline - today) * 0.014 * ageMultiplier(age);
   const activityGain = Math.min((Number(activityMinutesToday) || 0) / 60 * 3, 4.5) / 24;
   return activityGain + smokingTerm;
+}
+
+// Sleep/alcohol daily deviation coefficients (TZ section 3.3, 11.08.2026,
+// explicit numbers from product): bucket lookup, not hours directly —
+// normalized SEPARATELY on each side of the 7-8h optimum (3 buckets
+// below it, 2 above), not one symmetric curve.
+const SLEEP_DAILY_COEFFICIENT = {
+  lt5: 1.0,
+  "5to6": 0.67,
+  "6to7": 0.33,
+  "7to8": 0,
+  "8to9": 0.5,
+  gt9: 1.0,
+};
+
+// Sleep and alcohol moved from a one-time onboarding contribution to a
+// daily active factor (TZ section 3.3, 11.08.2026) — replacing that
+// one-time contribution entirely (removed from tsaiYearsLostTotal above),
+// not stacking with it. Explicitly a ROUGH approximation per the spec:
+// divides the Tsai one-time years-lost anchor by 365 and scales by
+// today's bucket coefficient — that anchor was never validated as a
+// daily rate, this is a disclosed placeholder, not the same evidence
+// grade as smoking/sport's per-cigarette/per-minute figures. Must ship
+// with a visible UI warning, not buried in fine print — see the log-card
+// hint in renderDashboard.
+function dailySleepDelta(sleepHoursRangeToday, gender) {
+  const coeff = SLEEP_DAILY_COEFFICIENT[sleepHoursRangeToday];
+  if (!coeff) return 0;
+  return -((yearsLostForGender("longSleep", gender) / 365) * coeff);
+}
+
+// Binary, not dose-scaled (TZ section 3.3): the Tsai source has no
+// dose-response data for alcohol, so "drank today" (any of the 3 fields
+// above its "0" bucket, same check as isRegularDrinkerApprox) applies the
+// full daily-equivalent anchor; not drinking is neutral, no deposit.
+// Same rough-approximation caveat as dailySleepDelta above.
+function dailyAlcoholDelta(spiritsToday, wineToday, beerToday, gender) {
+  const drankToday = isRegularDrinkerApprox({
+    alcoholSpirits: spiritsToday,
+    alcoholWine: wineToday,
+    alcoholBeer: beerToday,
+  });
+  if (!drankToday) return 0;
+  return -(yearsLostForGender("alcohol", gender) / 365);
 }
 
 // Monday of the ISO week containing dateStr ('YYYY-MM-DD'). Parses and
@@ -843,6 +824,14 @@ function reqMark() {
   return `<span class="required-mark">*</span>`;
 }
 
+// TZ section 1, item 8 (11.08.2026): long field explanations stay
+// collapsed behind an "ⓘ" by default, expand on tap — screen density fix
+// so "Далее" fits without scrolling. Native <details>/<summary> gives
+// expand/collapse for free, no JS wiring needed.
+function collapsibleHint(text) {
+  return `<details class="hint-details"><summary>ⓘ</summary><div class="hint">${text}</div></details>`;
+}
+
 function selectOptionsHtml(options, selectedValue) {
   return options
     .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
@@ -897,7 +886,7 @@ function renderOnboarding() {
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(ACTIVITY_RANGE_OPTIONS, draft.activityRange)}
         </select>
-        <div class="hint">Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.</div>
+        ${collapsibleHint("Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.")}
       </div>
       <div class="field" id="f_activityGoalBlock" style="display:${draft.activityRange === "lt150" ? "block" : "none"}">
         <label>Хотите начать регулярно двигаться? ${reqMark()}</label>
@@ -1334,7 +1323,6 @@ function renderDashboard(screen) {
       <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
       <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
     </div>
-    <div class="starting-ref">Стартовый капитал из онбординга: ${state.startingCapitalDays?.toLocaleString("ru-RU")} дней (справочно, не пересчитывается)</div>
     <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз.</div>
 
     <div class="period-switch">
@@ -1351,8 +1339,8 @@ function renderDashboard(screen) {
     <div class="chart-card">${renderChartSvg(series, period)}</div>
 
     <div class="next-step-card">
-      <div class="kicker">Следующий шаг</div>
-      <div>${nextStepRecommendation(todayEntry)}</div>
+      <div class="kicker">Итог дня</div>
+      <div>${todaySummary(todayEntry)}</div>
     </div>
 
     <div class="log-card">
@@ -1361,7 +1349,7 @@ function renderDashboard(screen) {
         <div class="field">
           <label>Сигарет сегодня</label>
           <input type="number" min="0" id="log_cigarettes" value="${escapeHtml(todayEntry.cigarettes ?? "")}">
-          <div class="hint">Ваша ватерлиния: ${state.smokingWaterline ?? 0} шт.</div>
+          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт.</div>
         </div>
         <div class="field">
           <label>Минут активности сегодня</label>
@@ -1369,6 +1357,37 @@ function renderDashboard(screen) {
           <div class="hint">Считается активность, где можно говорить, но не петь (или сложнее) — не медленная прогулка.</div>
         </div>
       </div>
+      <div class="field">
+        <label>Сон прошлой ночью</label>
+        <select id="log_sleep">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, todayEntry.sleepHoursRange)}
+        </select>
+      </div>
+      <div class="log-row">
+        <div class="field">
+          <label>Крепкий алкоголь сегодня</label>
+          <select id="log_alcohol_spirits">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, todayEntry.alcoholSpirits)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Вино сегодня</label>
+          <select id="log_alcohol_wine">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, todayEntry.alcoholWine)}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Пиво/слабоалкогольное сегодня</label>
+        <select id="log_alcohol_beer">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, todayEntry.alcoholBeer)}
+        </select>
+      </div>
+      <div class="methodology-warning">Приблизительная оценка — точная ежедневная методология для сна и алкоголя пока уточняется, в отличие от курения и спорта, где методология уже проверена.</div>
       <button class="btn" id="log-save" style="width:100%">Сохранить</button>
     </div>
 
@@ -1379,19 +1398,11 @@ function renderDashboard(screen) {
     }
 
     <div class="factor-grid">
-      <div class="factor-card">
-        <div class="name">Курение</div>
-        <div class="hint">Активный фактор</div>
-      </div>
-      <div class="factor-card">
-        <div class="name">Спорт</div>
-        <div class="hint">Активный фактор</div>
-      </div>
-      ${["Сон", "Алкоголь"]
+      ${["Курение", "Спорт", "Сон", "Алкоголь"]
         .map(
           (n) => `<div class="factor-card">
             <div class="name">${n}</div>
-            <div class="hint">Учитывается один раз, при онбординге</div>
+            <div class="hint">Активный фактор</div>
           </div>`
         )
         .join("")}
@@ -1424,9 +1435,27 @@ function renderDashboard(screen) {
   document.getElementById("log-save").addEventListener("click", () => {
     const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
     const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
+    const sleepHoursRange = document.getElementById("log_sleep").value;
+    const alcoholSpirits = document.getElementById("log_alcohol_spirits").value;
+    const alcoholWine = document.getElementById("log_alcohol_wine").value;
+    const alcoholBeer = document.getElementById("log_alcohol_beer").value;
     const age = Number(state.onboarding.age);
-    const deltaDays = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
-    state.ledger[today] = { cigarettes, activityMinutes, deltaDays };
+    const gender = state.onboarding.gender;
+    const baseDelta = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
+    const sleepDelta = dailySleepDelta(sleepHoursRange, gender);
+    const alcoholDelta = dailyAlcoholDelta(alcoholSpirits, alcoholWine, alcoholBeer, gender);
+    const deltaDays = baseDelta + sleepDelta + alcoholDelta;
+    state.ledger[today] = {
+      cigarettes,
+      activityMinutes,
+      sleepHoursRange,
+      alcoholSpirits,
+      alcoholWine,
+      alcoholBeer,
+      deltaDays,
+      sleepDelta,
+      alcoholDelta,
+    };
     // Weekly catch-up (TZ section 3.2) only evaluates on Sunday saves —
     // today's entry must already be in state.ledger (set above) so its
     // own minutes count toward the week's raw sum.
@@ -1447,20 +1476,29 @@ function formatDays(value) {
   return `${sign}${Math.abs(value).toFixed(2)} дн.`;
 }
 
-function nextStepRecommendation(todayEntry) {
+// "Итог дня" (renamed from "Следующий шаг", TZ section 8, 11.08.2026):
+// this was always a reaction to today's already-entered data, not a
+// forward-looking recommendation — the old name didn't match the
+// content. Smoking branches now react to deviation from the waterline
+// (never named to the user, see dailyDeltaDays) instead of an absolute
+// count: below it is praised, above it gets a no-blame note, and AT it
+// — including 0=0 for non-smokers — smoking isn't mentioned at all, per
+// TZ's explicit fix for the old "курение на обычном уровне" phrasing
+// that read oddly for someone who's never smoked.
+function todaySummary(todayEntry) {
   const activity = Number(todayEntry.activityMinutes) || 0;
   const cigarettes = Number(todayEntry.cigarettes) || 0;
   const waterline = Number(state.smokingWaterline) || 0;
   if (activity < 30) {
     return "Добавьте 30 минут активности сегодня (в темпе, когда можно говорить, но не петь) — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
   }
-  if (cigarettes > waterline) {
-    return `Сегодня выше Вашей ватерлинии (${waterline} шт.) — попробуйте вернуться к ней или ниже, это уже плюс к капиталу.`;
-  }
   if (cigarettes < waterline) {
-    return "Вы уже ниже своей обычной нормы по курению — это доход в капитал, продолжайте в том же духе.";
+    return "Меньше обычного — засчитано.";
   }
-  return "Хороший день — активность отмечена, курение на обычном уровне. Так держать.";
+  if (cigarettes > waterline) {
+    return "Больше обычного — бывает, завтра продолжим.";
+  }
+  return "Активность отмечена — так держать.";
 }
 
 function periodCutoffDate(period) {
@@ -1521,7 +1559,7 @@ function renderFeed() {
           const sign = smokingTerm > 0 ? "positive" : "negative";
           const arrow = smokingTerm > 0 ? "+" : "−";
           items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon smoke">К</span>Курение: ${e.cigarettes} шт. (ватерлиния ${waterline})</span><span class="amount ${sign}">${arrow}${Math.abs(smokingTerm).toFixed(2)} дн.</span></li>`
+            `<li class="feed-item"><span class="badge"><span class="icon smoke">К</span>Курение: ${e.cigarettes} шт.</span><span class="amount ${sign}">${arrow}${Math.abs(smokingTerm).toFixed(2)} дн.</span></li>`
           );
         }
         if (e.activityMinutes > 0) {
@@ -1533,6 +1571,17 @@ function renderFeed() {
         if (e.weeklyBonusDays > 0) {
           items.push(
             `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Недельная доплата за спорт</span><span class="amount positive">+${e.weeklyBonusDays.toFixed(2)} дн.</span></li>`
+          );
+        }
+        if (e.sleepDelta) {
+          const sleepLabel = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, e.sleepHoursRange, "label") || "";
+          items.push(
+            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Сон: ${escapeHtml(sleepLabel)}</span><span class="amount negative">−${Math.abs(e.sleepDelta).toFixed(2)} дн.</span></li>`
+          );
+        }
+        if (e.alcoholDelta) {
+          items.push(
+            `<li class="feed-item"><span class="badge"><span class="icon alcohol">А</span>Алкоголь сегодня</span><span class="amount negative">−${Math.abs(e.alcoholDelta).toFixed(2)} дн.</span></li>`
           );
         }
         return items.join("");

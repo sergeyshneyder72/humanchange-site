@@ -92,6 +92,29 @@ button {
   margin-top: 4px;
 }
 
+.hint-details {
+  margin-top: 6px;
+}
+
+.hint-details summary {
+  cursor: pointer;
+  display: inline-block;
+  font-size: 15px;
+  color: var(--muted);
+  list-style: none;
+}
+
+.hint-details summary::-webkit-details-marker { display: none; }
+.hint-details summary::marker { content: ""; }
+
+.hint-details[open] summary {
+  margin-bottom: 2px;
+}
+
+.hint-details .hint {
+  margin-top: 0;
+}
+
 .radio-row {
   display: flex;
   gap: 16px;
@@ -320,6 +343,16 @@ button {
 
 .log-row .field { flex: 1; margin-bottom: 0; }
 
+.methodology-warning {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  margin: 4px 0 16px;
+}
+
 .next-step-card {
   background: var(--accent-soft);
   border-radius: var(--radius);
@@ -421,6 +454,8 @@ button {
 
 .icon.smoke { background: var(--danger); }
 .icon.sport { background: var(--accent); }
+.icon.sleep { background: var(--muted); }
+.icon.alcohol { background: var(--muted); }
 
 .feed-item .amount.positive { color: var(--accent); font-weight: 600; }
 .feed-item .amount.negative { color: var(--danger); font-weight: 600; }
