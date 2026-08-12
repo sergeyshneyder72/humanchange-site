@@ -1355,6 +1355,24 @@ function animateRevealNumber(target) {
   requestAnimationFrame(tick);
 }
 
+// Same "count up/down" pattern as animateRevealNumber's onboarding
+// reveal, applied to the dashboard capital number after a daily save
+// (12.08.2026 fix) so it visibly rolls from the old total to the new
+// one instead of jumping instantly.
+function animateCapitalValue(el, from, to, duration = 1200) {
+  if (!el) return;
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const current = from + (to - from) * eased;
+    el.textContent = formatDays(current);
+    el.className = `capital-value ${current >= 0 ? "positive" : "negative"}`;
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 /* ---- Main app shell ---- */
 
 function renderApp() {
@@ -1558,6 +1576,8 @@ function renderDashboard(screen) {
   });
 
   document.getElementById("log-save").addEventListener("click", () => {
+    const seriesBefore = cumulativeSeries();
+    const oldCapitalValue = seriesBefore.length ? seriesBefore[seriesBefore.length - 1].value : 0;
     const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
     const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
     const sleepHoursRange = document.getElementById("log_sleep").value;
@@ -1598,6 +1618,9 @@ function renderDashboard(screen) {
     applyInactivityDecay(today);
     saveState();
     renderDashboard(screen);
+    const seriesAfter = cumulativeSeries();
+    const newCapitalValue = seriesAfter.length ? seriesAfter[seriesAfter.length - 1].value : 0;
+    animateCapitalValue(screen.querySelector(".capital-value"), oldCapitalValue, newCapitalValue);
   });
 }
 
@@ -1952,14 +1975,35 @@ function renderProfile(screen) {
 // see applyInactivityDecay/DECAY_TIERS) is NOT part of this per-day
 // column — by design it never touches the main capital, only the
 // separately-tracked sphere dividends pool — so it's rendered as its own
-// grouped section below the table instead, see decayChargeGroups below.
-function reportRowChargeDays(entry, age) {
+// grouped section below the table instead, see decayGroupsHtml below.
+//
+// Per-factor breakdown for one ledger day (12.08.2026: backs the tap-to-
+// expand detail under each report cell). Mirrors the same smoking/
+// activity/sleep/alcohol/weeklyBonus terms renderFeed() already computes
+// per day — kept as a separate function rather than refactoring
+// renderFeed to share it, so this doesn't risk the already-tested feed
+// rendering.
+function dailyFactorBreakdown(entry, age) {
   const waterline = Number(state.smokingWaterline) || 0;
   const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014 * ageMultiplier(age);
-  const smokingCharge = smokingTerm < 0 ? smokingTerm : 0;
-  const sleepCharge = entry.sleepDelta ? Math.min(entry.sleepDelta, 0) : 0;
-  const alcoholCharge = entry.alcoholDelta ? Math.min(entry.alcoholDelta, 0) : 0;
-  return smokingCharge + sleepCharge + alcoholCharge;
+  const items = [];
+  if (smokingTerm) items.push({ label: "Курение", amount: smokingTerm });
+  if (Number(entry.activityMinutes) > 0) {
+    items.push({ label: "Активность", amount: Math.min((Number(entry.activityMinutes) / 60) * 3, 4.5) / 24 });
+  }
+  if (entry.weeklyBonusDays) items.push({ label: "Недельная доплата за спорт", amount: entry.weeklyBonusDays });
+  if (entry.sleepDelta) items.push({ label: "Сон", amount: entry.sleepDelta });
+  if (entry.alcoholDelta) items.push({ label: "Алкоголь", amount: entry.alcoholDelta });
+  return items;
+}
+
+// Tappable number cell (TZ, 12.08.2026): the number itself is the
+// <summary> of a <details> block — tapping it expands the per-factor
+// breakdown underneath, same interaction in all three report columns.
+function reportClickableCell(amount, cssClass, items) {
+  if (!amount || items.length === 0) return `<td class="${cssClass}">—</td>`;
+  const detail = items.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
+  return `<td class="${cssClass}"><details class="report-cell"><summary>${formatDays(amount)}</summary>${detail}</details></td>`;
 }
 
 function renderReport(screen) {
@@ -1979,18 +2023,20 @@ function renderReport(screen) {
       const e = state.ledger[date];
       const savings = e.deltaDays || 0;
       const dividends = e.weeklyBonusDays || 0;
-      const charges = reportRowChargeDays(e, age);
+      const breakdown = dailyFactorBreakdown(e, age);
+      const chargeItems = breakdown.filter((i) => i.amount < 0);
+      const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
       totalSavings += savings;
       totalDividends += dividends;
       totalCharges += charges;
-      const dividendCell = dividends
-        ? `${formatDays(dividends)} ${collapsibleHint(`Недельная доплата за спорт: неделя ${escapeHtml(mondayOfWeek(date))}–${escapeHtml(date)}, перенос минут активности сверх дневного лимита 90 мин.`)}`
-        : "—";
+      const dividendItems = dividends
+        ? [{ label: `Недельная доплата за спорт (неделя ${mondayOfWeek(date)}–${date})`, amount: dividends }]
+        : [];
       return `<tr>
         <td>${escapeHtml(date)}</td>
-        <td class="${savings >= 0 ? "amount positive" : "amount negative"}">${formatDays(savings)}</td>
-        <td>${dividendCell}</td>
-        <td class="amount negative">${charges ? formatDays(charges) : "—"}</td>
+        ${reportClickableCell(savings, savings >= 0 ? "amount positive" : "amount negative", breakdown)}
+        ${reportClickableCell(dividends, "amount positive", dividendItems)}
+        ${reportClickableCell(charges, "amount negative", chargeItems)}
       </tr>`;
     })
     .join("");

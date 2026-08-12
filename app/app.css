@@ -231,6 +231,7 @@ button {
 .top-bar {
   position: sticky;
   top: 0;
+  height: 67px;
   background: var(--bg);
   display: flex;
   align-items: stretch;
@@ -273,6 +274,10 @@ button {
 .capital-header {
   text-align: center;
   padding: 28px 0 8px;
+  position: sticky;
+  top: 67px;
+  background: var(--bg);
+  z-index: 5;
 }
 
 .capital-header .capital-value {
@@ -550,12 +555,49 @@ button {
   background: var(--surface);
 }
 
+/* Frozen "Дата" column (TZ, 12.08.2026 mobile fix): the table scrolls
+   horizontally inside its .report-table-scroll wrapper, but the date
+   stays pinned on the left so a row is still identifiable while
+   "Списания" etc. scroll into view. Each row type needs its own
+   sticky-cell background (matching that row's own background) or
+   scrolling content would show through underneath it. */
+.report-table th:first-child,
+.report-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg);
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.report-table thead th:first-child {
+  z-index: 2;
+}
+
+.report-table .report-total td:first-child {
+  background: var(--surface);
+}
+
 .report-table .amount.positive { color: var(--accent); }
 .report-table .amount.negative { color: var(--danger); }
 
-.report-table .hint-details {
-  display: inline-block;
-  margin-left: 2px;
+.report-cell summary {
+  cursor: pointer;
+  list-style: none;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.report-cell summary::-webkit-details-marker { display: none; }
+.report-cell summary::marker { content: ""; }
+
+.report-cell[open] {
+  white-space: normal;
+}
+
+.report-cell .decay-detail-row {
+  white-space: nowrap;
+  padding: 3px 0;
 }
 
 .decay-group {
