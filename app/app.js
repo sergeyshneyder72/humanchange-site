@@ -215,6 +215,7 @@ const KNOWLEDGE_BASE = [
     active: true,
     body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится Вашей личной «ватерлинией» — точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
     source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
+    sourceKeys: ["ucl-smoking", "tsai-aging"],
   },
   {
     key: "sport",
@@ -222,27 +223,32 @@ const KNOWLEDGE_BASE = [
     active: true,
     body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми — с возрастом этот разрыв увеличивается, поэтому в стартовом расчёте он учитывается сильнее у пользователей старшего возраста. Считается только активность, где пульс поднимается минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
     source: "Источники: D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
+    sourceKeys: ["lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
   },
   {
     key: "sleep",
     name: "Сон",
     active: false,
-    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском. У людей с высокой физической нагрузкой оптимальное окно немного смещается в сторону более долгого сна.",
-    source: "Источник: метаанализ Cappuccio и соавт., ~1.3–1.5 млн участников.",
+    note: "разово, при онбординге",
+    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском. У людей с высокой физической нагрузкой оптимальное окно немного смещается в сторону более долгого сна. Короткий сон учитывается в стартовом капитале через тот же механизм, что и активность (см. выше); долгий сон (>8ч) — через отдельные годы жизни по тому же когортному исследованию, что и курение/алкоголь/активность. Ежедневно сон пока не отслеживается.",
+    source: "Источники: метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников); Tsai et al., Aging (Albany NY), 2021 — долгий сон.",
+    sourceKeys: ["cappuccio-sleep", "tsai-aging"],
   },
   {
     key: "alcohol",
     name: "Алкоголь",
     active: false,
-    body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует.",
-    source: "Источник: обзоры WHO и Lancet (Global Burden of Disease, 2018).",
+    note: "разово, при онбординге",
+    body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует. Статус «регулярно пьёт» учитывается один раз при расчёте стартового капитала (годы жизни по тому же когортному исследованию, что и курение/активность/долгий сон). Ежедневно алкоголь пока не отслеживается.",
+    source: "Источники: обзоры WHO и Lancet (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021 — годы жизни у «регулярно пьющих».",
+    sourceKeys: ["tsai-aging"],
   },
   {
     key: "nutrition",
     name: "Питание",
     active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора питания в капитал здоровья.",
-    source: "Скоро.",
+    body: "Раздел в разработке — появится вместе с добавлением фактора питания в капитал здоровья. Отдельно, только как культурный ориентир (не влияет на расчёт капитала): использование БАДов — массовая, нормализованная практика, не маргинальная — например, в Японии пищевые добавки регулярно принимают около 60% здоровых взрослых, 55–70% взрослых пациентов и 32% студентов, по национальным опросам.",
+    source: "Источник: национальные опросы по Японии.",
   },
   {
     key: "stress",
@@ -252,6 +258,64 @@ const KNOWLEDGE_BASE = [
     source: "Скоро.",
   },
 ];
+
+// Canonical source list (TZ section 9, 11.08.2026: "обязательная, отдельно
+// видимая страница/подраздел Базы знаний... каждый фактор должен вести на
+// соответствующий источник"). Implemented as a subsection of the existing
+// Knowledge Base screen (TZ explicitly allows "страница/подраздел" — a
+// subsection satisfies that), with direct links from this list AND from
+// each KNOWLEDGE_BASE card's sourceKeys.
+const SOURCES = [
+  {
+    key: "ucl-smoking",
+    label: "Курение (20 мин/сигарету)",
+    citation: "Jackson S. et al., UCL, редакционная статья в Addiction (2024/2025)",
+    url: "https://www.rcp.ac.uk/news-and-media/news-and-opinion/rcp-responds-to-ucl-research-showing-a-single-cigarette-can-take-20-minutes-off-life-expectancy/",
+  },
+  {
+    key: "lee-lancet",
+    label: "Физическая активность и продолжительность жизни",
+    citation: "Lee I-M. et al., The Lancet (2012), «Effect of physical inactivity on major non-communicable diseases worldwide»",
+    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3645500/",
+  },
+  {
+    key: "spiegelhalter-bmj",
+    label: "Microlife — концепция и методология",
+    citation: "Spiegelhalter D., BMJ (2012), «Using speed of ageing and 'microlives'»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/23247978/",
+  },
+  {
+    key: "cappuccio-sleep",
+    label: "Сон и смертность (метаанализ)",
+    citation: "Cappuccio F.P. et al., Sleep (2010); плюс dose-response метаанализ, ~1.5 млн участников (2016)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/20469800/",
+    url2: "https://www.nature.com/articles/srep21480",
+  },
+  {
+    key: "cleveland-clinic",
+    label: "Критерий умеренной физической активности (пульс)",
+    citation: "Cleveland Clinic, «What Does Moderate Exercise Mean, Anyway?»",
+    url: "https://health.clevelandclinic.org/what-does-moderate-exercise-mean-anyway",
+  },
+  {
+    key: "tsai-aging",
+    label: "Перевод hazard ratio в годы жизни (Chiang's life table method) + таблица по 30 факторам риска",
+    citation: "Tsai S.P. et al., Aging (2021), «Converting health risks into loss of life years»",
+    url: "https://www.aging-us.com/article/203491/text",
+  },
+];
+
+function sourceLinksHtml(keys) {
+  return keys
+    .map((k) => SOURCES.find((s) => s.key === k))
+    .filter(Boolean)
+    .map((s) => {
+      const links = [`<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`];
+      if (s.url2) links.push(`<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">доп. источник</a>`);
+      return links.join(" / ");
+    })
+    .join(", ");
+}
 
 const READING_LIST = [
   "UCL — Addiction (2024/2025): цена одной сигареты в минутах ожидаемой продолжительности жизни.",
@@ -283,6 +347,10 @@ const IDEA_CATEGORIES = [
   "Идея нового фактора",
   "Общая идея",
 ];
+
+// TZ section 12: separate from the Idea Fund — product suggestions go
+// there, technical problems and questions to the team go here.
+const CARE_CATEGORIES = ["Техническая проблема", "Вопрос к команде"];
 
 // "Фразы вовлечения" (TZ section 8, 10.08.2026) — base tone only, exactly
 // the example phrases given in the spec (not invented copy). Style
@@ -361,8 +429,10 @@ function defaultState() {
     createdAt: null,
     ledger: {}, // { 'YYYY-MM-DD': { cigarettes, activityMinutes } }
     ideas: [],
+    careRequests: [], // TZ section 12: technical problems / questions to the team, separate from Идея Fund
     nav: "dashboard",
     ideasTab: "new",
+    careTab: "new",
   };
 }
 
@@ -1202,6 +1272,7 @@ function renderApp() {
       <button data-nav="dashboard" class="${nav === "dashboard" ? "active" : ""}">Портфель</button>
       <button data-nav="knowledge" class="${nav === "knowledge" ? "active" : ""}">База знаний</button>
       <button data-nav="ideas" class="${nav === "ideas" ? "active" : ""}">Фонд идей</button>
+      <button data-nav="care" class="${nav === "care" ? "active" : ""}">Забота</button>
     </nav>
     <div class="wrap" id="screen"></div>
   `;
@@ -1217,6 +1288,7 @@ function renderApp() {
   if (nav === "dashboard") renderDashboard(screen);
   else if (nav === "knowledge") renderKnowledge(screen);
   else if (nav === "ideas") renderIdeas(screen);
+  else if (nav === "care") renderCare(screen);
 }
 
 /* ---- Dashboard ---- */
@@ -1315,7 +1387,15 @@ function renderDashboard(screen) {
         <div class="name">Спорт</div>
         <div class="hint">Активный фактор</div>
       </div>
-      ${["Сон", "Алкоголь", "Питание", "Стресс"]
+      ${["Сон", "Алкоголь"]
+        .map(
+          (n) => `<div class="factor-card">
+            <div class="name">${n}</div>
+            <div class="hint">Учитывается один раз, при онбординге</div>
+          </div>`
+        )
+        .join("")}
+      ${["Питание", "Стресс"]
         .map(
           (n) => `<div class="factor-card disabled">
             <div class="name">${n}</div>
@@ -1468,16 +1548,33 @@ function renderKnowledge(screen) {
     <h2>База знаний</h2>
     ${KNOWLEDGE_BASE.map(
       (item) => `
-      <div class="kb-card ${item.active ? "" : "disabled"}">
-        <div class="name">${item.name}${item.active ? "" : ' <span class="optional-badge">скоро</span>'}</div>
+      <div class="kb-card ${item.active || item.note ? "" : "disabled"}">
+        <div class="name">${item.name}${
+          item.active
+            ? ""
+            : item.note
+            ? ` <span class="optional-badge">${escapeHtml(item.note)}</span>`
+            : ' <span class="optional-badge">скоро</span>'
+        }</div>
         <div>${item.body}</div>
         <div class="source">${item.source}</div>
+        ${item.sourceKeys ? `<div class="source">${sourceLinksHtml(item.sourceKeys)}</div>` : ""}
       </div>`
     ).join("")}
 
     <h2>Что почитать</h2>
     <ul class="reading-list">
       ${READING_LIST.map((r) => `<li>${r}</li>`).join("")}
+    </ul>
+
+    <h2>Источники</h2>
+    <div class="note">Полный список научных источников, на которых основана модель — с прямыми ссылками. Пополняется по мере добавления новых факторов.</div>
+    <ul class="reading-list">
+      ${SOURCES.map(
+        (s) => `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a> — ${escapeHtml(s.citation)}${
+          s.url2 ? ` (<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">доп. ссылка</a>)` : ""
+        }</li>`
+      ).join("")}
     </ul>
 
     <h2>Что впереди</h2>
@@ -1549,6 +1646,77 @@ function renderIdeas(screen) {
       content.innerHTML = `<div class="empty-state">Вы ещё не отправляли идей.</div>`;
     } else {
       content.innerHTML = state.ideas
+        .slice()
+        .reverse()
+        .map(
+          (i) => `<div class="idea-item">
+            <span class="date">${escapeHtml(i.date)}</span>
+            <div class="cat">${escapeHtml(i.category)}</div>
+            <div>${escapeHtml(i.text)}</div>
+          </div>`
+        )
+        .join("");
+    }
+  }
+}
+
+/* ---- Служба заботы (TZ section 12) ---- */
+
+// Deliberately separate from the Idea Fund above: product suggestions go
+// through "Фонд идей" (п.11), technical problems and questions to the
+// team go here (п.12) — same local-only-storage pattern, own category
+// list, own history tab, not shared state with ideas.
+function renderCare(screen) {
+  const tab = state.careTab || "new";
+  screen.innerHTML = `
+    <h2>Служба заботы</h2>
+    <div class="section-tabs">
+      <button data-tab="new" class="${tab === "new" ? "active" : ""}">Новое обращение</button>
+      <button data-tab="mine" class="${tab === "mine" ? "active" : ""}">Ваши обращения</button>
+    </div>
+    <div id="care-content"></div>
+  `;
+  screen.querySelectorAll("[data-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.careTab = btn.dataset.tab;
+      saveState();
+      renderCare(screen);
+    });
+  });
+
+  const content = document.getElementById("care-content");
+  if (tab === "new") {
+    content.innerHTML = `
+      <div class="field">
+        <label>Категория</label>
+        <select id="care_category">
+          ${CARE_CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>Текст</label>
+        <textarea id="care_text" placeholder="Опишите проблему или вопрос..."></textarea>
+      </div>
+      <div class="hint" style="margin-bottom:16px;">Обращение видите только Вы и команда.</div>
+      <button class="btn" id="care-submit" style="width:100%">Отправить</button>
+    `;
+    document.getElementById("care-submit").addEventListener("click", () => {
+      const text = document.getElementById("care_text").value.trim();
+      if (!text) return;
+      const category = document.getElementById("care_category").value;
+      // TODO(backend): submit to a real endpoint instead of local-only storage,
+      // so the team can actually see and respond to submissions across users.
+      state.careRequests.push({ id: Date.now(), date: todayStr(), category, text });
+      saveState();
+      state.careTab = "mine";
+      saveState();
+      renderCare(screen);
+    });
+  } else {
+    if (state.careRequests.length === 0) {
+      content.innerHTML = `<div class="empty-state">Вы ещё не отправляли обращений.</div>`;
+    } else {
+      content.innerHTML = state.careRequests
         .slice()
         .reverse()
         .map(
