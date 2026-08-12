@@ -130,6 +130,18 @@ const RECOVERY_PRACTICES = [
   { key: "massage", label: "Массаж" },
 ];
 
+// TZ section 3.4, 11.08.2026: self-rated stress, collected at onboarding
+// and daily — data collection only, no formula (causality between
+// perceived stress and mortality is contested in the literature; a
+// formula is an explicit future task, not this one).
+const STRESS_LEVEL_OPTIONS = [
+  { value: "1", label: "1 — низкий" },
+  { value: "2", label: "2" },
+  { value: "3", label: "3 — средний" },
+  { value: "4", label: "4" },
+  { value: "5", label: "5 — высокий" },
+];
+
 // Nutrition step (TZ section 1 step 4) — all descriptive/collected for
 // future use, none feed the current formula (nutrition factor is
 // disabled, see KNOWLEDGE_BASE below).
@@ -426,6 +438,8 @@ function defaultState() {
     nav: "dashboard",
     ideasTab: "new",
     careTab: "new",
+    recalcMode: false, // true while re-running onboarding from the Profile screen's "official recalc" (TZ section 7, 11.08.2026)
+    decayCharges: [], // append-only inactivity-decay events against sphere dividends, see applyInactivityDecay
   };
 }
 
@@ -724,6 +738,79 @@ function sortedLedgerDates() {
   return Object.keys(state.ledger).sort();
 }
 
+// Inactivity-decay charge on sphere dividends (TZ section 7, 11.08.2026,
+// "Отчёт" — currently only sphere is "sport"). Design decision (12.08.2026,
+// answering the open fork on how this should be recorded): append-only,
+// one event per newly-crossed threshold, each holding the MARGINAL percentage
+// since the last threshold reached in the current unbroken inactivity run —
+// so a full 7→14→21→28-day run's events sum to exactly -50%, not -97%.
+// Explicitly NOT folded into deltaDays/the main capital ledger — per TZ,
+// this erodes the separately-tracked sphere dividends pool only, never the
+// main "Портфель"/"Личные накопления" total.
+const DECAY_TIERS = [
+  { days: 7, pct: 7 },
+  { days: 14, pct: 15 },
+  { days: 21, pct: 25 },
+  { days: 28, pct: 50 },
+];
+
+// Consecutive days up to and including uptoDateStr with no logged
+// activityMinutes > 0, counting back no further than state.createdAt.
+function daysSinceLastActivity(uptoDateStr) {
+  let count = 0;
+  let d = new Date(uptoDateStr + "T00:00:00Z");
+  const minDate = new Date((state.createdAt || uptoDateStr) + "T00:00:00Z");
+  while (d >= minDate) {
+    const ds = d.toISOString().slice(0, 10);
+    const entry = state.ledger[ds];
+    if (entry && Number(entry.activityMinutes) > 0) break;
+    count++;
+    d.setUTCDate(d.getUTCDate() - 1);
+  }
+  return count;
+}
+
+function sportDividendsLast30Days(uptoDateStr) {
+  const cutoff = new Date(uptoDateStr + "T00:00:00Z");
+  cutoff.setUTCDate(cutoff.getUTCDate() - 29);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  return Object.entries(state.ledger)
+    .filter(([date]) => date >= cutoffStr && date <= uptoDateStr)
+    .reduce((sum, [, e]) => sum + (e.weeklyBonusDays || 0), 0);
+}
+
+// Called on every daily log save (mirrors how the weekly top-up is only
+// evaluated at save time, not via a background job — same accepted
+// limitation as weeklyActivityTopUpDays above). Appends zero or more new
+// decayCharges rows for tiers newly crossed since the current streak began.
+function applyInactivityDecay(today) {
+  const streak = daysSinceLastActivity(today);
+  if (streak === 0) return;
+  const streakStart = new Date(today + "T00:00:00Z");
+  streakStart.setUTCDate(streakStart.getUTCDate() - (streak - 1));
+  const streakStartDate = streakStart.toISOString().slice(0, 10);
+
+  const chargedThisStreak = state.decayCharges.filter((c) => c.sphere === "sport" && c.streakStartDate === streakStartDate);
+  let highestChargedPct = chargedThisStreak.reduce((max, c) => Math.max(max, c.pct), 0);
+  const dividendsBase = sportDividendsLast30Days(today);
+
+  for (const tier of DECAY_TIERS) {
+    if (streak >= tier.days && tier.pct > highestChargedPct) {
+      const marginalPct = tier.pct - highestChargedPct;
+      state.decayCharges.push({
+        date: today,
+        sphere: "sport",
+        streakStartDate,
+        days: tier.days,
+        pct: tier.pct,
+        marginalPct,
+        amountDays: dividendsBase * (marginalPct / 100),
+      });
+      highestChargedPct = tier.pct;
+    }
+  }
+}
+
 function cumulativeSeries() {
   const dates = sortedLedgerDates();
   let running = 0;
@@ -767,7 +854,12 @@ function escapeHtml(value) {
 const root = document.getElementById("app");
 
 function render() {
-  if (!state.onboarding) {
+  if (state.recalcMode) {
+    // "Official recalc" (TZ section 7, 11.08.2026) re-runs the same 6-step
+    // wizard pre-filled with the current answers — welcome/consent is
+    // already accepted, so this bypasses it and goes straight to step 1.
+    renderOnboarding();
+  } else if (!state.onboarding) {
     if (!state.onboardingWelcomeAccepted) {
       renderWelcomeScreen();
     } else {
@@ -943,6 +1035,13 @@ function renderOnboarding() {
           <input type="text" id="f_recovery_otherText" placeholder="Что именно?" value="${escapeHtml(draft.recoveryPractices?.otherText ?? "")}">
         </div>
       </div>
+      <div class="field">
+        <label>Уровень стресса</label>
+        <select id="f_stressLevel">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, draft.stressLevel)}
+        </select>
+      </div>
     `;
   } else if (step === "nutrition") {
     body = `
@@ -1083,7 +1182,7 @@ function renderOnboarding() {
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
       </div>
       <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз. Число — игровой показатель для мотивации, не медицинская рекомендация. Если у Вас есть реальные проблемы со здоровьем — обратитесь к врачу.</div>
-      <button class="btn" id="finish-onboarding" style="width:100%">Перейти в приложение</button>
+      <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? "Сохранить пересчёт" : "Перейти в приложение"}</button>
     `;
   }
 
@@ -1105,12 +1204,15 @@ function renderOnboarding() {
   if (step === "reveal") {
     animateRevealNumber(revealDays);
     document.getElementById("finish-onboarding").addEventListener("click", () => {
+      const wasRecalc = state.recalcMode;
       state.onboarding = draft;
       state.startingCapitalDays = revealDays;
       state.smokingWaterline = Number(draft.cigarettesPerDay) || 0;
       state.createdAt = state.createdAt || todayStr();
       state.onboardingStep = null;
       state.onboardingDraft = null;
+      state.recalcMode = false;
+      if (wasRecalc) state.nav = "profile";
       saveState();
       render();
     });
@@ -1207,6 +1309,7 @@ function collectStepFields(step, draft) {
       other: !!document.getElementById("f_recovery_other")?.checked,
       otherText: val("f_recovery_otherText") || "",
     };
+    draft.stressLevel = val("f_stressLevel") || "";
   } else if (step === "nutrition") {
     draft.waterRange = val("f_waterRange") || "";
     draft.lastMealTimeRange = val("f_lastMealTimeRange") || "";
@@ -1257,12 +1360,16 @@ function animateRevealNumber(target) {
 function renderApp() {
   const nav = state.nav || "dashboard";
   root.innerHTML = `
-    <nav class="app-nav">
-      <button data-nav="dashboard" class="${nav === "dashboard" ? "active" : ""}">Портфель</button>
-      <button data-nav="knowledge" class="${nav === "knowledge" ? "active" : ""}">База знаний</button>
-      <button data-nav="ideas" class="${nav === "ideas" ? "active" : ""}">Фонд идей</button>
-      <button data-nav="care" class="${nav === "care" ? "active" : ""}">Забота</button>
-    </nav>
+    <div class="top-bar">
+      <nav class="app-nav">
+        <button data-nav="dashboard" class="${nav === "dashboard" ? "active" : ""}">Портфель</button>
+        <button data-nav="report" class="${nav === "report" ? "active" : ""}">Отчёт</button>
+        <button data-nav="knowledge" class="${nav === "knowledge" ? "active" : ""}">База знаний</button>
+        <button data-nav="ideas" class="${nav === "ideas" ? "active" : ""}">Фонд идей</button>
+        <button data-nav="care" class="${nav === "care" ? "active" : ""}">Забота</button>
+      </nav>
+      <button class="profile-icon" id="profile-btn" aria-label="Профиль" title="Профиль">👤</button>
+    </div>
     <div class="wrap" id="screen"></div>
   `;
   root.querySelectorAll("[data-nav]").forEach((btn) => {
@@ -1272,12 +1379,22 @@ function renderApp() {
       render();
     });
   });
+  // Profile icon (TZ section 7, 11.08.2026): deliberately not one of the
+  // tab buttons above — it never shows "active", tapping it just opens
+  // the profile screen on top of whatever tab was last selected.
+  document.getElementById("profile-btn").addEventListener("click", () => {
+    state.nav = "profile";
+    saveState();
+    render();
+  });
 
   const screen = document.getElementById("screen");
   if (nav === "dashboard") renderDashboard(screen);
+  else if (nav === "report") renderReport(screen);
   else if (nav === "knowledge") renderKnowledge(screen);
   else if (nav === "ideas") renderIdeas(screen);
   else if (nav === "care") renderCare(screen);
+  else if (nav === "profile") renderProfile(screen);
 }
 
 /* ---- Dashboard ---- */
@@ -1388,6 +1505,14 @@ function renderDashboard(screen) {
         </select>
       </div>
       <div class="methodology-warning">Приблизительная оценка — точная ежедневная методология для сна и алкоголя пока уточняется, в отличие от курения и спорта, где методология уже проверена.</div>
+      <div class="field">
+        <label>Уровень стресса сегодня</label>
+        <select id="log_stress">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, todayEntry.stressLevel)}
+        </select>
+        <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
+      </div>
       <button class="btn" id="log-save" style="width:100%">Сохранить</button>
     </div>
 
@@ -1439,6 +1564,7 @@ function renderDashboard(screen) {
     const alcoholSpirits = document.getElementById("log_alcohol_spirits").value;
     const alcoholWine = document.getElementById("log_alcohol_wine").value;
     const alcoholBeer = document.getElementById("log_alcohol_beer").value;
+    const stressLevel = document.getElementById("log_stress").value;
     const age = Number(state.onboarding.age);
     const gender = state.onboarding.gender;
     const baseDelta = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
@@ -1452,6 +1578,7 @@ function renderDashboard(screen) {
       alcoholSpirits,
       alcoholWine,
       alcoholBeer,
+      stressLevel,
       deltaDays,
       sleepDelta,
       alcoholDelta,
@@ -1466,6 +1593,9 @@ function renderDashboard(screen) {
         state.ledger[today].deltaDays += bonus;
       }
     }
+    // Inactivity-decay on sphere dividends (TZ section 7, "Отчёт") — does
+    // NOT touch deltaDays/the main capital, see applyInactivityDecay.
+    applyInactivityDecay(today);
     saveState();
     renderDashboard(screen);
   });
@@ -1778,6 +1908,152 @@ function renderCare(screen) {
         .join("");
     }
   }
+}
+
+/* ---- Profile ---- */
+
+// TZ section 7, 11.08.2026: the starting-capital number lives only here
+// now, not on the main dashboard. "Изменить ответы и пересчитать" is the
+// "official recalc" tool from TZ section 1's "two tools" split — the
+// scenario simulator (sandbox "what if", nothing saved) is the other
+// tool and is a separate, not-yet-built feature.
+function renderProfile(screen) {
+  screen.innerHTML = `
+    <h2>Профиль</h2>
+    <div class="reveal-number" style="padding: 24px 0;">
+      <div class="value" style="font-size:36px;">${(state.startingCapitalDays ?? 0).toLocaleString("ru-RU")}</div>
+      <div class="label">дней стартового капитала (из онбординга)</div>
+    </div>
+    <p class="note" style="margin-top:0;">Число не пересчитывается автоматически — только когда Вы сами обновите ответы анкеты. Имеет смысл делать это не чаще раза в месяц, по мере реальных изменений привычек.</p>
+    <button class="btn secondary" id="profile-recalc" style="width:100%">Изменить ответы и пересчитать</button>
+  `;
+  document.getElementById("profile-recalc").addEventListener("click", () => {
+    state.onboardingDraft = { ...state.onboarding };
+    state.onboardingStep = ONBOARDING_STEPS[0];
+    state.recalcMode = true;
+    saveState();
+    render();
+  });
+}
+
+/* ---- Report ---- */
+
+// TZ section 7, 11.08.2026: detailed date-by-date registry, three
+// columns. "Личные накопления" is the same net day total already used
+// for the main chart (deposits minus regular per-factor charges) — this
+// table doesn't recompute it, just breaks it down. "Дивиденды" surfaces
+// the periodic bonuses (currently only the weekly sport top-up) that are
+// already folded into that day's total. "Списания" isolates the
+// negative regular per-factor charges (smoking above baseline, sleep,
+// alcohol) for the same day.
+//
+// The inactivity-decay charge (TZ section 7, "списание в процентах от
+// суммы Дивидендов по сфере..., 7/14/21/28+ дней → -7/-15/-25/-50%",
+// see applyInactivityDecay/DECAY_TIERS) is NOT part of this per-day
+// column — by design it never touches the main capital, only the
+// separately-tracked sphere dividends pool — so it's rendered as its own
+// grouped section below the table instead, see decayChargeGroups below.
+function reportRowChargeDays(entry, age) {
+  const waterline = Number(state.smokingWaterline) || 0;
+  const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014 * ageMultiplier(age);
+  const smokingCharge = smokingTerm < 0 ? smokingTerm : 0;
+  const sleepCharge = entry.sleepDelta ? Math.min(entry.sleepDelta, 0) : 0;
+  const alcoholCharge = entry.alcoholDelta ? Math.min(entry.alcoholDelta, 0) : 0;
+  return smokingCharge + sleepCharge + alcoholCharge;
+}
+
+function renderReport(screen) {
+  const dates = sortedLedgerDates().reverse();
+  const age = Number(state.onboarding.age);
+
+  if (dates.length === 0) {
+    screen.innerHTML = `<h2>Отчёт</h2><div class="empty-state">Операций пока нет.</div>`;
+    return;
+  }
+
+  let totalSavings = 0;
+  let totalDividends = 0;
+  let totalCharges = 0;
+  const rows = dates
+    .map((date) => {
+      const e = state.ledger[date];
+      const savings = e.deltaDays || 0;
+      const dividends = e.weeklyBonusDays || 0;
+      const charges = reportRowChargeDays(e, age);
+      totalSavings += savings;
+      totalDividends += dividends;
+      totalCharges += charges;
+      const dividendCell = dividends
+        ? `${formatDays(dividends)} ${collapsibleHint(`Недельная доплата за спорт: неделя ${escapeHtml(mondayOfWeek(date))}–${escapeHtml(date)}, перенос минут активности сверх дневного лимита 90 мин.`)}`
+        : "—";
+      return `<tr>
+        <td>${escapeHtml(date)}</td>
+        <td class="${savings >= 0 ? "amount positive" : "amount negative"}">${formatDays(savings)}</td>
+        <td>${dividendCell}</td>
+        <td class="amount negative">${charges ? formatDays(charges) : "—"}</td>
+      </tr>`;
+    })
+    .join("");
+
+  // Group append-only decayCharges rows by streakStartDate (TZ section 7,
+  // design decision 12.08.2026): each group is one unbroken inactivity
+  // run, shown collapsed as its current total %, expandable to the
+  // individual dated marginal-charge rows underneath.
+  const decayGroups = {};
+  for (const c of state.decayCharges) {
+    (decayGroups[c.streakStartDate] ??= []).push(c);
+  }
+  const decayGroupsHtml = Object.entries(decayGroups)
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .map(([streakStartDate, events]) => {
+      const sorted = events.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+      const latest = sorted[sorted.length - 1];
+      const totalAmount = sorted.reduce((sum, c) => sum + c.amountDays, 0);
+      const detailRows = sorted
+        .map(
+          (c) =>
+            `<div class="decay-detail-row">${escapeHtml(c.date)}: ${c.days}+ дней бездействия, −${c.marginalPct}% (${formatDays(-c.amountDays)})</div>`
+        )
+        .join("");
+      return `<details class="decay-group">
+        <summary>Бездействие (спорт), с ${escapeHtml(streakStartDate)} — −${latest.pct}% (${formatDays(-totalAmount)})</summary>
+        <div class="decay-detail">${detailRows}</div>
+      </details>`;
+    })
+    .join("");
+
+  screen.innerHTML = `
+    <h2>Отчёт</h2>
+    <div class="note" style="margin-top:0;">Детальный реестр операций по дням.</div>
+    <div style="overflow-x:auto;">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Личные накопления</th>
+            <th>Дивиденды</th>
+            <th>Списания</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="report-total">
+            <td>Итого</td>
+            <td class="${totalSavings >= 0 ? "amount positive" : "amount negative"}">${formatDays(totalSavings)}</td>
+            <td class="amount positive">${totalDividends ? formatDays(totalDividends) : "—"}</td>
+            <td class="amount negative">${totalCharges ? formatDays(totalCharges) : "—"}</td>
+          </tr>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    ${
+      decayGroupsHtml
+        ? `<h3>Списания за бездействие (Дивиденды по спорту)</h3>
+           <div class="note" style="margin-top:0;">Отдельная механика — списывает только накопленные Дивиденды за спорт, не основной капитал.</div>
+           ${decayGroupsHtml}`
+        : ""
+    }
+  `;
 }
 
 /* ---------------------------------------------------------------------

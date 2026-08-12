@@ -228,13 +228,20 @@ button {
 }
 
 /* Nav */
-.app-nav {
+.top-bar {
   position: sticky;
   top: 0;
   background: var(--bg);
   display: flex;
+  align-items: stretch;
   border-bottom: 1px solid var(--line);
   z-index: 10;
+}
+
+.app-nav {
+  display: flex;
+  flex: 1;
+  min-width: 0;
 }
 
 .app-nav button {
@@ -251,6 +258,15 @@ button {
 .app-nav button.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+}
+
+.profile-icon {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  font-size: 18px;
+  padding: 0 16px;
+  color: var(--muted);
 }
 
 /* Dashboard */
@@ -506,6 +522,65 @@ button {
   color: var(--muted);
   margin-top: -6px;
   margin-bottom: 16px;
+}
+
+/* Report */
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.report-table th,
+.report-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.report-table .report-total {
+  font-weight: 700;
+  background: var(--surface);
+}
+
+.report-table .amount.positive { color: var(--accent); }
+.report-table .amount.negative { color: var(--danger); }
+
+.report-table .hint-details {
+  display: inline-block;
+  margin-left: 2px;
+}
+
+.decay-group {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.decay-group summary {
+  cursor: pointer;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.decay-detail {
+  margin-top: 8px;
+}
+
+.decay-detail-row {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 4px 0;
 }
 
 /* Ideas */
