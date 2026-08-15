@@ -622,20 +622,24 @@ button {
   color: var(--muted);
 }
 
-.day-cell.neutral {
+.day-cell.neutral,
+.legend-swatch.neutral {
   background: var(--line);
   color: var(--muted);
 }
 
-.day-cell.positive.tier-1 { background: #d7ecdf; color: #1f1f1d; }
-.day-cell.positive.tier-2 { background: #a8d6bb; color: #1f1f1d; }
-.day-cell.positive.tier-3 { background: #6ab98c; color: #fff; }
-.day-cell.positive.tier-4 { background: #1f6f4a; color: #fff; }
+/* Shared with .legend-swatch (History legend, TZ 13.08.2026) so the
+   legend swatches show the exact same tier colors as the grid cells
+   instead of needing their own duplicated color list. */
+.day-cell.positive.tier-1, .legend-swatch.positive.tier-1 { background: #d7ecdf; color: #1f1f1d; }
+.day-cell.positive.tier-2, .legend-swatch.positive.tier-2 { background: #a8d6bb; color: #1f1f1d; }
+.day-cell.positive.tier-3, .legend-swatch.positive.tier-3 { background: #6ab98c; color: #fff; }
+.day-cell.positive.tier-4, .legend-swatch.positive.tier-4 { background: #1f6f4a; color: #fff; }
 
-.day-cell.negative.tier-1 { background: #f3dcdc; color: #1f1f1d; }
-.day-cell.negative.tier-2 { background: #e2a8a8; color: #1f1f1d; }
-.day-cell.negative.tier-3 { background: #c96f6f; color: #fff; }
-.day-cell.negative.tier-4 { background: #a83232; color: #fff; }
+.day-cell.negative.tier-1, .legend-swatch.negative.tier-1 { background: #f3dcdc; color: #1f1f1d; }
+.day-cell.negative.tier-2, .legend-swatch.negative.tier-2 { background: #e2a8a8; color: #1f1f1d; }
+.day-cell.negative.tier-3, .legend-swatch.negative.tier-3 { background: #c96f6f; color: #fff; }
+.day-cell.negative.tier-4, .legend-swatch.negative.tier-4 { background: #a83232; color: #fff; }
 
 .history-legend {
   display: flex;
