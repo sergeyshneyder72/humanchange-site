@@ -14,6 +14,34 @@
  */
 
 /* ---------------------------------------------------------------------
+ * Icons (TZ section 7, 13.08.2026: outline/line-style, not colored
+ * emoji — hand-drawn minimal SVGs, stroke=currentColor so each icon
+ * picks up its button's color for active/inactive states).
+ * ------------------------------------------------------------------- */
+
+function iconSvg(inner) {
+  return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
+function gearIconInner() {
+  const ticks = [];
+  for (let i = 0; i < 8; i++) {
+    ticks.push(`<line x1="12" y1="2.6" x2="12" y2="5.4" transform="rotate(${i * 45} 12 12)"/>`);
+  }
+  return `<circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.2"/>${ticks.join("")}`;
+}
+
+const ICONS = {
+  home: iconSvg(`<path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-9"/><path d="M9.5 20v-6h5v6"/>`),
+  calendar: iconSvg(`<rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M3.5 9.7h17"/><path d="M8 3.5v4"/><path d="M16 3.5v4"/>`),
+  book: iconSvg(`<path d="M12 6.8c-2.3-1.5-5.2-1.9-8.5-1v13c3.3-0.9 6.2-0.5 8.5 1c2.3-1.5 5.2-1.9 8.5-1v-13c-3.3-0.9-6.2-0.5-8.5 1z"/><path d="M12 6.8v13"/>`),
+  chat: iconSvg(`<path d="M4 5.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9.5L5 21.5V17.5H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z"/>`),
+  gear: iconSvg(gearIconInner()),
+  bell: iconSvg(`<path d="M6.5 10.2a5.5 5.5 0 0 1 11 0c0 4.1 1.4 5.5 2 6.2a.6.6 0 0 1-.4 1H4.9a.6.6 0 0 1-.4-1c.6-.7 2-2.1 2-6.2z"/><path d="M9.6 19.6a2.5 2.5 0 0 0 4.8 0"/>`),
+  user: iconSvg(`<circle cx="12" cy="8.3" r="3.7"/><path d="M4.5 20c0.6-4.2 4-6.3 7.5-6.3s6.9 2.1 7.5 6.3"/>`),
+};
+
+/* ---------------------------------------------------------------------
  * Data / constants
  * ------------------------------------------------------------------- */
 
@@ -445,6 +473,9 @@ function defaultState() {
     recalcMode: false, // true while re-running onboarding from the Profile screen's "official recalc" (TZ section 7, 11.08.2026)
     decayCharges: [], // append-only inactivity-decay events against sphere dividends, see applyInactivityDecay
     historyMonth: null, // "YYYY-MM" currently viewed in the История calendar, defaults to the current month when unset
+    historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
+    settingsView: "root", // "root" | "care" | "factors" — sub-screen open within Настройки, TZ section 7, 13.08.2026
+    visibleFactors: ["sport", "sleep", "nutrition", "stress"], // default dashboard factor cards, TZ section 7, 13.08.2026 — deliberately not the same set as the formula factors
   };
 }
 
@@ -1381,12 +1412,17 @@ function animateCapitalValue(el, from, to, duration = 1200) {
 // either just navigates on top of whatever bottom-nav section was last
 // open, same non-active-highlighting behavior the profile icon already
 // had before this restructuring.
+// TZ section 7, 13.08.2026: 4th icon renamed "Фонд идей + Забота" ->
+// "Чат" — now a pure nav placeholder ("скоро"), full chat functionality
+// stays in the backlog (section 10). "Служба заботы"/"Фонд идей" moved
+// under "Настройки" instead (see renderSettings), same merged-screen
+// mechanics, just reached through the gear icon now.
 const BOTTOM_NAV_ITEMS = [
-  { nav: "dashboard", icon: "🏠", label: "Портфель" },
-  { nav: "history", icon: "📅", label: "История" },
-  { nav: "knowledge", icon: "📖", label: "База знаний" },
-  { nav: "care", icon: "💬", label: "Забота" },
-  { nav: "settings", icon: "⚙️", label: "Настройки" },
+  { nav: "dashboard", icon: ICONS.home, label: "Портфель" },
+  { nav: "history", icon: ICONS.calendar, label: "История" },
+  { nav: "knowledge", icon: ICONS.book, label: "База знаний" },
+  { nav: "chat", icon: ICONS.chat, label: "Чат" },
+  { nav: "settings", icon: ICONS.gear, label: "Настройки" },
 ];
 
 function renderApp() {
@@ -1394,8 +1430,8 @@ function renderApp() {
   root.innerHTML = `
     <div class="top-bar">
       <div class="top-icons">
-        <button class="icon-btn" id="bell-btn" aria-label="Уведомления" title="Уведомления">🔔</button>
-        <button class="icon-btn" id="profile-btn" aria-label="Профиль" title="Профиль">👤</button>
+        <button class="icon-btn" id="bell-btn" aria-label="Уведомления" title="Уведомления">${ICONS.bell}</button>
+        <button class="icon-btn" id="profile-btn" aria-label="Профиль" title="Профиль">${ICONS.user}</button>
       </div>
     </div>
     <div class="wrap" id="screen"></div>
@@ -1431,24 +1467,109 @@ function renderApp() {
   const screen = document.getElementById("screen");
   if (nav === "dashboard") renderDashboard(screen);
   else if (nav === "history") renderHistory(screen);
+  else if (nav === "history-day") renderHistoryDay(screen);
   else if (nav === "knowledge") renderKnowledge(screen);
-  else if (nav === "care") renderCare(screen);
+  else if (nav === "chat") renderChat(screen);
   else if (nav === "settings") renderSettings(screen);
   else if (nav === "profile") renderProfile(screen);
   else if (nav === "notifications") renderNotifications(screen);
   // Fallback for any stale state.nav value from before this
-  // restructuring (e.g. old "report"/"ideas" persisted in a returning
-  // user's localStorage) — those screens no longer exist as standalone
-  // destinations, so land on the dashboard rather than render nothing.
+  // restructuring (e.g. old "report"/"ideas"/"care" persisted in a
+  // returning user's localStorage) — those screens no longer exist as
+  // standalone bottom-nav destinations, so land on the dashboard rather
+  // than render nothing.
   else renderDashboard(screen);
 }
 
+function renderChat(screen) {
+  screen.innerHTML = `<h2 class="screen-title">Чат</h2><div class="empty-state">Скоро.</div>`;
+}
+
+// TZ section 7, 13.08.2026: "Служба заботы"/"Фонд идей" (renderCare,
+// unchanged mechanics) and the factor-visibility checklist both live
+// under Settings now, reached via a simple two-row list — not their own
+// bottom-nav icons. state.settingsView tracks which sub-screen is open;
+// resets to the root list on the "← Назад" button inside each.
 function renderSettings(screen) {
-  screen.innerHTML = `<h2>Настройки</h2><div class="empty-state">Раздел в разработке.</div>`;
+  const view = state.settingsView || "root";
+  if (view === "care") {
+    renderCare(screen);
+    return;
+  }
+  if (view === "factors") {
+    renderFactorSettings(screen);
+    return;
+  }
+  screen.innerHTML = `
+    <h2 class="screen-title">Настройки</h2>
+    <div class="settings-list">
+      <button class="settings-row" data-view="care">Служба заботы и Фонд идей</button>
+      <button class="settings-row" data-view="factors">Факторы на главном экране</button>
+    </div>
+    <div class="empty-state">Остальные настройки — в разработке.</div>
+  `;
+  screen.querySelectorAll("[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.settingsView = btn.dataset.view;
+      saveState();
+      renderSettings(screen);
+    });
+  });
+}
+
+function settingsBackButtonHtml() {
+  return `<button class="btn secondary" id="settings-back" style="margin-bottom:16px;">← Назад</button>`;
+}
+
+function wireSettingsBackButton(screen) {
+  document.getElementById("settings-back").addEventListener("click", () => {
+    state.settingsView = "root";
+    saveState();
+    renderSettings(screen);
+  });
+}
+
+// TZ section 7, 13.08.2026: default visible dashboard cards (Активность/
+// Sleep/Nutrition/Stress) are deliberately NOT the same set as the 4
+// factors that actually run in the capital formula (Smoking/Sport/
+// Sleep/Alcohol) — Nutrition/Stress show because they're broadly
+// relevant even without a formula yet, Smoking/Alcohol are hidden by
+// default since they're not relevant to everyone. Toggle list is flat,
+// no categories (would be overkill at 6 factors).
+const ALL_FACTORS = [
+  { key: "smoking", label: "Курение", active: true },
+  { key: "sport", label: "Активность", active: true },
+  { key: "sleep", label: "Сон", active: true },
+  { key: "alcohol", label: "Алкоголь", active: true },
+  { key: "nutrition", label: "Питание", active: false },
+  { key: "stress", label: "Стресс", active: false },
+];
+
+function renderFactorSettings(screen) {
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">Факторы на главном экране</h2>
+    <div class="checkbox-list">
+      ${ALL_FACTORS.map(
+        (f) =>
+          `<label class="checkbox-row"><input type="checkbox" data-factor="${f.key}" ${state.visibleFactors.includes(f.key) ? "checked" : ""}> ${f.label}</label>`
+      ).join("")}
+    </div>
+  `;
+  wireSettingsBackButton(screen);
+  screen.querySelectorAll("[data-factor]").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const key = cb.dataset.factor;
+      state.visibleFactors = cb.checked
+        ? [...new Set([...state.visibleFactors, key])]
+        : state.visibleFactors.filter((k) => k !== key);
+      saveState();
+    });
+  });
 }
 
 function renderNotifications(screen) {
-  screen.innerHTML = `<h2>Уведомления</h2><div class="empty-state">Уведомлений пока нет.</div>`;
+  screen.innerHTML = `<h2 class="screen-title">Уведомления</h2><div class="empty-state">Уведомлений пока нет.</div>`;
 }
 
 /* ---- Dashboard ---- */
@@ -1490,7 +1611,7 @@ function renderDashboard(screen) {
   const engagement = dailyEngagementPhrase(today, todayEntry);
 
   screen.innerHTML = `
-    <h2>Портфель</h2>
+    <h2 class="screen-title">Портфель</h2>
     <div class="capital-header">
       <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
       <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
@@ -1526,7 +1647,7 @@ function renderDashboard(screen) {
         <div class="field">
           <label>Минут активности сегодня</label>
           <input type="number" min="0" id="log_activity" value="${escapeHtml(todayEntry.activityMinutes ?? "")}">
-          <div class="hint">Считается активность, где можно говорить, но не петь (или сложнее) — не медленная прогулка.</div>
+          <div class="hint">Не считается медленная прогулка — подробнее в Базе знаний.</div>
         </div>
       </div>
       <div class="field">
@@ -1578,20 +1699,17 @@ function renderDashboard(screen) {
     }
 
     <div class="factor-grid">
-      ${["Курение", "Спорт", "Сон", "Алкоголь"]
-        .map(
-          (n) => `<div class="factor-card">
-            <div class="name">${n}</div>
-            <div class="hint">Активный фактор</div>
-          </div>`
-        )
-        .join("")}
-      ${["Питание", "Стресс"]
-        .map(
-          (n) => `<div class="factor-card disabled">
-            <div class="name">${n}</div>
-            <div class="soon">скоро</div>
-          </div>`
+      ${ALL_FACTORS.filter((f) => state.visibleFactors.includes(f.key))
+        .map((f) =>
+          f.active
+            ? `<div class="factor-card">
+                <div class="name">${f.label}</div>
+                <div class="hint">Активный фактор</div>
+              </div>`
+            : `<div class="factor-card disabled">
+                <div class="name">${f.label}</div>
+                <div class="soon">скоро</div>
+              </div>`
         )
         .join("")}
       <div class="factor-card disabled">
@@ -1783,7 +1901,7 @@ function renderFeed() {
 
 function renderKnowledge(screen) {
   screen.innerHTML = `
-    <h2>База знаний</h2>
+    <h2 class="screen-title">База знаний</h2>
     ${KNOWLEDGE_BASE.map(
       (item) => `
       <div class="kb-card ${item.active || item.note ? "" : "disabled"}">
@@ -1980,13 +2098,15 @@ function renderCareSupport(container) {
 function renderCare(screen) {
   const section = state.careSection || "support";
   screen.innerHTML = `
-    <h2>Забота</h2>
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">Забота</h2>
     <div class="section-tabs">
       <button data-section="support" class="${section === "support" ? "active" : ""}">Вопрос в поддержку</button>
       <button data-section="ideas" class="${section === "ideas" ? "active" : ""}">Предложить идею</button>
     </div>
     <div id="care-outer-content"></div>
   `;
+  wireSettingsBackButton(screen);
   screen.querySelectorAll("[data-section]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.careSection = btn.dataset.section;
@@ -2008,7 +2128,7 @@ function renderCare(screen) {
 // tool and is a separate, not-yet-built feature.
 function renderProfile(screen) {
   screen.innerHTML = `
-    <h2>Профиль</h2>
+    <h2 class="screen-title">Профиль</h2>
     <div class="reveal-number" style="padding: 24px 0;">
       <div class="value" style="font-size:36px;">${(state.startingCapitalDays ?? 0).toLocaleString("ru-RU")}</div>
       <div class="label">дней стартового капитала (из онбординга)</div>
@@ -2077,34 +2197,14 @@ function reportClickableAmount(amount, cssClass, items) {
   return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
 }
 
-// Minimal modal system (TZ section 7, 13.08.2026: "Транзакции за день"
-// popup on tapping a calendar date) — appended to <body> rather than
-// #screen since it needs to overlay the fixed bottom nav too. Click
-// outside the box or the ✕ closes it.
-function showModal(bodyHtml) {
-  closeModal();
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.id = "modal-overlay";
-  overlay.innerHTML = `<div class="modal-box">${bodyHtml}</div>`;
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeModal();
-  });
-  document.body.appendChild(overlay);
-  document.getElementById("modal-close-btn")?.addEventListener("click", closeModal);
-}
-
-function closeModal() {
-  document.getElementById("modal-overlay")?.remove();
-}
-
-function dayTransactionsModalHtml(date) {
+// TZ section 7, 13.08.2026: tapping a date now navigates to a full
+// screen ("Транзакции за [дата]") instead of opening a popup over the
+// calendar — same breakdown content as the earlier modal version, just
+// reached via state.nav="history-day" + state.historyDetailDate.
+function dayTransactionsHtml(date) {
   const entry = state.ledger[date];
   if (!entry) {
-    return `
-      <div class="modal-header"><h3>${escapeHtml(date)}</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
-      <div class="empty-state">Операций в этот день не было.</div>
-    `;
+    return `<div class="empty-state">Операций в этот день не было.</div>`;
   }
   const savings = entry.deltaDays || 0;
   const dividends = entry.weeklyBonusDays || 0;
@@ -2116,7 +2216,6 @@ function dayTransactionsModalHtml(date) {
     : [];
 
   return `
-    <div class="modal-header"><h3>Транзакции за ${escapeHtml(date)}</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
     <div class="modal-row">
       <span>Личные накопления</span>
       ${reportClickableAmount(savings, savings >= 0 ? "amount positive" : "amount negative", breakdown)}
@@ -2132,31 +2231,33 @@ function dayTransactionsModalHtml(date) {
   `;
 }
 
+function renderHistoryDay(screen) {
+  const date = state.historyDetailDate;
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">Транзакции за ${escapeHtml(date || "")}</h2>
+    ${dayTransactionsHtml(date)}
+  `;
+  document.getElementById("settings-back").addEventListener("click", () => {
+    state.nav = "history";
+    saveState();
+    render();
+  });
+}
+
 const RU_MONTH_NAMES = [
   "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ];
 const RU_WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-// 4-tier intensity bucket, GitHub-heatmap style — relative to the
-// largest single-day magnitude seen across the whole ledger (not just
-// the visible month), so color intensity stays comparable as the user
-// navigates between months instead of recalibrating each time.
-function intensityTier(value, max) {
-  if (max <= 0) return 1;
-  const ratio = Math.abs(value) / max;
-  if (ratio > 0.75) return 4;
-  if (ratio > 0.5) return 3;
-  if (ratio > 0.25) return 2;
-  return 1;
-}
-
-// TZ section 7, 13.08.2026: "История" — calendar grid replacing the old
-// table-based report. Cell color reflects that day's real deltaDays
-// only (green=positive/red=negative/gray=no data), matching the main
-// Портфель chart; the balance number itself is deliberately not shown
-// on the grid. Tapping a date opens "Транзакции за день" with the full
-// breakdown, same clickable-amount pattern as before.
+// TZ section 7, 13.08.2026: "История" — calendar grid. Legend is
+// binary (replaces the earlier 4-tier intensity idea): green = day's
+// balance positive, red = negative, no color = no data that day — no
+// on-screen legend text, colors are meant to read as self-evident.
+// Balance number itself is deliberately not shown on the grid. Tapping
+// a date navigates to a full "Транзакции за [дата]" screen (was a
+// popup) with the same per-factor breakdown as before.
 function renderHistory(screen) {
   const monthStr = state.historyMonth || todayStr().slice(0, 7);
   const [year, mon] = monthStr.split("-").map(Number);
@@ -2166,20 +2267,13 @@ function renderHistory(screen) {
   const firstWeekday = firstOfMonth.getUTCDay(); // 0=Sun..6=Sat
   const leadingPad = firstWeekday === 0 ? 6 : firstWeekday - 1; // Monday-first grid
 
-  const maxAbsDelta = Object.values(state.ledger).reduce((max, e) => Math.max(max, Math.abs(e.deltaDays || 0)), 0);
-
   const cells = [];
   for (let i = 0; i < leadingPad; i++) cells.push(`<div class="day-cell pad"></div>`);
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(mon).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const entry = state.ledger[dateStr];
-    let cls = "empty";
-    if (entry) {
-      const delta = entry.deltaDays || 0;
-      if (delta > 0) cls = `positive tier-${intensityTier(delta, maxAbsDelta)}`;
-      else if (delta < 0) cls = `negative tier-${intensityTier(delta, maxAbsDelta)}`;
-      else cls = "neutral";
-    }
+    const delta = entry?.deltaDays || 0;
+    const cls = delta > 0 ? "positive" : delta < 0 ? "negative" : "empty";
     cells.push(`<button class="day-cell ${cls}" data-date="${dateStr}">${d}</button>`);
   }
   const trailingPad = (7 - (cells.length % 7)) % 7;
@@ -2188,7 +2282,7 @@ function renderHistory(screen) {
   const isCurrentMonth = monthStr === todayStr().slice(0, 7);
 
   screen.innerHTML = `
-    <h2>История</h2>
+    <h2 class="screen-title">История</h2>
     <div class="history-nav">
       <button class="btn secondary" id="month-prev">‹</button>
       <div class="month-label">${RU_MONTH_NAMES[mon - 1]} ${year}</div>
@@ -2198,10 +2292,6 @@ function renderHistory(screen) {
       ${RU_WEEKDAY_LABELS.map((w) => `<div class="weekday-label">${w}</div>`).join("")}
     </div>
     <div class="history-grid">${cells.join("")}</div>
-    <div class="history-legend">
-      <span class="legend-swatch negative tier-4"></span><span class="legend-swatch negative tier-2"></span><span class="legend-swatch neutral"></span><span class="legend-swatch positive tier-2"></span><span class="legend-swatch positive tier-4"></span>
-      <span class="hint" style="margin:0 0 0 8px;">Меньше — больше капитала за день</span>
-    </div>
   `;
 
   document.getElementById("month-prev").addEventListener("click", () => {
@@ -2219,7 +2309,10 @@ function renderHistory(screen) {
   });
   screen.querySelectorAll(".day-cell[data-date]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      showModal(dayTransactionsModalHtml(btn.dataset.date));
+      state.historyDetailDate = btn.dataset.date;
+      state.nav = "history-day";
+      saveState();
+      render();
     });
   });
 }
