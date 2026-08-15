@@ -17,15 +17,6 @@
  * Data / constants
  * ------------------------------------------------------------------- */
 
-// Age multiplier for the smoking active factor — TZ section 3.1, linear
-// interpolation between the given points, clamped outside [30, 60].
-const AGE_MULTIPLIER_POINTS = [
-  [30, 1.0],
-  [40, 1.2],
-  [50, 1.5],
-  [60, 1.8],
-];
-
 // Approximate remaining-life-expectancy-in-years table, illustrative of
 // SSA Period Life Table (US) magnitudes. TODO: replace with a real
 // SSA/WHO GHO data source before this number is shown as authoritative.
@@ -225,7 +216,7 @@ const KNOWLEDGE_BASE = [
     key: "smoking",
     name: "Курение",
     active: true,
-    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни; с возрастом цена растёт. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
+    body: "Каждая выкуренная сигарета в среднем стоит около 20 минут ожидаемой продолжительности жизни. Статус «курит» отдельно учитывается один раз при расчёте стартового капитала (около 5.7–7 лет разницы в ожидаемой продолжительности жизни у курящих, по данным когортного исследования). Отдельно от этого число сигарет в день, указанное при онбординге, становится точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
     source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
     sourceKeys: ["ucl-smoking", "tsai-aging"],
   },
@@ -233,9 +224,9 @@ const KNOWLEDGE_BASE = [
     key: "sport",
     name: "Физическая активность",
     active: true,
-    body: "Около 20 минут умеренной активности добавляют примерно 1 час капитала (модель microlife). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми — с возрастом этот разрыв увеличивается, поэтому в стартовом расчёте он учитывается сильнее у пользователей старшего возраста. Считается только активность, где пульс поднимается минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
-    source: "Источники: D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
-    sourceKeys: ["lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
+    body: "Час умеренной активности добавляет примерно 6 часов капитала — по данным акселерометров, объективное измерение для наименее активного квартиля населения (эффект вдвое сильнее более ранних оценок именно за счёт точности измерения). Положительный эффект перестаёт расти после 90 минут активности в день. Отдельно недостаточная активность (менее ~150 минут в неделю) сама по себе связана с повышенным на 20–30% риском смерти по сравнению с достаточно активными людьми. Считается только активность, где пульс поднимается минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь (или сложнее говорить) — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
+    source: "Источники: Veerman et al., BJSM (2024); D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
+    sourceKeys: ["veerman-bjsm", "webmd-walking", "lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
   },
   {
     key: "sleep",
@@ -312,6 +303,18 @@ const SOURCES = [
     label: "Перевод hazard ratio в годы жизни (Chiang's life table method) + таблица по 30 факторам риска",
     citation: "Tsai S.P. et al., Aging (2021), «Converting health risks into loss of life years»",
     url: "https://www.aging-us.com/article/203491/text",
+  },
+  {
+    key: "veerman-bjsm",
+    label: "Соотношение активность → капитал, 1:6 (основной источник)",
+    citation: "Veerman L. et al., British Journal of Sports Medicine (2024), «Physical activity and life expectancy: a life-table analysis» (Griffith University) — данные акселерометра",
+    url: "https://www.sciencedaily.com/releases/2024/11/241126215133.htm",
+  },
+  {
+    key: "webmd-walking",
+    label: "Дополнительное подтверждение соотношения активности",
+    citation: "WebMD (2024), обзор исследования по ходьбе — аналогичное соотношение ≈1:6",
+    url: "https://www.webmd.com/fitness-exercise/news/20241115/cm/how-walking-more-could-add-11-years-to-your-life",
   },
 ];
 
@@ -464,21 +467,6 @@ let state = loadState();
 /* ---------------------------------------------------------------------
  * Calculation engine
  * ------------------------------------------------------------------- */
-
-function ageMultiplier(age) {
-  const pts = AGE_MULTIPLIER_POINTS;
-  if (age <= pts[0][0]) return pts[0][1];
-  if (age >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [a0, m0] = pts[i];
-    const [a1, m1] = pts[i + 1];
-    if (age >= a0 && age <= a1) {
-      const t = (age - a0) / (a1 - a0);
-      return m0 + t * (m1 - m0);
-    }
-  }
-  return 1.0;
-}
 
 // TODO(hardening, flagged 11.08.2026, not reachable via the current UI):
 // `age` is used raw in the comparisons below, not Number()-coerced. A
@@ -633,12 +621,19 @@ function computeStartingCapitalDays(ob) {
 // (reference point). Smoking less than the waterline today is a
 // deposit, smoking more is a withdrawal, smoking exactly at the
 // waterline is neutral — the waterline itself never costs anything by
-// existing, only deviations from it do.
-function dailyDeltaDays(cigarettesToday, activityMinutesToday, age, smokingWaterline) {
+// existing, only deviations from it do. No age multiplier (TZ section
+// 3.1, 13.08.2026, per David Spiegelhalter: no age-specific source
+// backed the old ×1.0-1.8 curve, and a Beijing cohort found the
+// opposite direction — HR higher in younger smokers — so a flat rate
+// is the honest choice, not invented age scaling). Activity ratio is
+// 1:6 (TZ section 3.2, 13.08.2026, Veerman et al. BJSM 2024 accelerometer
+// data — replaces the earlier temporary 1:3 Spiegelhalter estimate),
+// daily cap 90 min / 9 hours.
+function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline) {
   const waterline = Number(smokingWaterline) || 0;
   const today = Number(cigarettesToday) || 0;
-  const smokingTerm = (waterline - today) * 0.014 * ageMultiplier(age);
-  const activityGain = Math.min((Number(activityMinutesToday) || 0) / 60 * 3, 4.5) / 24;
+  const smokingTerm = (waterline - today) * 0.014;
+  const activityGain = Math.min((Number(activityMinutesToday) || 0) / 60 * 6, 9) / 24;
   return activityGain + smokingTerm;
 }
 
@@ -733,7 +728,7 @@ function weeklyActivityTopUpDays(sundayDateStr) {
   }
   const weeklyEffective = Math.min(rawMinutes, 630);
   const topUpMinutes = Math.max(0, weeklyEffective - creditedMinutes);
-  return ((topUpMinutes / 60) * 3) / 24;
+  return ((topUpMinutes / 60) * 6) / 24;
 }
 
 function sortedLedgerDates() {
@@ -1183,7 +1178,7 @@ function renderOnboarding() {
         <div class="label">дней ожидаемого капитала здоровья</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
       </div>
-      <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз. Число — игровой показатель для мотивации, не медицинская рекомендация. Если у Вас есть реальные проблемы со здоровьем — обратитесь к врачу.</div>
+      <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация. Если у Вас есть реальные проблемы со здоровьем — обратитесь к врачу.</div>
       <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? "Сохранить пересчёт" : "Перейти в приложение"}</button>
     `;
   }
@@ -1500,7 +1495,7 @@ function renderDashboard(screen) {
       <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
       <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
     </div>
-    <div class="disclaimer">Это статистическая оценка на основе научных исследований, не медицинский диагноз и не персональный прогноз.</div>
+    <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — не точный расчёт для Вас лично, не медицинский диагноз.</div>
 
     <div class="period-switch">
       ${["week", "month", "year"]
@@ -1627,9 +1622,8 @@ function renderDashboard(screen) {
     const alcoholWine = document.getElementById("log_alcohol_wine").value;
     const alcoholBeer = document.getElementById("log_alcohol_beer").value;
     const stressLevel = document.getElementById("log_stress").value;
-    const age = Number(state.onboarding.age);
     const gender = state.onboarding.gender;
-    const baseDelta = dailyDeltaDays(cigarettes, activityMinutes, age, state.smokingWaterline);
+    const baseDelta = dailyDeltaDays(cigarettes, activityMinutes, state.smokingWaterline);
     const sleepDelta = dailySleepDelta(sleepHoursRange, gender);
     const alcoholDelta = dailyAlcoholDelta(alcoholSpirits, alcoholWine, alcoholBeer, gender);
     const deltaDays = baseDelta + sleepDelta + alcoholDelta;
@@ -1749,7 +1743,7 @@ function renderFeed() {
         const e = state.ledger[date];
         const items = [];
         const waterline = Number(state.smokingWaterline) || 0;
-        const smokingTerm = (waterline - (Number(e.cigarettes) || 0)) * 0.014 * ageMultiplier(Number(state.onboarding.age));
+        const smokingTerm = (waterline - (Number(e.cigarettes) || 0)) * 0.014;
         if (smokingTerm !== 0) {
           const sign = smokingTerm > 0 ? "positive" : "negative";
           const arrow = smokingTerm > 0 ? "+" : "−";
@@ -1758,7 +1752,7 @@ function renderFeed() {
           );
         }
         if (e.activityMinutes > 0) {
-          const gain = Math.min((e.activityMinutes / 60) * 3, 4.5) / 24;
+          const gain = Math.min((e.activityMinutes / 60) * 6, 9) / 24;
           items.push(
             `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Активность: ${e.activityMinutes} мин.</span><span class="amount positive">+${gain.toFixed(2)} дн.</span></li>`
           );
@@ -2046,13 +2040,13 @@ function renderProfile(screen) {
 // "Списания" display per-day via dayDecayChargeItems below instead
 // (TZ section 7, 13.08.2026: "меняется только визуальное
 // представление данных", not the underlying mechanics).
-function dailyFactorBreakdown(entry, age) {
+function dailyFactorBreakdown(entry) {
   const waterline = Number(state.smokingWaterline) || 0;
-  const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014 * ageMultiplier(age);
+  const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014;
   const items = [];
   if (smokingTerm) items.push({ label: "Курение", amount: smokingTerm });
   if (Number(entry.activityMinutes) > 0) {
-    items.push({ label: "Активность", amount: Math.min((Number(entry.activityMinutes) / 60) * 3, 4.5) / 24 });
+    items.push({ label: "Активность", amount: Math.min((Number(entry.activityMinutes) / 60) * 6, 9) / 24 });
   }
   if (entry.weeklyBonusDays) items.push({ label: "Недельная доплата за спорт", amount: entry.weeklyBonusDays });
   if (entry.sleepDelta) items.push({ label: "Сон", amount: entry.sleepDelta });
@@ -2104,7 +2098,7 @@ function closeModal() {
   document.getElementById("modal-overlay")?.remove();
 }
 
-function dayTransactionsModalHtml(date, age) {
+function dayTransactionsModalHtml(date) {
   const entry = state.ledger[date];
   if (!entry) {
     return `
@@ -2114,7 +2108,7 @@ function dayTransactionsModalHtml(date, age) {
   }
   const savings = entry.deltaDays || 0;
   const dividends = entry.weeklyBonusDays || 0;
-  const breakdown = dailyFactorBreakdown(entry, age);
+  const breakdown = dailyFactorBreakdown(entry);
   const chargeItems = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
   const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
   const dividendItems = dividends
@@ -2166,7 +2160,6 @@ function intensityTier(value, max) {
 function renderHistory(screen) {
   const monthStr = state.historyMonth || todayStr().slice(0, 7);
   const [year, mon] = monthStr.split("-").map(Number);
-  const age = Number(state.onboarding.age);
 
   const firstOfMonth = new Date(Date.UTC(year, mon - 1, 1));
   const daysInMonth = new Date(Date.UTC(year, mon, 0)).getUTCDate();
@@ -2226,7 +2219,7 @@ function renderHistory(screen) {
   });
   screen.querySelectorAll(".day-cell[data-date]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      showModal(dayTransactionsModalHtml(btn.dataset.date, age));
+      showModal(dayTransactionsModalHtml(btn.dataset.date));
     });
   });
 }
