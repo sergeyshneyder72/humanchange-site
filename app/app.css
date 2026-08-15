@@ -227,41 +227,25 @@ button {
   color: var(--accent);
 }
 
-/* Nav */
+/* Nav (TZ section 7, 13.08.2026: icon-only bottom nav + minimal top bar) */
 .top-bar {
   position: sticky;
   top: 0;
-  height: 67px;
+  height: 52px;
   background: var(--bg);
   display: flex;
   align-items: stretch;
+  justify-content: flex-end;
   border-bottom: 1px solid var(--line);
   z-index: 10;
 }
 
-.app-nav {
+.top-icons {
   display: flex;
-  flex: 1;
-  min-width: 0;
+  align-items: stretch;
 }
 
-.app-nav button {
-  flex: 1;
-  padding: 14px 8px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.app-nav button.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-
-.profile-icon {
+.icon-btn {
   flex: 0 0 auto;
   border: none;
   background: none;
@@ -270,12 +254,37 @@ button {
   color: var(--muted);
 }
 
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58px;
+  display: flex;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+
+.icon-nav-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 22px;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.icon-nav-btn.active {
+  opacity: 1;
+}
+
 /* Dashboard */
 .capital-header {
   text-align: center;
   padding: 28px 0 8px;
   position: sticky;
-  top: 67px;
+  top: 52px;
   background: var(--bg);
   z-index: 5;
 }
@@ -529,58 +538,12 @@ button {
   margin-bottom: 16px;
 }
 
-/* Report */
-.report-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  white-space: nowrap;
-}
+/* Amounts (generic — used in the feed list, and in the История modal) */
+.amount.positive { color: var(--accent); }
+.amount.negative { color: var(--danger); }
 
-.report-table th,
-.report-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-
-.report-table th {
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 12px;
-}
-
-.report-table .report-total {
-  font-weight: 700;
-  background: var(--surface);
-}
-
-/* Frozen "Дата" column (TZ, 12.08.2026 mobile fix): the table scrolls
-   horizontally inside its .report-table-scroll wrapper, but the date
-   stays pinned on the left so a row is still identifiable while
-   "Списания" etc. scroll into view. Each row type needs its own
-   sticky-cell background (matching that row's own background) or
-   scrolling content would show through underneath it. */
-.report-table th:first-child,
-.report-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--bg);
-  box-shadow: 1px 0 0 var(--line);
-}
-
-.report-table thead th:first-child {
-  z-index: 2;
-}
-
-.report-table .report-total td:first-child {
-  background: var(--surface);
-}
-
-.report-table .amount.positive { color: var(--accent); }
-.report-table .amount.negative { color: var(--danger); }
-
+/* Tappable amount → breakdown (TZ, 12.08.2026 pattern; reused 13.08.2026
+   inside the "Транзакции за день" modal instead of a table cell). */
 .report-cell summary {
   cursor: pointer;
   list-style: none;
@@ -595,34 +558,150 @@ button {
   white-space: normal;
 }
 
-.report-cell .decay-detail-row {
-  white-space: nowrap;
-  padding: 3px 0;
-}
-
-.decay-group {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.decay-group summary {
-  cursor: pointer;
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.decay-detail {
-  margin-top: 8px;
-}
-
 .decay-detail-row {
   font-size: 13px;
   color: var(--muted);
   padding: 4px 0;
+  white-space: nowrap;
+}
+
+/* History (calendar heatmap), TZ section 7, 13.08.2026 */
+.history-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.history-nav .btn.secondary {
+  padding: 8px 16px;
+}
+
+.month-label {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.history-weekdays {
+  margin-bottom: 8px;
+}
+
+.weekday-label {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.day-cell {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  padding: 0;
+  background: none;
+  width: 100%;
+}
+
+.day-cell.pad {
+  background: transparent;
+}
+
+.day-cell.empty {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.day-cell.neutral {
+  background: var(--line);
+  color: var(--muted);
+}
+
+.day-cell.positive.tier-1 { background: #d7ecdf; color: #1f1f1d; }
+.day-cell.positive.tier-2 { background: #a8d6bb; color: #1f1f1d; }
+.day-cell.positive.tier-3 { background: #6ab98c; color: #fff; }
+.day-cell.positive.tier-4 { background: #1f6f4a; color: #fff; }
+
+.day-cell.negative.tier-1 { background: #f3dcdc; color: #1f1f1d; }
+.day-cell.negative.tier-2 { background: #e2a8a8; color: #1f1f1d; }
+.day-cell.negative.tier-3 { background: #c96f6f; color: #fff; }
+.day-cell.negative.tier-4 { background: #a83232; color: #fff; }
+
+.history-legend {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin-right: 3px;
+}
+
+/* Modal ("Транзакции за день" etc.) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px;
+  width: 100%;
+  max-width: var(--max-width);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-close {
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: var(--muted);
+  padding: 4px 8px;
+}
+
+.modal-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.modal-row:last-child {
+  border-bottom: none;
 }
 
 /* Ideas */

@@ -438,8 +438,10 @@ function defaultState() {
     nav: "dashboard",
     ideasTab: "new",
     careTab: "new",
+    careSection: "support", // outer tab within the merged "Забота" screen, TZ section 11, 13.08.2026
     recalcMode: false, // true while re-running onboarding from the Profile screen's "official recalc" (TZ section 7, 11.08.2026)
     decayCharges: [], // append-only inactivity-decay events against sphere dividends, see applyInactivityDecay
+    historyMonth: null, // "YYYY-MM" currently viewed in the История calendar, defaults to the current month when unset
   };
 }
 
@@ -1375,20 +1377,39 @@ function animateCapitalValue(el, from, to, duration = 1200) {
 
 /* ---- Main app shell ---- */
 
+// TZ section 7, 13.08.2026: navigation finalized, replaces every earlier
+// draft (top tab bar, separate "Отчёт" tab, separate "Фонд идей" tab).
+// Bottom nav is icon-only — the open section's own <h2> (already the
+// existing pattern on every screen below) is what tells the user where
+// they are, not a label on the nav button itself. Top-right keeps only
+// the notification bell and profile icon; neither is a "tab" — clicking
+// either just navigates on top of whatever bottom-nav section was last
+// open, same non-active-highlighting behavior the profile icon already
+// had before this restructuring.
+const BOTTOM_NAV_ITEMS = [
+  { nav: "dashboard", icon: "🏠", label: "Портфель" },
+  { nav: "history", icon: "📅", label: "История" },
+  { nav: "knowledge", icon: "📖", label: "База знаний" },
+  { nav: "care", icon: "💬", label: "Забота" },
+  { nav: "settings", icon: "⚙️", label: "Настройки" },
+];
+
 function renderApp() {
   const nav = state.nav || "dashboard";
   root.innerHTML = `
     <div class="top-bar">
-      <nav class="app-nav">
-        <button data-nav="dashboard" class="${nav === "dashboard" ? "active" : ""}">Портфель</button>
-        <button data-nav="report" class="${nav === "report" ? "active" : ""}">Отчёт</button>
-        <button data-nav="knowledge" class="${nav === "knowledge" ? "active" : ""}">База знаний</button>
-        <button data-nav="ideas" class="${nav === "ideas" ? "active" : ""}">Фонд идей</button>
-        <button data-nav="care" class="${nav === "care" ? "active" : ""}">Забота</button>
-      </nav>
-      <button class="profile-icon" id="profile-btn" aria-label="Профиль" title="Профиль">👤</button>
+      <div class="top-icons">
+        <button class="icon-btn" id="bell-btn" aria-label="Уведомления" title="Уведомления">🔔</button>
+        <button class="icon-btn" id="profile-btn" aria-label="Профиль" title="Профиль">👤</button>
+      </div>
     </div>
     <div class="wrap" id="screen"></div>
+    <nav class="bottom-nav">
+      ${BOTTOM_NAV_ITEMS.map(
+        (item) =>
+          `<button data-nav="${item.nav}" class="icon-nav-btn ${nav === item.nav ? "active" : ""}" aria-label="${item.label}" title="${item.label}">${item.icon}</button>`
+      ).join("")}
+    </nav>
   `;
   root.querySelectorAll("[data-nav]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1397,22 +1418,42 @@ function renderApp() {
       render();
     });
   });
-  // Profile icon (TZ section 7, 11.08.2026): deliberately not one of the
-  // tab buttons above — it never shows "active", tapping it just opens
-  // the profile screen on top of whatever tab was last selected.
   document.getElementById("profile-btn").addEventListener("click", () => {
     state.nav = "profile";
+    saveState();
+    render();
+  });
+  // Bell (TZ section 7, 13.08.2026): UI element only for now — what
+  // generates notifications is an explicitly open future question (push
+  // reminders are backlogged separately, TZ section 6). No fake unread
+  // badge since there's no real source yet to count.
+  document.getElementById("bell-btn").addEventListener("click", () => {
+    state.nav = "notifications";
     saveState();
     render();
   });
 
   const screen = document.getElementById("screen");
   if (nav === "dashboard") renderDashboard(screen);
-  else if (nav === "report") renderReport(screen);
+  else if (nav === "history") renderHistory(screen);
   else if (nav === "knowledge") renderKnowledge(screen);
-  else if (nav === "ideas") renderIdeas(screen);
   else if (nav === "care") renderCare(screen);
+  else if (nav === "settings") renderSettings(screen);
   else if (nav === "profile") renderProfile(screen);
+  else if (nav === "notifications") renderNotifications(screen);
+  // Fallback for any stale state.nav value from before this
+  // restructuring (e.g. old "report"/"ideas" persisted in a returning
+  // user's localStorage) — those screens no longer exist as standalone
+  // destinations, so land on the dashboard rather than render nothing.
+  else renderDashboard(screen);
+}
+
+function renderSettings(screen) {
+  screen.innerHTML = `<h2>Настройки</h2><div class="empty-state">Раздел в разработке.</div>`;
+}
+
+function renderNotifications(screen) {
+  screen.innerHTML = `<h2>Уведомления</h2><div class="empty-state">Уведомлений пока нет.</div>`;
 }
 
 /* ---- Dashboard ---- */
@@ -1454,6 +1495,7 @@ function renderDashboard(screen) {
   const engagement = dailyEngagementPhrase(today, todayEntry);
 
   screen.innerHTML = `
+    <h2>Портфель</h2>
     <div class="capital-header">
       <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
       <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
@@ -1780,7 +1822,7 @@ function renderKnowledge(screen) {
     </ul>
 
     <h2>Что впереди</h2>
-    <div class="note">Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную (см. Фонд идей).</div>
+    <div class="note">Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную (см. «Забота» → «Предложить идею»).</div>
     ${UPCOMING_FACTORS.map(
       (f) => `<div class="ahead-item"><span>${f.name}</span><span class="optional-badge">${f.note}</span></div>`
     ).join("")}
@@ -1797,21 +1839,26 @@ function renderKnowledge(screen) {
 
 /* ---- Idea fund ---- */
 
-function renderIdeas(screen) {
+// TZ section 11, 13.08.2026: "Фонд идей" and "Служба заботы" merged into
+// one nav entry ("Забота") with two sections inside — 5 separate nav
+// entries felt like one too many. Mechanics (voting, authorship privacy,
+// local-only storage) are unchanged, only the navigation container
+// changed, so renderCareIdeas/renderCareSupport below are the same
+// new/mine tab logic that used to live directly in renderIdeas/renderCare.
+function renderCareIdeas(container) {
   const tab = state.ideasTab || "new";
-  screen.innerHTML = `
-    <h2>Фонд идей</h2>
+  container.innerHTML = `
     <div class="section-tabs">
       <button data-tab="new" class="${tab === "new" ? "active" : ""}">Новая идея</button>
       <button data-tab="mine" class="${tab === "mine" ? "active" : ""}">Ваши идеи</button>
     </div>
     <div id="ideas-content"></div>
   `;
-  screen.querySelectorAll("[data-tab]").forEach((btn) => {
+  container.querySelectorAll("[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.ideasTab = btn.dataset.tab;
       saveState();
-      renderIdeas(screen);
+      renderCareIdeas(container);
     });
   });
 
@@ -1841,7 +1888,7 @@ function renderIdeas(screen) {
       saveState();
       state.ideasTab = "mine";
       saveState();
-      renderIdeas(screen);
+      renderCareIdeas(container);
     });
   } else {
     if (state.ideas.length === 0) {
@@ -1862,27 +1909,24 @@ function renderIdeas(screen) {
   }
 }
 
-/* ---- Служба заботы (TZ section 12) ---- */
-
-// Deliberately separate from the Idea Fund above: product suggestions go
-// through "Фонд идей" (п.11), technical problems and questions to the
-// team go here (п.12) — same local-only-storage pattern, own category
-// list, own history tab, not shared state with ideas.
-function renderCare(screen) {
+// Deliberately separate storage from the ideas above: product
+// suggestions go through "Предложить идею" (TZ section 11), technical
+// problems and questions to the team go here — own category list, own
+// history tab, not shared state with ideas.
+function renderCareSupport(container) {
   const tab = state.careTab || "new";
-  screen.innerHTML = `
-    <h2>Служба заботы</h2>
+  container.innerHTML = `
     <div class="section-tabs">
       <button data-tab="new" class="${tab === "new" ? "active" : ""}">Новое обращение</button>
       <button data-tab="mine" class="${tab === "mine" ? "active" : ""}">Ваши обращения</button>
     </div>
     <div id="care-content"></div>
   `;
-  screen.querySelectorAll("[data-tab]").forEach((btn) => {
+  container.querySelectorAll("[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.careTab = btn.dataset.tab;
       saveState();
-      renderCare(screen);
+      renderCareSupport(container);
     });
   });
 
@@ -1912,7 +1956,7 @@ function renderCare(screen) {
       saveState();
       state.careTab = "mine";
       saveState();
-      renderCare(screen);
+      renderCareSupport(container);
     });
   } else {
     if (state.careRequests.length === 0) {
@@ -1931,6 +1975,34 @@ function renderCare(screen) {
         .join("");
     }
   }
+}
+
+// TZ section 11, 13.08.2026: single "Забота" nav entry, two sections
+// inside via an outer tab switch — "Вопрос в поддержку" (support,
+// previously its own "Служба заботы" tab) and "Предложить идею"
+// (previously its own "Фонд идей" tab). Each keeps its own inner
+// new/mine tab state (state.careTab / state.ideasTab) untouched by
+// switching the outer section.
+function renderCare(screen) {
+  const section = state.careSection || "support";
+  screen.innerHTML = `
+    <h2>Забота</h2>
+    <div class="section-tabs">
+      <button data-section="support" class="${section === "support" ? "active" : ""}">Вопрос в поддержку</button>
+      <button data-section="ideas" class="${section === "ideas" ? "active" : ""}">Предложить идею</button>
+    </div>
+    <div id="care-outer-content"></div>
+  `;
+  screen.querySelectorAll("[data-section]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.careSection = btn.dataset.section;
+      saveState();
+      renderCare(screen);
+    });
+  });
+  const container = document.getElementById("care-outer-content");
+  if (section === "support") renderCareSupport(container);
+  else renderCareIdeas(container);
 }
 
 /* ---- Profile ---- */
@@ -1959,30 +2031,21 @@ function renderProfile(screen) {
   });
 }
 
-/* ---- Report ---- */
+/* ---- History (calendar heatmap) ---- */
 
-// TZ section 7, 11.08.2026: detailed date-by-date registry, three
-// columns. "Личные накопления" is the same net day total already used
-// for the main chart (deposits minus regular per-factor charges) — this
-// table doesn't recompute it, just breaks it down. "Дивиденды" surfaces
-// the periodic bonuses (currently only the weekly sport top-up) that are
-// already folded into that day's total. "Списания" isolates the
-// negative regular per-factor charges (smoking above baseline, sleep,
-// alcohol) for the same day.
-//
-// The inactivity-decay charge (TZ section 7, "списание в процентах от
-// суммы Дивидендов по сфере..., 7/14/21/28+ дней → -7/-15/-25/-50%",
-// see applyInactivityDecay/DECAY_TIERS) is NOT part of this per-day
-// column — by design it never touches the main capital, only the
-// separately-tracked sphere dividends pool — so it's rendered as its own
-// grouped section below the table instead, see decayGroupsHtml below.
-//
-// Per-factor breakdown for one ledger day (12.08.2026: backs the tap-to-
-// expand detail under each report cell). Mirrors the same smoking/
-// activity/sleep/alcohol/weeklyBonus terms renderFeed() already computes
-// per day — kept as a separate function rather than refactoring
-// renderFeed to share it, so this doesn't risk the already-tested feed
-// rendering.
+
+// "Личные накопления" is the net day total already used for the main
+// chart (deposits minus regular per-factor charges) — this just breaks
+// it down for display. "Дивиденды" surfaces the periodic bonuses
+// (currently only the weekly sport top-up) already folded into that
+// day's total. "Списания" isolates the negative regular per-factor
+// charges (smoking above baseline, sleep, alcohol) for the same day —
+// the inactivity-decay charge (see applyInactivityDecay/DECAY_TIERS)
+// is NOT computed here since it never touches the main capital, only
+// the separately-tracked sphere dividends pool; it's merged into the
+// "Списания" display per-day via dayDecayChargeItems below instead
+// (TZ section 7, 13.08.2026: "меняется только визуальное
+// представление данных", not the underlying mechanics).
 function dailyFactorBreakdown(entry, age) {
   const waterline = Number(state.smokingWaterline) || 0;
   const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014 * ageMultiplier(age);
@@ -1997,109 +2060,175 @@ function dailyFactorBreakdown(entry, age) {
   return items;
 }
 
-// Tappable number cell (TZ, 12.08.2026): the number itself is the
-// <summary> of a <details> block — tapping it expands the per-factor
-// breakdown underneath, same interaction in all three report columns.
-function reportClickableCell(amount, cssClass, items) {
-  if (!amount || items.length === 0) return `<td class="${cssClass}">—</td>`;
-  const detail = items.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
-  return `<td class="${cssClass}"><details class="report-cell"><summary>${formatDays(amount)}</summary>${detail}</details></td>`;
+// Inactivity-decay events recorded on this specific date (TZ section 7,
+// 13.08.2026 display change: shown inside that day's "Списания" in the
+// "Транзакции за день" popup instead of a standalone always-visible
+// section). Storage/computation in applyInactivityDecay is unchanged.
+function dayDecayChargeItems(date) {
+  return state.decayCharges
+    .filter((c) => c.date === date)
+    .map((c) => ({
+      label: `Бездействие (${c.sphere === "sport" ? "спорт" : c.sphere}): ${c.days}+ дней, −${c.marginalPct}% от Дивидендов`,
+      amount: -c.amountDays,
+    }));
 }
 
-function renderReport(screen) {
-  const dates = sortedLedgerDates().reverse();
+// Tappable amount (TZ, 12.08.2026 pattern, reused 13.08.2026 outside a
+// table for the "Транзакции за день" popup): the number itself is the
+// <summary> of a <details> block — tapping it expands the per-factor
+// breakdown underneath.
+function reportClickableAmount(amount, cssClass, items) {
+  if (!amount || items.length === 0) return `<span class="${cssClass}">—</span>`;
+  const detail = items.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
+  return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
+}
+
+// Minimal modal system (TZ section 7, 13.08.2026: "Транзакции за день"
+// popup on tapping a calendar date) — appended to <body> rather than
+// #screen since it needs to overlay the fixed bottom nav too. Click
+// outside the box or the ✕ closes it.
+function showModal(bodyHtml) {
+  closeModal();
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "modal-overlay";
+  overlay.innerHTML = `<div class="modal-box">${bodyHtml}</div>`;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  document.body.appendChild(overlay);
+  document.getElementById("modal-close-btn")?.addEventListener("click", closeModal);
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay")?.remove();
+}
+
+function dayTransactionsModalHtml(date, age) {
+  const entry = state.ledger[date];
+  if (!entry) {
+    return `
+      <div class="modal-header"><h3>${escapeHtml(date)}</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
+      <div class="empty-state">Операций в этот день не было.</div>
+    `;
+  }
+  const savings = entry.deltaDays || 0;
+  const dividends = entry.weeklyBonusDays || 0;
+  const breakdown = dailyFactorBreakdown(entry, age);
+  const chargeItems = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
+  const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
+  const dividendItems = dividends
+    ? [{ label: `Недельная доплата за спорт (неделя ${mondayOfWeek(date)}–${date})`, amount: dividends }]
+    : [];
+
+  return `
+    <div class="modal-header"><h3>Транзакции за ${escapeHtml(date)}</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
+    <div class="modal-row">
+      <span>Личные накопления</span>
+      ${reportClickableAmount(savings, savings >= 0 ? "amount positive" : "amount negative", breakdown)}
+    </div>
+    <div class="modal-row">
+      <span>Дивиденды</span>
+      ${reportClickableAmount(dividends, "amount positive", dividendItems)}
+    </div>
+    <div class="modal-row">
+      <span>Списания</span>
+      ${reportClickableAmount(charges, "amount negative", chargeItems)}
+    </div>
+  `;
+}
+
+const RU_MONTH_NAMES = [
+  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+];
+const RU_WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+// 4-tier intensity bucket, GitHub-heatmap style — relative to the
+// largest single-day magnitude seen across the whole ledger (not just
+// the visible month), so color intensity stays comparable as the user
+// navigates between months instead of recalibrating each time.
+function intensityTier(value, max) {
+  if (max <= 0) return 1;
+  const ratio = Math.abs(value) / max;
+  if (ratio > 0.75) return 4;
+  if (ratio > 0.5) return 3;
+  if (ratio > 0.25) return 2;
+  return 1;
+}
+
+// TZ section 7, 13.08.2026: "История" — calendar grid replacing the old
+// table-based report. Cell color reflects that day's real deltaDays
+// only (green=positive/red=negative/gray=no data), matching the main
+// Портфель chart; the balance number itself is deliberately not shown
+// on the grid. Tapping a date opens "Транзакции за день" with the full
+// breakdown, same clickable-amount pattern as before.
+function renderHistory(screen) {
+  const monthStr = state.historyMonth || todayStr().slice(0, 7);
+  const [year, mon] = monthStr.split("-").map(Number);
   const age = Number(state.onboarding.age);
 
-  if (dates.length === 0) {
-    screen.innerHTML = `<h2>Отчёт</h2><div class="empty-state">Операций пока нет.</div>`;
-    return;
-  }
+  const firstOfMonth = new Date(Date.UTC(year, mon - 1, 1));
+  const daysInMonth = new Date(Date.UTC(year, mon, 0)).getUTCDate();
+  const firstWeekday = firstOfMonth.getUTCDay(); // 0=Sun..6=Sat
+  const leadingPad = firstWeekday === 0 ? 6 : firstWeekday - 1; // Monday-first grid
 
-  let totalSavings = 0;
-  let totalDividends = 0;
-  let totalCharges = 0;
-  const rows = dates
-    .map((date) => {
-      const e = state.ledger[date];
-      const savings = e.deltaDays || 0;
-      const dividends = e.weeklyBonusDays || 0;
-      const breakdown = dailyFactorBreakdown(e, age);
-      const chargeItems = breakdown.filter((i) => i.amount < 0);
-      const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
-      totalSavings += savings;
-      totalDividends += dividends;
-      totalCharges += charges;
-      const dividendItems = dividends
-        ? [{ label: `Недельная доплата за спорт (неделя ${mondayOfWeek(date)}–${date})`, amount: dividends }]
-        : [];
-      return `<tr>
-        <td>${escapeHtml(date)}</td>
-        ${reportClickableCell(savings, savings >= 0 ? "amount positive" : "amount negative", breakdown)}
-        ${reportClickableCell(dividends, "amount positive", dividendItems)}
-        ${reportClickableCell(charges, "amount negative", chargeItems)}
-      </tr>`;
-    })
-    .join("");
+  const maxAbsDelta = Object.values(state.ledger).reduce((max, e) => Math.max(max, Math.abs(e.deltaDays || 0)), 0);
 
-  // Group append-only decayCharges rows by streakStartDate (TZ section 7,
-  // design decision 12.08.2026): each group is one unbroken inactivity
-  // run, shown collapsed as its current total %, expandable to the
-  // individual dated marginal-charge rows underneath.
-  const decayGroups = {};
-  for (const c of state.decayCharges) {
-    (decayGroups[c.streakStartDate] ??= []).push(c);
+  const cells = [];
+  for (let i = 0; i < leadingPad; i++) cells.push(`<div class="day-cell pad"></div>`);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(mon).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const entry = state.ledger[dateStr];
+    let cls = "empty";
+    if (entry) {
+      const delta = entry.deltaDays || 0;
+      if (delta > 0) cls = `positive tier-${intensityTier(delta, maxAbsDelta)}`;
+      else if (delta < 0) cls = `negative tier-${intensityTier(delta, maxAbsDelta)}`;
+      else cls = "neutral";
+    }
+    cells.push(`<button class="day-cell ${cls}" data-date="${dateStr}">${d}</button>`);
   }
-  const decayGroupsHtml = Object.entries(decayGroups)
-    .sort(([a], [b]) => (a < b ? 1 : -1))
-    .map(([streakStartDate, events]) => {
-      const sorted = events.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
-      const latest = sorted[sorted.length - 1];
-      const totalAmount = sorted.reduce((sum, c) => sum + c.amountDays, 0);
-      const detailRows = sorted
-        .map(
-          (c) =>
-            `<div class="decay-detail-row">${escapeHtml(c.date)}: ${c.days}+ дней бездействия, −${c.marginalPct}% (${formatDays(-c.amountDays)})</div>`
-        )
-        .join("");
-      return `<details class="decay-group">
-        <summary>Бездействие (спорт), с ${escapeHtml(streakStartDate)} — −${latest.pct}% (${formatDays(-totalAmount)})</summary>
-        <div class="decay-detail">${detailRows}</div>
-      </details>`;
-    })
-    .join("");
+  const trailingPad = (7 - (cells.length % 7)) % 7;
+  for (let i = 0; i < trailingPad; i++) cells.push(`<div class="day-cell pad"></div>`);
+
+  const isCurrentMonth = monthStr === todayStr().slice(0, 7);
 
   screen.innerHTML = `
-    <h2>Отчёт</h2>
-    <div class="note" style="margin-top:0;">Детальный реестр операций по дням.</div>
-    <div style="overflow-x:auto;">
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th>Дата</th>
-            <th>Личные накопления</th>
-            <th>Дивиденды</th>
-            <th>Списания</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="report-total">
-            <td>Итого</td>
-            <td class="${totalSavings >= 0 ? "amount positive" : "amount negative"}">${formatDays(totalSavings)}</td>
-            <td class="amount positive">${totalDividends ? formatDays(totalDividends) : "—"}</td>
-            <td class="amount negative">${totalCharges ? formatDays(totalCharges) : "—"}</td>
-          </tr>
-          ${rows}
-        </tbody>
-      </table>
+    <h2>История</h2>
+    <div class="history-nav">
+      <button class="btn secondary" id="month-prev">‹</button>
+      <div class="month-label">${RU_MONTH_NAMES[mon - 1]} ${year}</div>
+      <button class="btn secondary" id="month-next" ${isCurrentMonth ? "disabled" : ""}>›</button>
     </div>
-    ${
-      decayGroupsHtml
-        ? `<h3>Списания за бездействие (Дивиденды по спорту)</h3>
-           <div class="note" style="margin-top:0;">Отдельная механика — списывает только накопленные Дивиденды за спорт, не основной капитал.</div>
-           ${decayGroupsHtml}`
-        : ""
-    }
+    <div class="history-grid history-weekdays">
+      ${RU_WEEKDAY_LABELS.map((w) => `<div class="weekday-label">${w}</div>`).join("")}
+    </div>
+    <div class="history-grid">${cells.join("")}</div>
+    <div class="history-legend">
+      <span class="legend-swatch negative tier-4"></span><span class="legend-swatch negative tier-2"></span><span class="legend-swatch neutral"></span><span class="legend-swatch positive tier-2"></span><span class="legend-swatch positive tier-4"></span>
+      <span class="hint" style="margin:0 0 0 8px;">Меньше — больше капитала за день</span>
+    </div>
   `;
+
+  document.getElementById("month-prev").addEventListener("click", () => {
+    const prev = new Date(Date.UTC(year, mon - 2, 1));
+    state.historyMonth = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, "0")}`;
+    saveState();
+    renderHistory(screen);
+  });
+  document.getElementById("month-next").addEventListener("click", () => {
+    if (isCurrentMonth) return;
+    const next = new Date(Date.UTC(year, mon, 1));
+    state.historyMonth = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}`;
+    saveState();
+    renderHistory(screen);
+  });
+  screen.querySelectorAll(".day-cell[data-date]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showModal(dayTransactionsModalHtml(btn.dataset.date, age));
+    });
+  });
 }
 
 /* ---------------------------------------------------------------------
