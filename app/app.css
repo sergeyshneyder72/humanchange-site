@@ -674,6 +674,17 @@ button {
 .day-cell.positive { background: #1f6f4a; color: #fff; }
 .day-cell.negative { background: #a83232; color: #fff; }
 
+/* Outside the retroactive-editing window (TZ, 16.08.2026) — still
+   visible with its real color, just dimmed; a day with no data becomes
+   non-interactive (native disabled) instead of opening an empty form. */
+.day-cell.locked {
+  opacity: 0.45;
+}
+
+.day-cell.locked:disabled {
+  cursor: not-allowed;
+}
+
 /* "Транзакции за день" row (now a full screen, not a modal — TZ
    13.08.2026 — kept the .modal-row name since it's still just a row
    layout, no longer inside an actual modal). */

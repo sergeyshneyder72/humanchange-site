@@ -260,9 +260,9 @@ const KNOWLEDGE_BASE = [
     key: "sleep",
     name: "Сон",
     active: true,
-    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском. Ежедневно: отклонение от окна 7–8ч даёт грубую дельту капитала, отдельно нормированную для короткого и для длинного сна (три ступени вниз от окна, две вверх) — приблизительная оценка, точная ежедневная методология для сна пока уточняется, в отличие от курения и спорта.",
-    source: "Источники: метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников); Tsai et al., Aging (Albany NY), 2021.",
-    sourceKeys: ["cappuccio-sleep", "tsai-aging"],
+    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском, причём нелинейно и несимметрично — на каждый недостающий час риск растёт примерно на 6%, на каждый лишний час сверх нормы — примерно на 13%. Вместо разового дневного штрафа приложение ведёт накопительный «долг сна»: недосып одного дня не компенсируется одной «лишней» ночью сна один к одному, организм восстанавливается постепенно — долг затухает со временем, а штраф в капитал растёт ускоренно (нелинейно) с размером накопленного долга, а не с разовым отклонением. Отдельно и независимо — штраф за нерегулярное время отхода ко сну (если это поле заполняется 7+ дней подряд), даже при нормальном количестве часов. Модель «долг сна + регулярность» — собственная интерпретация проекта, собранная из нескольких независимых исследований (модель гомеостатического давления сна, дозозависимый метаанализ смертности, Sleep Regularity Index UK Biobank), а не прямая цитата единой признанной методологии.",
+    source: "Источники: Yin J. et al., JAHA (2017, дозозависимая связь смертности со сном); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) и Belenky et al. (2003, динамика восстановления после ограничения сна); Sleep Regularity Index, UK Biobank; метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников, фоновая U-образная связь).",
+    sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
   },
   {
     key: "alcohol",
@@ -343,6 +343,37 @@ const SOURCES = [
     label: "Дополнительное подтверждение соотношения активности",
     citation: "WebMD (2024), обзор исследования по ходьбе — аналогичное соотношение ≈1:6",
     url: "https://www.webmd.com/fitness-exercise/news/20241115/cm/how-walking-more-could-add-11-years-to-your-life",
+  },
+  {
+    key: "yin-jaha-sleep",
+    label: "Дозозависимая связь сна со смертностью (+6%/недосып, +13%/пересып на час)",
+    citation: "Yin J. et al., Journal of the American Heart Association (2017), «Relationship of Sleep Duration With All-Cause Mortality and Cardiovascular Events: A Systematic Review and Dose-Response Meta-Analysis of Prospective Cohort Studies»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/28889101/",
+  },
+  {
+    key: "borbely-two-process",
+    label: "Two-process model сна (гомеостатическое давление)",
+    citation: "Borbély A.A., Human Neurobiology (1982), «A two process model of sleep regulation»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/7185792/",
+    url2: "https://pubmed.ncbi.nlm.nih.gov/26762182/",
+  },
+  {
+    key: "vandongen-dinges-2003",
+    label: "Накопительный эффект хронического ограничения сна",
+    citation: "Van Dongen H.P.A. et al., Sleep (2003), «The Cumulative Cost of Additional Wakefulness»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12683469/",
+  },
+  {
+    key: "belenky-2003",
+    label: "Динамика восстановления после ограничения сна",
+    citation: "Belenky G. et al., Journal of Sleep Research (2003), «Patterns of performance degradation and restoration during sleep restriction and subsequent recovery»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12603781/",
+  },
+  {
+    key: "sri-ukbiobank",
+    label: "Sleep Regularity Index — методология регулярности сна",
+    citation: "Windred D.P. et al., UK Biobank (2024), «Sleep regularity and mortality: a prospective analysis in the UK Biobank»",
+    url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
   },
 ];
 
@@ -551,8 +582,10 @@ function illnessAdjustmentPct(ob) {
 // have this problem — see tsaiYearsLostTotal() below, sourced from real
 // years-of-life-lost data (Tsai et al. 2021) instead of a converted RR.
 // Sleep and alcohol don't either, but for a different reason: they moved
-// to the daily bucket-coefficient/binary mechanic (TZ section 3.3, see
-// dailySleepDelta/dailyAlcoholDelta below) — its own disclosed rough
+// to daily active factors (TZ section 3.3 — alcohol's daily
+// bucket-coefficient/binary mechanic, see dailyAlcoholDelta below; sleep's
+// cumulative-debt mechanic, see sleepDebtPenalty/sleepRegularityPenalty
+// further down, TZ section 3.3.1) — each its own disclosed
 // approximation, not this issue. Region (regionAdjustmentPct) was never
 // the same issue — it scales by an actual life-expectancy-YEARS ratio
 // between countries. Do not invent the illness conversion yourself — no
@@ -608,7 +641,7 @@ function isRegularDrinkerApprox(ob) {
 // REMOVED, not kept alongside their new daily mechanic — replaces,
 // doesn't add, same principle as smoking's onboarding value being a pure
 // reference point rather than a separate standing penalty. See
-// dailySleepDelta/dailyAlcoholDelta below for where they live now.
+// sleepDebtPenalty/dailyAlcoholDelta below for where they live now.
 function tsaiYearsLostTotal(ob) {
   const smokingYears = Number(ob.cigarettesPerDay) > 0 ? yearsLostForGender("smoking", ob.gender) : 0;
   // Approximation, NOT from the source: the paper measures inactivity in
@@ -668,40 +701,110 @@ function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline)
   return activityGain + smokingTerm;
 }
 
-// Sleep/alcohol daily deviation coefficients (TZ section 3.3, 11.08.2026,
-// explicit numbers from product): bucket lookup, not hours directly —
-// normalized SEPARATELY on each side of the 7-8h optimum (3 buckets
-// below it, 2 above), not one symmetric curve.
-const SLEEP_DAILY_COEFFICIENT = {
-  lt5: 1.0,
-  "5to6": 0.67,
-  "6to7": 0.33,
-  "7to8": 0,
-  "8to9": 0.5,
-  gt9: 1.0,
-};
+// TZ section 3.3.1, 16.08.2026: replaces the old flat per-day bucket
+// model above. Two independent mechanisms:
+//
+//   1. Nonlinear cumulative "sleep debt" (two-process-model-inspired):
+//      долг(N) = долг(N-1) × k + (норма_сна − факт_сна(N)), penalized by
+//      a convex (accelerating) function of the accumulated debt instead
+//      of a flat per-day delta — a single bad night matters less than
+//      the same deviation sustained for a week.
+//   2. Bedtime regularity (simplified Sleep Regularity Index, UK
+//      Biobank) — independent of the debt above; penalizes an unstable
+//      bedtime even when average sleep duration is fine.
+//
+// TZ explicitly leaves k and the debt→penalty conversion "at the
+// implementation's discretion" (only the 0.7-0.85 range for k, and the
+// JAHA-sourced 13%/6% oversleep/undersleep steepness ratio, are given).
+// The constants below are THIS implementation's disclosed choice, not a
+// verified clinical calibration — see the Sleep card in the Knowledge
+// Base and Source_* entries for the explicit "own interpretation, not a
+// single cited methodology" disclosure TZ requires.
 
-// Sleep and alcohol moved from a one-time onboarding contribution to a
-// daily active factor (TZ section 3.3, 11.08.2026) — replacing that
-// one-time contribution entirely (removed from tsaiYearsLostTotal above),
-// not stacking with it. Explicitly a ROUGH approximation per the spec:
-// divides the Tsai one-time years-lost anchor by 365 and scales by
-// today's bucket coefficient — that anchor was never validated as a
-// daily rate, this is a disclosed placeholder, not the same evidence
-// grade as smoking/sport's per-cigarette/per-minute figures. Must ship
-// with a visible UI warning, not buried in fine print — see the log-card
-// hint in renderDashboard.
-function dailySleepDelta(sleepHoursRangeToday, gender) {
-  const coeff = SLEEP_DAILY_COEFFICIENT[sleepHoursRangeToday];
-  if (!coeff) return 0;
-  return -((yearsLostForGender("longSleep", gender) / 365) * coeff);
+// Reference point for the debt recurrence — the same 7-8h optimum the
+// old model centered on (SLEEP_HOURS_RANGE_OPTIONS' own bucket
+// midpoints), not a separately chosen number.
+const SLEEP_DEBT_NORM_HOURS = 7.5;
+// Decay per calendar day; TZ range is 0.7-0.85, this is the midpoint.
+const SLEEP_DEBT_DECAY_K = 0.8;
+// Convex (quadratic) penalty per day of accumulated debt. Oversleep
+// (debt < 0) is steeper than undersleep (debt > 0) by the JAHA 13%/6%
+// ratio. Magnitude calibrated so a STEADY ~1h/day undersleep — which
+// converges to a debt of 1/(1-k) = 5 at k=0.8 — costs roughly the same
+// order of magnitude as the old flat model's worst bucket (~0.0138
+// days/day), so the replacement doesn't jump to a wildly different
+// scale; not itself a sourced target.
+const SLEEP_DEBT_UNDER_COEFF = 0.0008;
+const SLEEP_DEBT_OVER_COEFF = SLEEP_DEBT_UNDER_COEFF * (13 / 6);
+
+function sleepDebtPenalty(debt) {
+  if (!debt) return 0;
+  const coeff = debt > 0 ? SLEEP_DEBT_UNDER_COEFF : SLEEP_DEBT_OVER_COEFF;
+  return -(coeff * debt * debt);
+}
+
+// Whole calendar days between two 'YYYY-MM-DD' dates (b − a), UTC —
+// same date-label convention as todayStr()/mondayOfWeek() elsewhere.
+function daysBetweenDates(a, b) {
+  const da = new Date(a + "T00:00:00Z");
+  const db = new Date(b + "T00:00:00Z");
+  return Math.round((db - da) / 86400000);
+}
+
+// Regularity subfactor (Mechanism 2) — minutes-from-midnight for a
+// "HH:MM" bedtime, shifted so evening/past-midnight bedtimes stay on one
+// continuous scale (00:10 becomes 24:10, comparable to 23:50) instead of
+// wrapping around the literal clock. Assumes bedtimes cluster in the
+// evening/early morning, not exactly at midday — true for this field.
+function circularBedtimeMinutes(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  let mins = h * 60 + (m || 0);
+  if (mins < 12 * 60) mins += 24 * 60;
+  return mins;
+}
+
+const SLEEP_REGULARITY_WINDOW_DAYS = 14; // TZ: "за последние 7-14 дней"
+const SLEEP_REGULARITY_MIN_SAMPLES = 7; // TZ: "в достаточном объёме"
+const SLEEP_REGULARITY_THRESHOLD_MIN = 30; // SD below this = "regular enough", no penalty
+const SLEEP_REGULARITY_SD_FOR_MAX_MIN = 120; // SD at/above this = full penalty
+const SLEEP_REGULARITY_MAX_PENALTY_DAYS = 0.02;
+
+// Simplified Sleep Regularity Index (TZ 3.3.1, mechanism 2): standard
+// deviation of bedtime across the trailing window relative to the
+// user's OWN average (not an abstract norm), among days that actually
+// have a bedtime logged. Below SLEEP_REGULARITY_MIN_SAMPLES data points
+// in the window, the mechanism is inactive — no penalty for not
+// entering the optional field, per TZ.
+function sleepRegularityPenalty(uptoDateStr) {
+  const windowStart = new Date(uptoDateStr + "T00:00:00Z");
+  windowStart.setUTCDate(windowStart.getUTCDate() - (SLEEP_REGULARITY_WINDOW_DAYS - 1));
+  const windowStartStr = windowStart.toISOString().slice(0, 10);
+
+  const samples = [];
+  for (const date of sortedLedgerDates()) {
+    if (date < windowStartStr || date > uptoDateStr) continue;
+    const entry = state.ledger[date];
+    if (entry && entry.bedtimeToday) samples.push(circularBedtimeMinutes(entry.bedtimeToday));
+  }
+  if (samples.length < SLEEP_REGULARITY_MIN_SAMPLES) return 0;
+
+  const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+  const variance = samples.reduce((a, b) => a + (b - mean) ** 2, 0) / samples.length;
+  const sd = Math.sqrt(variance);
+
+  if (sd <= SLEEP_REGULARITY_THRESHOLD_MIN) return 0;
+  const t = Math.min(
+    1,
+    (sd - SLEEP_REGULARITY_THRESHOLD_MIN) / (SLEEP_REGULARITY_SD_FOR_MAX_MIN - SLEEP_REGULARITY_THRESHOLD_MIN)
+  );
+  return -(t * SLEEP_REGULARITY_MAX_PENALTY_DAYS);
 }
 
 // Binary, not dose-scaled (TZ section 3.3): the Tsai source has no
 // dose-response data for alcohol, so "drank today" (any of the 3 fields
 // above its "0" bucket, same check as isRegularDrinkerApprox) applies the
 // full daily-equivalent anchor; not drinking is neutral, no deposit.
-// Same rough-approximation caveat as dailySleepDelta above.
+// Same "disclosed rough approximation" caveat as the sleep mechanism above.
 function dailyAlcoholDelta(spiritsToday, wineToday, beerToday, gender) {
   const drankToday = isRegularDrinkerApprox({
     alcoholSpirits: spiritsToday,
@@ -764,6 +867,102 @@ function weeklyActivityTopUpDays(sundayDateStr) {
 
 function sortedLedgerDates() {
   return Object.keys(state.ledger).sort();
+}
+
+/* ---------------------------------------------------------------------
+ * Retroactive entry (TZ, 16.08.2026): "История" tap opens a fill/edit
+ * form for any day from onboarding through today, capped at 30 days
+ * back. Editing a past day cascades — deltaDays, the weekly sport
+ * bonus, and inactivity-decay charges are all re-derived for every
+ * ledger entry from the edited date through today, same formulas as a
+ * normal same-day save, just re-run over a range. See cascadeRecalcFrom.
+ * ------------------------------------------------------------------- */
+
+// Furthest-back editable date: 30 days before today, inclusive (today
+// minus 30 days is still editable; today minus 31 is not).
+function retroCutoffDate(today = todayStr()) {
+  const cutoff = new Date(today + "T00:00:00Z");
+  cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  return cutoff.toISOString().slice(0, 10);
+}
+
+function isDateEditable(dateStr) {
+  const today = todayStr();
+  if (dateStr > today) return false;
+  if (!state.createdAt || dateStr < state.createdAt) return false;
+  if (dateStr < retroCutoffDate(today)) return false;
+  return true;
+}
+
+// Re-runs the same per-day/per-week/per-streak formulas the normal
+// same-day save already used (dailyDeltaDays, the sleep-debt/regularity
+// mechanism, dailyAlcoholDelta, weeklyActivityTopUpDays,
+// applyInactivityDecay) for every EXISTING ledger entry from fromDate
+// through today — none of those formulas change here, only the range
+// they're applied to.
+//
+// Sleep debt is the one piece that's inherently sequential (each day's
+// debt depends on the previous day's), not just per-day like the other
+// factors — it's seeded from the last ledger entry strictly BEFORE
+// fromDate (already-computed, untouched by this cascade) via
+// daysBetweenDates, so a calendar-day gap with no entries still decays
+// correctly without looping over empty days one by one
+// (debt × k^gap === decaying once per empty day, since there's no
+// deviation term to add on days with no entry).
+//
+// Order matters: deltaDays must be rebuilt first (weeklyBonusDays gets
+// added on top of it in step 2), and decayCharges must be rebuilt last
+// since its dividends base reads the just-recomputed weeklyBonusDays.
+// decayCharges recorded on/after fromDate are discarded and replayed in
+// chronological order — safe because a charge recorded for date D only
+// ever depends on data up to and including D (see daysSinceLastActivity,
+// which only looks backward), so charges before fromDate are unaffected
+// by anything at or after it and don't need to move.
+function cascadeRecalcFrom(fromDate) {
+  const today = todayStr();
+  const gender = state.onboarding.gender;
+  const affectedDates = sortedLedgerDates().filter((d) => d >= fromDate && d <= today);
+
+  const priorDates = sortedLedgerDates().filter((d) => d < fromDate);
+  const seedDate = priorDates.length ? priorDates[priorDates.length - 1] : null;
+  let runningDebt = seedDate ? state.ledger[seedDate].sleepDebt || 0 : 0;
+  let runningDebtDate = seedDate || fromDate;
+
+  for (const date of affectedDates) {
+    const entry = state.ledger[date];
+    const baseDelta = dailyDeltaDays(entry.cigarettes, entry.activityMinutes, state.smokingWaterline);
+
+    const gapDays = Math.max(daysBetweenDates(runningDebtDate, date), 0);
+    const decayed = runningDebt * Math.pow(SLEEP_DEBT_DECAY_K, gapDays);
+    const factHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, entry.sleepHoursRange, "midpointHours");
+    const deviation = factHours !== undefined ? SLEEP_DEBT_NORM_HOURS - factHours : 0;
+    const debt = decayed + deviation;
+    entry.sleepDebt = debt;
+    entry.sleepDebtDelta = sleepDebtPenalty(debt);
+    entry.sleepRegularityDelta = sleepRegularityPenalty(date);
+    entry.sleepDelta = entry.sleepDebtDelta + entry.sleepRegularityDelta;
+    runningDebt = debt;
+    runningDebtDate = date;
+
+    const alcoholDelta = dailyAlcoholDelta(entry.alcoholSpirits, entry.alcoholWine, entry.alcoholBeer, gender);
+    entry.alcoholDelta = alcoholDelta;
+    entry.deltaDays = baseDelta + entry.sleepDelta + alcoholDelta;
+    delete entry.weeklyBonusDays;
+  }
+
+  for (const date of affectedDates) {
+    if (new Date(date + "T00:00:00").getDay() !== 0) continue;
+    const bonus = weeklyActivityTopUpDays(date);
+    if (bonus > 0) {
+      state.ledger[date].weeklyBonusDays = bonus;
+      state.ledger[date].deltaDays += bonus;
+    }
+  }
+
+  state.decayCharges = state.decayCharges.filter((c) => c.date < fromDate);
+  for (const date of affectedDates) {
+    applyInactivityDecay(date);
+  }
 }
 
 // Inactivity-decay charge on sphere dividends (TZ section 7, 11.08.2026,
@@ -1651,12 +1850,19 @@ function renderDashboard(screen) {
           <div class="hint">Не считается медленная прогулка — подробнее в Базе знаний.</div>
         </div>
       </div>
-      <div class="field">
-        <label>Сон прошлой ночью</label>
-        <select id="log_sleep">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, todayEntry.sleepHoursRange)}
-        </select>
+      <div class="log-row">
+        <div class="field">
+          <label>Сон прошлой ночью</label>
+          <select id="log_sleep">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, todayEntry.sleepHoursRange)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Время отхода ко сну</label>
+          <input type="time" id="log_bedtime" value="${escapeHtml(todayEntry.bedtimeToday ?? "")}">
+          <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
+        </div>
       </div>
       <div class="log-row">
         <div class="field">
@@ -1681,7 +1887,7 @@ function renderDashboard(screen) {
           ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, todayEntry.alcoholBeer)}
         </select>
       </div>
-      <div class="methodology-warning">Приблизительная оценка — точная ежедневная методология для сна и алкоголя пока уточняется, в отличие от курения и спорта, где методология уже проверена.</div>
+      <div class="methodology-warning">Приблизительная оценка — точная ежедневная методология для алкоголя пока уточняется, в отличие от курения, спорта и сна, где методология уже проверена/детализирована.</div>
       <div class="field">
         <label>Уровень стресса сегодня</label>
         <select id="log_stress">
@@ -1737,40 +1943,26 @@ function renderDashboard(screen) {
     const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
     const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
     const sleepHoursRange = document.getElementById("log_sleep").value;
+    const bedtimeToday = document.getElementById("log_bedtime").value;
     const alcoholSpirits = document.getElementById("log_alcohol_spirits").value;
     const alcoholWine = document.getElementById("log_alcohol_wine").value;
     const alcoholBeer = document.getElementById("log_alcohol_beer").value;
     const stressLevel = document.getElementById("log_stress").value;
-    const gender = state.onboarding.gender;
-    const baseDelta = dailyDeltaDays(cigarettes, activityMinutes, state.smokingWaterline);
-    const sleepDelta = dailySleepDelta(sleepHoursRange, gender);
-    const alcoholDelta = dailyAlcoholDelta(alcoholSpirits, alcoholWine, alcoholBeer, gender);
-    const deltaDays = baseDelta + sleepDelta + alcoholDelta;
     state.ledger[today] = {
+      ...(state.ledger[today] || {}),
       cigarettes,
       activityMinutes,
       sleepHoursRange,
+      bedtimeToday,
       alcoholSpirits,
       alcoholWine,
       alcoholBeer,
       stressLevel,
-      deltaDays,
-      sleepDelta,
-      alcoholDelta,
     };
-    // Weekly catch-up (TZ section 3.2) only evaluates on Sunday saves —
-    // today's entry must already be in state.ledger (set above) so its
-    // own minutes count toward the week's raw sum.
-    if (new Date(today + "T00:00:00").getDay() === 0) {
-      const bonus = weeklyActivityTopUpDays(today);
-      if (bonus > 0) {
-        state.ledger[today].weeklyBonusDays = bonus;
-        state.ledger[today].deltaDays += bonus;
-      }
-    }
-    // Inactivity-decay on sphere dividends (TZ section 7, "Отчёт") — does
-    // NOT touch deltaDays/the main capital, see applyInactivityDecay.
-    applyInactivityDecay(today);
+    // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
+    // today alone this is equivalent to the old single-day computation,
+    // it just goes through the shared path now.
+    cascadeRecalcFrom(today);
     saveState();
     renderDashboard(screen);
     const seriesAfter = cumulativeSeries();
@@ -1881,10 +2073,14 @@ function renderFeed() {
             `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Недельная доплата за спорт</span><span class="amount positive">+${e.weeklyBonusDays.toFixed(2)} дн.</span></li>`
           );
         }
-        if (e.sleepDelta) {
-          const sleepLabel = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, e.sleepHoursRange, "label") || "";
+        if (e.sleepDebtDelta) {
           items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Сон: ${escapeHtml(sleepLabel)}</span><span class="amount negative">−${Math.abs(e.sleepDelta).toFixed(2)} дн.</span></li>`
+            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Долг сна</span><span class="amount negative">−${Math.abs(e.sleepDebtDelta).toFixed(2)} дн.</span></li>`
+          );
+        }
+        if (e.sleepRegularityDelta) {
+          items.push(
+            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Нерегулярный отход ко сну</span><span class="amount negative">−${Math.abs(e.sleepRegularityDelta).toFixed(2)} дн.</span></li>`
           );
         }
         if (e.alcoholDelta) {
@@ -2170,7 +2366,8 @@ function dailyFactorBreakdown(entry) {
     items.push({ label: "Активность", amount: Math.min((Number(entry.activityMinutes) / 60) * 6, 9) / 24 });
   }
   if (entry.weeklyBonusDays) items.push({ label: "Недельная доплата за спорт", amount: entry.weeklyBonusDays });
-  if (entry.sleepDelta) items.push({ label: "Сон", amount: entry.sleepDelta });
+  if (entry.sleepDebtDelta) items.push({ label: "Долг сна", amount: entry.sleepDebtDelta });
+  if (entry.sleepRegularityDelta) items.push({ label: "Регулярность сна", amount: entry.sleepRegularityDelta });
   if (entry.alcoholDelta) items.push({ label: "Алкоголь", amount: entry.alcoholDelta });
   return items;
 }
@@ -2232,18 +2429,119 @@ function dayTransactionsHtml(date) {
   `;
 }
 
+// Retroactive fill/edit form (TZ, 16.08.2026) — same 4 formula factors as
+// the Dashboard's "Отметить сегодня" card (курение, спорт, сон, алкоголь);
+// stress is collection-only there and isn't part of this retroactive form.
+function dayEditFormHtml(date, entry) {
+  const e = entry || {};
+  return `
+    <div class="log-card">
+      <h3>${entry ? "Изменить день" : "Заполнить день"}</h3>
+      <div class="log-row">
+        <div class="field">
+          <label>Сигарет</label>
+          <input type="number" min="0" id="edit_cigarettes" value="${escapeHtml(e.cigarettes ?? "")}">
+          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт.</div>
+        </div>
+        <div class="field">
+          <label>Минут активности</label>
+          <input type="number" min="0" id="edit_activity" value="${escapeHtml(e.activityMinutes ?? "")}">
+        </div>
+      </div>
+      <div class="log-row">
+        <div class="field">
+          <label>Сон</label>
+          <select id="edit_sleep">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, e.sleepHoursRange)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Время отхода ко сну</label>
+          <input type="time" id="edit_bedtime" value="${escapeHtml(e.bedtimeToday ?? "")}">
+          <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
+        </div>
+      </div>
+      <div class="log-row">
+        <div class="field">
+          <label>Крепкий алкоголь</label>
+          <select id="edit_alcohol_spirits">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, e.alcoholSpirits)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Вино</label>
+          <select id="edit_alcohol_wine">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, e.alcoholWine)}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Пиво/слабоалкогольное</label>
+        <select id="edit_alcohol_beer">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, e.alcoholBeer)}
+        </select>
+      </div>
+      <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
+    </div>
+  `;
+}
+
+// TZ, 16.08.2026: combines the existing read-only breakdown with a
+// fill/edit form — one screen, not two. The breakdown (if the day has
+// data) stays on top exactly as before; the form appears underneath
+// only when the date is inside the editable window. Outside the window,
+// a day with data still shows the breakdown (read-only, per product
+// decision), a day with no data shows an explanatory note instead of a
+// form — the calendar already blocked the tap for that no-data case.
 function renderHistoryDay(screen) {
   const date = state.historyDetailDate;
+  const entry = state.ledger[date];
+  const editable = isDateEditable(date);
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
     <h2 class="screen-title">Транзакции за ${escapeHtml(date || "")}</h2>
-    ${dayTransactionsHtml(date)}
+    ${entry ? dayTransactionsHtml(date) : `<div class="empty-state">Операций в этот день не было.</div>`}
+    ${
+      editable
+        ? dayEditFormHtml(date, entry)
+        : !entry
+        ? `<div class="note">Редактирование недоступно — дата вне доступного 30-дневного окна или раньше даты онбординга.</div>`
+        : ""
+    }
   `;
   document.getElementById("settings-back").addEventListener("click", () => {
     state.nav = "history";
     saveState();
     render();
   });
+  if (editable) {
+    document.getElementById("day-edit-save").addEventListener("click", () => {
+      const cigarettes = Number(document.getElementById("edit_cigarettes").value) || 0;
+      const activityMinutes = Number(document.getElementById("edit_activity").value) || 0;
+      const sleepHoursRange = document.getElementById("edit_sleep").value;
+      const bedtimeToday = document.getElementById("edit_bedtime").value;
+      const alcoholSpirits = document.getElementById("edit_alcohol_spirits").value;
+      const alcoholWine = document.getElementById("edit_alcohol_wine").value;
+      const alcoholBeer = document.getElementById("edit_alcohol_beer").value;
+      state.ledger[date] = {
+        ...(state.ledger[date] || {}),
+        cigarettes,
+        activityMinutes,
+        sleepHoursRange,
+        bedtimeToday,
+        alcoholSpirits,
+        alcoholWine,
+        alcoholBeer,
+      };
+      cascadeRecalcFrom(date);
+      saveState();
+      renderHistoryDay(screen);
+    });
+  }
 }
 
 const RU_MONTH_NAMES = [
@@ -2275,7 +2573,13 @@ function renderHistory(screen) {
     const entry = state.ledger[dateStr];
     const delta = entry?.deltaDays || 0;
     const cls = delta > 0 ? "positive" : delta < 0 ? "negative" : "empty";
-    cells.push(`<button class="day-cell ${cls}" data-date="${dateStr}">${d}</button>`);
+    const editable = isDateEditable(dateStr);
+    // Locked days stay visible and, if they have data, still tappable
+    // (opens a read-only view) — only the editing itself is blocked,
+    // per TZ (не скрывать день, а заблокировать тап на редактирование).
+    const locked = !editable ? " locked" : "";
+    const disabled = !editable && !entry ? "disabled" : "";
+    cells.push(`<button class="day-cell ${cls}${locked}" data-date="${dateStr}" ${disabled} title="${editable ? "" : "Редактирование недоступно"}">${d}</button>`);
   }
   const trailingPad = (7 - (cells.length % 7)) % 7;
   for (let i = 0; i < trailingPad; i++) cells.push(`<div class="day-cell pad"></div>`);
