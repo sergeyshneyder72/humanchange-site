@@ -1505,6 +1505,7 @@ function renderSettings(screen) {
     <div class="settings-list">
       <button class="settings-row" data-view="care">Служба заботы и Фонд идей</button>
       <button class="settings-row" data-view="factors">Факторы на главном экране</button>
+      <a class="settings-row" href="/product/" target="_blank" rel="noopener">Тарифы и оплата</a>
     </div>
     <div class="empty-state">Остальные настройки — в разработке.</div>
   `;

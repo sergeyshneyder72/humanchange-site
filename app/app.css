@@ -197,6 +197,7 @@ button {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
+  text-decoration: none;
 }
 
 /* Onboarding */
