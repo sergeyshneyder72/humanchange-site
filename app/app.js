@@ -1661,8 +1661,19 @@ const BOTTOM_NAV_ITEMS = [
   { nav: "settings", icon: ICONS.gear, label: "Настройки" },
 ];
 
-function renderApp() {
-  const nav = state.nav || "dashboard";
+// TZ, 18.08.2026 fix: the app shell (top bar / .wrap / bottom nav) used
+// to be torn down and rebuilt via root.innerHTML on EVERY navigation —
+// including every time the user just tapped back onto Портфель. A
+// freshly-inserted overflow-y:auto element (.wrap) isn't immediately
+// promoted to its own scrolling compositor layer on mobile Safari/
+// Chrome, so the first one or two touch-scroll gestures on a
+// just-recreated .wrap were silently swallowed — "не скролится с первой
+// попытки, только с третьей". Building the shell once and reusing the
+// same .wrap node across navigations (only its CONTENTS change per
+// screen) keeps that scroll layer alive, so it never needs to "warm up"
+// again after the very first render.
+function ensureAppShell() {
+  if (document.querySelector(".bottom-nav")) return;
   root.innerHTML = `
     <div class="top-bar">
       <div class="top-icons">
@@ -1673,8 +1684,7 @@ function renderApp() {
     <div class="wrap" id="screen"></div>
     <nav class="bottom-nav">
       ${BOTTOM_NAV_ITEMS.map(
-        (item) =>
-          `<button data-nav="${item.nav}" class="icon-nav-btn ${nav === item.nav ? "active" : ""}" aria-label="${item.label}" title="${item.label}">${item.icon}</button>`
+        (item) => `<button data-nav="${item.nav}" class="icon-nav-btn" aria-label="${item.label}" title="${item.label}">${item.icon}</button>`
       ).join("")}
     </nav>
   `;
@@ -1698,6 +1708,18 @@ function renderApp() {
     state.nav = "notifications";
     saveState();
     render();
+  });
+}
+
+function renderApp() {
+  const nav = state.nav || "dashboard";
+  // Guarded by a DOM check, not a boolean flag, so it self-heals: if
+  // something else (onboarding's "official recalc", etc.) wipes
+  // root.innerHTML out from under the shell, the next renderApp() call
+  // just rebuilds it instead of trusting stale in-memory state.
+  ensureAppShell();
+  root.querySelectorAll("[data-nav]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.nav === nav);
   });
 
   const screen = document.getElementById("screen");
