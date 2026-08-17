@@ -505,6 +505,7 @@ function defaultState() {
     decayCharges: [], // append-only inactivity-decay events against sphere dividends, see applyInactivityDecay
     historyMonth: null, // "YYYY-MM" currently viewed in the История calendar, defaults to the current month when unset
     historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
+    historyDayEditMode: false, // whether that screen's fill/edit form is expanded, TZ section 7, 17.08.2026
     settingsView: "root", // "root" | "care" | "factors" — sub-screen open within Настройки, TZ section 7, 13.08.2026
     visibleFactors: ["sport", "sleep", "nutrition", "stress"], // default dashboard factor cards, TZ section 7, 13.08.2026 — deliberately not the same set as the formula factors
   };
@@ -1155,6 +1156,42 @@ function selectOptionsHtml(options, selectedValue) {
   return options
     .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
     .join("");
+}
+
+// Bedtime picker (TZ, 17.08.2026) — two <select> dropdowns (hour,
+// 15-minute increments) instead of a native <input type="time">.
+// Native time inputs render fine on desktop Chrome, but some mobile
+// browsers/webviews without full support for type="time" silently fall
+// back to a plain text box with no picker UI at all, which is exactly
+// the "empty rectangle" reported live. Two selects match the rest of
+// this form's own component vocabulary (every other field here is
+// already a <select> over a fixed set of options) and behave
+// identically everywhere, no feature-detection needed. Stored/read as
+// the same "HH:MM" string the sleep-regularity mechanism already
+// expects (see circularBedtimeMinutes) — only the input widget changed.
+const BEDTIME_MINUTE_OPTIONS = ["00", "15", "30", "45"];
+
+function timePickerHtml(idPrefix, value) {
+  const [h, m] = (value || "").split(":");
+  const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"))
+    .map((hh) => `<option value="${hh}" ${hh === h ? "selected" : ""}>${hh}</option>`)
+    .join("");
+  const minuteOptions = BEDTIME_MINUTE_OPTIONS.map(
+    (mm) => `<option value="${mm}" ${mm === m ? "selected" : ""}>${mm}</option>`
+  ).join("");
+  return `
+    <div class="time-picker-row">
+      <select id="${idPrefix}_hour" aria-label="Часы"><option value="">--</option>${hourOptions}</select>
+      <span class="time-picker-sep">:</span>
+      <select id="${idPrefix}_minute" aria-label="Минуты"><option value="">--</option>${minuteOptions}</select>
+    </div>
+  `;
+}
+
+function timePickerValue(idPrefix) {
+  const h = document.getElementById(`${idPrefix}_hour`).value;
+  const m = document.getElementById(`${idPrefix}_minute`).value;
+  return h && m ? `${h}:${m}` : "";
 }
 
 function renderOnboarding() {
@@ -1860,7 +1897,7 @@ function renderDashboard(screen) {
         </div>
         <div class="field">
           <label>Время отхода ко сну</label>
-          <input type="time" id="log_bedtime" value="${escapeHtml(todayEntry.bedtimeToday ?? "")}">
+          ${timePickerHtml("log_bedtime", todayEntry.bedtimeToday)}
           <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
         </div>
       </div>
@@ -1943,7 +1980,7 @@ function renderDashboard(screen) {
     const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
     const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
     const sleepHoursRange = document.getElementById("log_sleep").value;
-    const bedtimeToday = document.getElementById("log_bedtime").value;
+    const bedtimeToday = timePickerValue("log_bedtime");
     const alcoholSpirits = document.getElementById("log_alcohol_spirits").value;
     const alcoholWine = document.getElementById("log_alcohol_wine").value;
     const alcoholBeer = document.getElementById("log_alcohol_beer").value;
@@ -2458,7 +2495,7 @@ function dayEditFormHtml(date, entry) {
         </div>
         <div class="field">
           <label>Время отхода ко сну</label>
-          <input type="time" id="edit_bedtime" value="${escapeHtml(e.bedtimeToday ?? "")}">
+          ${timePickerHtml("edit_bedtime", e.bedtimeToday)}
           <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
         </div>
       </div>
@@ -2490,40 +2527,57 @@ function dayEditFormHtml(date, entry) {
   `;
 }
 
-// TZ, 16.08.2026: combines the existing read-only breakdown with a
-// fill/edit form — one screen, not two. The breakdown (if the day has
-// data) stays on top exactly as before; the form appears underneath
-// only when the date is inside the editable window. Outside the window,
-// a day with data still shows the breakdown (read-only, per product
-// decision), a day with no data shows an explanatory note instead of a
-// form — the calendar already blocked the tap for that no-data case.
+// TZ, 17.08.2026: view/edit split (п.7-7.1) — a day that already has
+// data opens in read-only summary by default; "Изменить" reveals the
+// form on demand instead of it always sitting expanded underneath. A
+// day with no data (but inside the editable window) still jumps
+// straight to the form — there's nothing to view yet. state.
+// historyDayEditMode tracks whether the form is currently open; reset
+// to false whenever a new date is opened from the calendar (see the
+// day-cell click handler in renderHistory) so re-entering a day always
+// starts back in view mode.
 function renderHistoryDay(screen) {
   const date = state.historyDetailDate;
   const entry = state.ledger[date];
   const editable = isDateEditable(date);
+  const showForm = editable && (!entry || state.historyDayEditMode);
+
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
     <h2 class="screen-title">Транзакции за ${escapeHtml(date || "")}</h2>
     ${entry ? dayTransactionsHtml(date) : `<div class="empty-state">Операций в этот день не было.</div>`}
     ${
-      editable
-        ? dayEditFormHtml(date, entry)
-        : !entry
+      editable && entry && !showForm
+        ? `<button class="btn secondary" id="day-edit-toggle" style="width:100%; margin-top:12px;">Изменить</button>`
+        : ""
+    }
+    ${showForm ? dayEditFormHtml(date, entry) : ""}
+    ${
+      !editable && !entry
         ? `<div class="note">Редактирование недоступно — дата вне доступного 30-дневного окна или раньше даты онбординга.</div>`
         : ""
     }
   `;
   document.getElementById("settings-back").addEventListener("click", () => {
     state.nav = "history";
+    state.historyDayEditMode = false;
     saveState();
     render();
   });
-  if (editable) {
+  const toggleBtn = document.getElementById("day-edit-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      state.historyDayEditMode = true;
+      saveState();
+      renderHistoryDay(screen);
+    });
+  }
+  if (showForm) {
     document.getElementById("day-edit-save").addEventListener("click", () => {
       const cigarettes = Number(document.getElementById("edit_cigarettes").value) || 0;
       const activityMinutes = Number(document.getElementById("edit_activity").value) || 0;
       const sleepHoursRange = document.getElementById("edit_sleep").value;
-      const bedtimeToday = document.getElementById("edit_bedtime").value;
+      const bedtimeToday = timePickerValue("edit_bedtime");
       const alcoholSpirits = document.getElementById("edit_alcohol_spirits").value;
       const alcoholWine = document.getElementById("edit_alcohol_wine").value;
       const alcoholBeer = document.getElementById("edit_alcohol_beer").value;
@@ -2538,6 +2592,7 @@ function renderHistoryDay(screen) {
         alcoholBeer,
       };
       cascadeRecalcFrom(date);
+      state.historyDayEditMode = false;
       saveState();
       renderHistoryDay(screen);
     });
@@ -2615,6 +2670,7 @@ function renderHistory(screen) {
   screen.querySelectorAll(".day-cell[data-date]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.historyDetailDate = btn.dataset.date;
+      state.historyDayEditMode = false;
       state.nav = "history-day";
       saveState();
       render();
