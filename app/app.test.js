@@ -372,6 +372,49 @@ test("sleep regularity penalizes a widely scattered bedtime but not a consistent
   const penalty = sleepRegularityPenalty(daysAgo(1));
   assert.ok(penalty < 0, "a wildly scattered bedtime schedule should be penalized");
 });
+
+/* ---- Per-factor field visibility + neutral substitution (TZ, 17.08.2026) ---- */
+
+test("resolvedFactorFields reads live form values when the factor is visible", () => {
+  state.visibleFactors = ["smoking"];
+  const result = resolvedFactorFields("smoking", undefined, () => ({ cigarettes: 7 }));
+  assert.deepStrictEqual(result, { cigarettes: 7 });
+});
+
+test("resolvedFactorFields uses the neutral default for a hidden factor with no prior data", () => {
+  state.visibleFactors = [];
+  const result = resolvedFactorFields("alcohol", undefined, () => {
+    throw new Error("must not read from the (hidden, unrendered) form");
+  });
+  assert.deepStrictEqual(result, { alcoholSpirits: "0", alcoholWine: "0", alcoholBeer: "0" });
+});
+
+test("resolvedFactorFields preserves a day's real historical value instead of overwriting it with neutral when the factor is later hidden", () => {
+  state.visibleFactors = []; // smoking turned off after this day's real data was saved
+  const existingEntry = { cigarettes: 12 }; // a real, previously-logged value
+  const result = resolvedFactorFields("smoking", existingEntry, () => {
+    throw new Error("must not read from the (hidden, unrendered) form");
+  });
+  assert.deepStrictEqual(result, { cigarettes: 12 }, "real past data must survive, not be silently zeroed out");
+});
+
+test("resolvedFactorFields treats an explicit 0 as real data, not as 'never answered'", () => {
+  state.visibleFactors = [];
+  const existingEntry = { cigarettes: 0 }; // user genuinely smoked zero that day
+  const result = resolvedFactorFields("smoking", existingEntry, () => {
+    throw new Error("must not read from the form");
+  });
+  assert.deepStrictEqual(result, { cigarettes: 0 });
+});
+
+test("resolvedFactorFields treats an empty-string select value as 'never answered', not as real data", () => {
+  state.visibleFactors = [];
+  const existingEntry = { sleepHoursRange: "", bedtimeToday: "" }; // field existed but was left blank
+  const result = resolvedFactorFields("sleep", existingEntry, () => {
+    throw new Error("must not read from the form");
+  });
+  assert.deepStrictEqual(result, { sleepHoursRange: "7to8", bedtimeToday: "" });
+});
 `;
 
 new vm.Script(`${appSource}\n${testsSource}`, { filename: "app.js+tests" }).runInContext(sandbox);

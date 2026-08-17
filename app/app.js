@@ -1212,6 +1212,7 @@ function alcoholSummaryText(entry) {
 }
 
 function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
+  if (!isFactorVisible("alcohol")) return "";
   const e = entry || {};
   const summary = alcoholSummaryText(e);
   return `
@@ -1241,6 +1242,59 @@ function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
         </select>
       </div>
     </details>
+  `;
+}
+
+// Smoking/sport/sleep field(s) for the daily-log and retroactive-edit
+// forms — same "hidden when the factor is off in Настройки" gating as
+// alcoholFieldsHtml above, and same idPrefix-sharing so both forms stay
+// in sync from one definition (TZ, 17.08.2026).
+function smokingFieldHtml(idPrefix, entry, label) {
+  if (!isFactorVisible("smoking")) return "";
+  return `
+    <div class="field">
+      <label>${label}</label>
+      <input type="number" min="0" id="${idPrefix}_cigarettes" value="${escapeHtml(entry.cigarettes ?? "")}">
+      <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
+    </div>
+  `;
+}
+
+function activityFieldHtml(idPrefix, entry, label, withHint) {
+  if (!isFactorVisible("sport")) return "";
+  return `
+    <div class="field">
+      <label>${label}</label>
+      <input type="number" min="0" id="${idPrefix}_activity" value="${escapeHtml(entry.activityMinutes ?? "")}">
+      ${withHint ? `<div class="hint">Не считается медленная прогулка — подробнее в Базе знаний.</div>` : ""}
+    </div>
+  `;
+}
+
+function smokingActivityRowHtml(idPrefix, entry, smokingLabel, activityLabel, withActivityHint) {
+  const smoking = smokingFieldHtml(idPrefix, entry, smokingLabel);
+  const activity = activityFieldHtml(idPrefix, entry, activityLabel, withActivityHint);
+  if (!smoking && !activity) return "";
+  return `<div class="log-row">${smoking}${activity}</div>`;
+}
+
+function sleepRowHtml(idPrefix, entry, sleepLabel) {
+  if (!isFactorVisible("sleep")) return "";
+  return `
+    <div class="log-row">
+      <div class="field">
+        <label>${sleepLabel}</label>
+        <select id="${idPrefix}_sleep">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, entry.sleepHoursRange)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Время отхода ко сну</label>
+        ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
+        <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
+      </div>
+    </div>
   `;
 }
 
@@ -1854,6 +1908,52 @@ const ALL_FACTORS = [
   { key: "stress", label: "Стресс", active: false },
 ];
 
+function isFactorVisible(key) {
+  return state.visibleFactors.includes(key);
+}
+
+// TZ, 17.08.2026: turning a factor off here now also removes its
+// field(s) from both daily-input forms (Dashboard's "Отметить сегодня"
+// and the retroactive "Изменить/Заполнить день" form), not just its
+// dashboard card. One neutral-value table per factor, keyed the same
+// as ALL_FACTORS — a future formula factor just needs an entry here,
+// not a special case in the save handlers. Nutrition has no daily
+// field yet, so it isn't listed.
+const FACTOR_NEUTRAL_VALUES = {
+  smoking: { cigarettes: 0 },
+  sport: { activityMinutes: 0 },
+  sleep: { sleepHoursRange: "7to8", bedtimeToday: "" },
+  alcohol: { alcoholSpirits: "0", alcoholWine: "0", alcoholBeer: "0" },
+  stress: { stressLevel: "" },
+};
+
+// A field counts as "already answered for real" if it's not undefined
+// (never saved) — for numeric fields that's the whole check, since 0 is
+// itself a real answer; for the string/select fields "" is this app's
+// existing convention for "not selected", same as every other select.
+function hasRealFieldValue(entry, field, numeric) {
+  if (!entry || entry[field] === undefined) return false;
+  return numeric ? true : entry[field] !== "";
+}
+
+// Resolves one factor's field(s) for a save: reads live form values if
+// the factor is currently visible; otherwise keeps whatever real value
+// the day already had (so re-saving an unrelated field on a day with
+// real historical data never silently overwrites it), or falls back to
+// the fixed neutral default for a field that was never answered. This
+// runs once, at save time — toggling the checkbox later never revisits
+// or recomputes past ledger entries.
+function resolvedFactorFields(factorKey, existingEntry, readFromDom) {
+  if (isFactorVisible(factorKey)) return readFromDom();
+  const neutral = FACTOR_NEUTRAL_VALUES[factorKey];
+  const result = {};
+  for (const field of Object.keys(neutral)) {
+    const numeric = typeof neutral[field] === "number";
+    result[field] = hasRealFieldValue(existingEntry, field, numeric) ? existingEntry[field] : neutral[field];
+  }
+  return result;
+}
+
 function renderFactorSettings(screen) {
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
@@ -1916,14 +2016,14 @@ function dailyEngagementPhrase(today, todayEntry) {
 // reference taken at render time) doesn't change.
 function collectLogFormValues() {
   return {
-    cigarettes: document.getElementById("log_cigarettes").value,
-    activityMinutes: document.getElementById("log_activity").value,
-    sleepHoursRange: document.getElementById("log_sleep").value,
-    bedtimeToday: timePickerValue("log_bedtime"),
-    alcoholSpirits: document.getElementById("log_alcohol_spirits").value,
-    alcoholWine: document.getElementById("log_alcohol_wine").value,
-    alcoholBeer: document.getElementById("log_alcohol_beer").value,
-    stressLevel: document.getElementById("log_stress").value,
+    cigarettes: isFactorVisible("smoking") ? document.getElementById("log_cigarettes").value : null,
+    activityMinutes: isFactorVisible("sport") ? document.getElementById("log_activity").value : null,
+    sleepHoursRange: isFactorVisible("sleep") ? document.getElementById("log_sleep").value : null,
+    bedtimeToday: isFactorVisible("sleep") ? timePickerValue("log_bedtime") : null,
+    alcoholSpirits: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_spirits").value : null,
+    alcoholWine: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_wine").value : null,
+    alcoholBeer: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_beer").value : null,
+    stressLevel: isFactorVisible("stress") ? document.getElementById("log_stress").value : null,
   };
 }
 
@@ -1964,41 +2064,21 @@ function renderDashboard(screen) {
 
     <div class="log-card">
       <h3>Отметить сегодня</h3>
-      <div class="log-row">
-        <div class="field">
-          <label>Сигарет сегодня</label>
-          <input type="number" min="0" id="log_cigarettes" value="${escapeHtml(todayEntry.cigarettes ?? "")}">
-          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
-        </div>
-        <div class="field">
-          <label>Минут активности сегодня</label>
-          <input type="number" min="0" id="log_activity" value="${escapeHtml(todayEntry.activityMinutes ?? "")}">
-          <div class="hint">Не считается медленная прогулка — подробнее в Базе знаний.</div>
-        </div>
-      </div>
-      <div class="log-row">
-        <div class="field">
-          <label>Сон прошлой ночью</label>
-          <select id="log_sleep">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, todayEntry.sleepHoursRange)}
-          </select>
-        </div>
-        <div class="field">
-          <label>Время отхода ко сну</label>
-          ${timePickerHtml("log_bedtime", todayEntry.bedtimeToday)}
-          <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
-        </div>
-      </div>
+      ${smokingActivityRowHtml("log", todayEntry, "Сигарет сегодня", "Минут активности сегодня", true)}
+      ${sleepRowHtml("log", todayEntry, "Сон прошлой ночью")}
       ${alcoholFieldsHtml("log", todayEntry, "Алкоголь сегодня")}
-      <div class="field">
+      ${
+        isFactorVisible("stress")
+          ? `<div class="field">
         <label>Уровень стресса сегодня</label>
         <select id="log_stress">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, todayEntry.stressLevel)}
         </select>
         <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
-      </div>
+      </div>`
+          : ""
+      }
       <button class="btn" id="log-save" style="width:100%">Сохранить</button>
     </div>
 
@@ -2065,24 +2145,32 @@ function renderDashboard(screen) {
   document.getElementById("log-save").addEventListener("click", () => {
     const seriesBefore = cumulativeSeries();
     const oldCapitalValue = seriesBefore.length ? seriesBefore[seriesBefore.length - 1].value : 0;
-    const cigarettes = Number(document.getElementById("log_cigarettes").value) || 0;
-    const activityMinutes = Number(document.getElementById("log_activity").value) || 0;
-    const sleepHoursRange = document.getElementById("log_sleep").value;
-    const bedtimeToday = timePickerValue("log_bedtime");
-    const alcoholSpirits = document.getElementById("log_alcohol_spirits").value;
-    const alcoholWine = document.getElementById("log_alcohol_wine").value;
-    const alcoholBeer = document.getElementById("log_alcohol_beer").value;
-    const stressLevel = document.getElementById("log_stress").value;
+    const existing = state.ledger[today];
+    const smoking = resolvedFactorFields("smoking", existing, () => ({
+      cigarettes: Number(document.getElementById("log_cigarettes").value) || 0,
+    }));
+    const sport = resolvedFactorFields("sport", existing, () => ({
+      activityMinutes: Number(document.getElementById("log_activity").value) || 0,
+    }));
+    const sleep = resolvedFactorFields("sleep", existing, () => ({
+      sleepHoursRange: document.getElementById("log_sleep").value,
+      bedtimeToday: timePickerValue("log_bedtime"),
+    }));
+    const alcohol = resolvedFactorFields("alcohol", existing, () => ({
+      alcoholSpirits: document.getElementById("log_alcohol_spirits").value,
+      alcoholWine: document.getElementById("log_alcohol_wine").value,
+      alcoholBeer: document.getElementById("log_alcohol_beer").value,
+    }));
+    const stress = resolvedFactorFields("stress", existing, () => ({
+      stressLevel: document.getElementById("log_stress").value,
+    }));
     state.ledger[today] = {
-      ...(state.ledger[today] || {}),
-      cigarettes,
-      activityMinutes,
-      sleepHoursRange,
-      bedtimeToday,
-      alcoholSpirits,
-      alcoholWine,
-      alcoholBeer,
-      stressLevel,
+      ...(existing || {}),
+      ...smoking,
+      ...sport,
+      ...sleep,
+      ...alcohol,
+      ...stress,
     };
     // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
     // today alone this is equivalent to the old single-day computation,
@@ -2115,7 +2203,7 @@ function todaySummary(todayEntry) {
   const cigarettes = Number(todayEntry.cigarettes) || 0;
   const waterline = Number(state.smokingWaterline) || 0;
   if (activity < 30) {
-    return "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
+    return "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.";
   }
   if (cigarettes < waterline) {
     return "Меньше обычного — засчитано.";
@@ -2605,31 +2693,8 @@ function dayEditFormHtml(date, entry) {
   return `
     <div class="log-card">
       <h3>${entry ? "Изменить день" : "Заполнить день"}</h3>
-      <div class="log-row">
-        <div class="field">
-          <label>Сигарет</label>
-          <input type="number" min="0" id="edit_cigarettes" value="${escapeHtml(e.cigarettes ?? "")}">
-          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
-        </div>
-        <div class="field">
-          <label>Минут активности</label>
-          <input type="number" min="0" id="edit_activity" value="${escapeHtml(e.activityMinutes ?? "")}">
-        </div>
-      </div>
-      <div class="log-row">
-        <div class="field">
-          <label>Сон</label>
-          <select id="edit_sleep">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, e.sleepHoursRange)}
-          </select>
-        </div>
-        <div class="field">
-          <label>Время отхода ко сну</label>
-          ${timePickerHtml("edit_bedtime", e.bedtimeToday)}
-          <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
-        </div>
-      </div>
+      ${smokingActivityRowHtml("edit", e, "Сигарет", "Минут активности", false)}
+      ${sleepRowHtml("edit", e, "Сон")}
       ${alcoholFieldsHtml("edit", e, "Алкоголь")}
       <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
     </div>
@@ -2683,22 +2748,28 @@ function renderHistoryDay(screen) {
   }
   if (showForm) {
     document.getElementById("day-edit-save").addEventListener("click", () => {
-      const cigarettes = Number(document.getElementById("edit_cigarettes").value) || 0;
-      const activityMinutes = Number(document.getElementById("edit_activity").value) || 0;
-      const sleepHoursRange = document.getElementById("edit_sleep").value;
-      const bedtimeToday = timePickerValue("edit_bedtime");
-      const alcoholSpirits = document.getElementById("edit_alcohol_spirits").value;
-      const alcoholWine = document.getElementById("edit_alcohol_wine").value;
-      const alcoholBeer = document.getElementById("edit_alcohol_beer").value;
+      const existing = state.ledger[date];
+      const smoking = resolvedFactorFields("smoking", existing, () => ({
+        cigarettes: Number(document.getElementById("edit_cigarettes").value) || 0,
+      }));
+      const sport = resolvedFactorFields("sport", existing, () => ({
+        activityMinutes: Number(document.getElementById("edit_activity").value) || 0,
+      }));
+      const sleep = resolvedFactorFields("sleep", existing, () => ({
+        sleepHoursRange: document.getElementById("edit_sleep").value,
+        bedtimeToday: timePickerValue("edit_bedtime"),
+      }));
+      const alcohol = resolvedFactorFields("alcohol", existing, () => ({
+        alcoholSpirits: document.getElementById("edit_alcohol_spirits").value,
+        alcoholWine: document.getElementById("edit_alcohol_wine").value,
+        alcoholBeer: document.getElementById("edit_alcohol_beer").value,
+      }));
       state.ledger[date] = {
-        ...(state.ledger[date] || {}),
-        cigarettes,
-        activityMinutes,
-        sleepHoursRange,
-        bedtimeToday,
-        alcoholSpirits,
-        alcoholWine,
-        alcoholBeer,
+        ...(existing || {}),
+        ...smoking,
+        ...sport,
+        ...sleep,
+        ...alcohol,
       };
       cascadeRecalcFrom(date);
       state.historyDayEditMode = false;
