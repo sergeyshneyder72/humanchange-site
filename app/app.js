@@ -2027,7 +2027,7 @@ function todaySummary(todayEntry) {
   const cigarettes = Number(todayEntry.cigarettes) || 0;
   const waterline = Number(state.smokingWaterline) || 0;
   if (activity < 30) {
-    return "Добавьте 30 минут активности сегодня (в темпе, когда можно говорить, но не петь) — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
+    return "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу, а прирост не теряется вплоть до 90 минут.";
   }
   if (cigarettes < waterline) {
     return "Меньше обычного — засчитано.";
