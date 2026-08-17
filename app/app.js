@@ -2462,13 +2462,44 @@ function dayDecayChargeItems(date) {
     }));
 }
 
+// Display-only rounding reconciliation (17.08.2026 fix): each breakdown
+// line and the summary total are the same underlying deltaDays values,
+// just rounded to 2dp independently for display — which can visibly
+// disagree (e.g. +0.38 and +0.44 shown for a total that rounds to
+// +0.81, not the +0.82 those two round-off figures appear to add to).
+// The total itself is never touched here, only how the rounding
+// "slack" is distributed across the displayed line items, so the
+// summary keeps showing the same number it always did — this just
+// makes the line items underneath add up to it on-screen. Working in
+// integer cents avoids float drift; the leftover cent(s) go to the
+// largest-magnitude line, where a ±0.01 nudge is least noticeable.
+function reconcileBreakdownForDisplay(total, items) {
+  if (items.length === 0) return items;
+  const totalCents = Math.round(total * 100);
+  const rounded = items.map((i) => ({ ...i, amount: Math.round(i.amount * 100) }));
+  const diff = totalCents - rounded.reduce((sum, i) => sum + i.amount, 0);
+  if (diff !== 0) {
+    let idx = 0;
+    let maxAbs = -Infinity;
+    rounded.forEach((i, k) => {
+      if (Math.abs(i.amount) > maxAbs) {
+        maxAbs = Math.abs(i.amount);
+        idx = k;
+      }
+    });
+    rounded[idx].amount += diff;
+  }
+  return rounded.map((i) => ({ ...i, amount: i.amount / 100 }));
+}
+
 // Tappable amount (TZ, 12.08.2026 pattern, reused 13.08.2026 outside a
 // table for the "Транзакции за день" popup): the number itself is the
 // <summary> of a <details> block — tapping it expands the per-factor
 // breakdown underneath.
 function reportClickableAmount(amount, cssClass, items) {
   if (!amount || items.length === 0) return `<span class="${cssClass}">—</span>`;
-  const detail = items.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
+  const reconciled = reconcileBreakdownForDisplay(amount, items);
+  const detail = reconciled.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
   return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
 }
 
