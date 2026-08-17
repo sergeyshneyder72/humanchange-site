@@ -1194,6 +1194,56 @@ function timePickerValue(idPrefix) {
   return h && m ? `${h}:${m}` : "";
 }
 
+// Alcohol input (17.08.2026 audit fix) — three always-visible dropdowns
+// collapsed into one <details> block, same collapsible pattern already
+// used elsewhere in this form (hint-details, report-cell). Shared
+// between the daily-log card and the retroactive edit form via
+// idPrefix; storage/calc for the three fields is unchanged, only how
+// they're shown.
+function alcoholSummaryText(entry) {
+  const parts = [];
+  const spirits = rangeLookup(ALCOHOL_SPIRITS_RANGE_OPTIONS, entry.alcoholSpirits, "label");
+  if (spirits) parts.push(`крепкий: ${spirits}`);
+  const wine = rangeLookup(ALCOHOL_WINE_RANGE_OPTIONS, entry.alcoholWine, "label");
+  if (wine) parts.push(`вино: ${wine}`);
+  const beer = rangeLookup(ALCOHOL_BEER_RANGE_OPTIONS, entry.alcoholBeer, "label");
+  if (beer) parts.push(`пиво: ${beer}`);
+  return parts.join(", ");
+}
+
+function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
+  const e = entry || {};
+  const summary = alcoholSummaryText(e);
+  return `
+    <details class="field alcohol-details" ${summary ? "open" : ""}>
+      <summary>${summaryLabel}${summary ? ` — ${escapeHtml(summary)}` : ""}</summary>
+      <div class="log-row" style="margin-top:10px;">
+        <div class="field">
+          <label>Крепкий алкоголь</label>
+          <select id="${idPrefix}_alcohol_spirits">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, e.alcoholSpirits)}
+          </select>
+        </div>
+        <div class="field">
+          <label>Вино</label>
+          <select id="${idPrefix}_alcohol_wine">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, e.alcoholWine)}
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Пиво/слабоалкогольное</label>
+        <select id="${idPrefix}_alcohol_beer">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, e.alcoholBeer)}
+        </select>
+      </div>
+    </details>
+  `;
+}
+
 function renderOnboarding() {
   const step = state.onboardingStep || ONBOARDING_STEPS[0];
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
@@ -1918,7 +1968,7 @@ function renderDashboard(screen) {
         <div class="field">
           <label>Сигарет сегодня</label>
           <input type="number" min="0" id="log_cigarettes" value="${escapeHtml(todayEntry.cigarettes ?? "")}">
-          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт.</div>
+          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
         </div>
         <div class="field">
           <label>Минут активности сегодня</label>
@@ -1940,30 +1990,7 @@ function renderDashboard(screen) {
           <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
         </div>
       </div>
-      <div class="log-row">
-        <div class="field">
-          <label>Крепкий алкоголь сегодня</label>
-          <select id="log_alcohol_spirits">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, todayEntry.alcoholSpirits)}
-          </select>
-        </div>
-        <div class="field">
-          <label>Вино сегодня</label>
-          <select id="log_alcohol_wine">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, todayEntry.alcoholWine)}
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Пиво/слабоалкогольное сегодня</label>
-        <select id="log_alcohol_beer">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, todayEntry.alcoholBeer)}
-        </select>
-      </div>
-      <div class="methodology-warning">Приблизительная оценка — точная ежедневная методология для алкоголя пока уточняется, в отличие от курения, спорта и сна, где методология уже проверена/детализирована.</div>
+      ${alcoholFieldsHtml("log", todayEntry, "Алкоголь сегодня")}
       <div class="field">
         <label>Уровень стресса сегодня</label>
         <select id="log_stress">
@@ -2470,6 +2497,18 @@ function dailyFactorBreakdown(entry) {
   return items;
 }
 
+// Human-readable sphere names (17.08.2026 audit fix) — an explicit
+// mapping with a generic fallback, not a raw c.sphere passthrough, so
+// adding a new sphere later can't leak its internal identifier straight
+// into user-facing text before someone remembers to add a label for it.
+const SPHERE_LABELS = {
+  sport: "спорт",
+};
+
+function sphereLabel(sphere) {
+  return SPHERE_LABELS[sphere] || "активность";
+}
+
 // Inactivity-decay events recorded on this specific date (TZ section 7,
 // 13.08.2026 display change: shown inside that day's "Списания" in the
 // "Транзакции за день" popup instead of a standalone always-visible
@@ -2478,7 +2517,7 @@ function dayDecayChargeItems(date) {
   return state.decayCharges
     .filter((c) => c.date === date)
     .map((c) => ({
-      label: `Бездействие (${c.sphere === "sport" ? "спорт" : c.sphere}): ${c.days}+ дней, −${c.marginalPct}% от Дивидендов`,
+      label: `Бездействие (${sphereLabel(c.sphere)}): ${c.days}+ дней, −${c.marginalPct}% от Дивидендов`,
       amount: -c.amountDays,
     }));
 }
@@ -2570,7 +2609,7 @@ function dayEditFormHtml(date, entry) {
         <div class="field">
           <label>Сигарет</label>
           <input type="number" min="0" id="edit_cigarettes" value="${escapeHtml(e.cigarettes ?? "")}">
-          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт.</div>
+          <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
         </div>
         <div class="field">
           <label>Минут активности</label>
@@ -2591,29 +2630,7 @@ function dayEditFormHtml(date, entry) {
           <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
         </div>
       </div>
-      <div class="log-row">
-        <div class="field">
-          <label>Крепкий алкоголь</label>
-          <select id="edit_alcohol_spirits">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, e.alcoholSpirits)}
-          </select>
-        </div>
-        <div class="field">
-          <label>Вино</label>
-          <select id="edit_alcohol_wine">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, e.alcoholWine)}
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Пиво/слабоалкогольное</label>
-        <select id="edit_alcohol_beer">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, e.alcoholBeer)}
-        </select>
-      </div>
+      ${alcoholFieldsHtml("edit", e, "Алкоголь")}
       <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
     </div>
   `;
@@ -2646,7 +2663,7 @@ function renderHistoryDay(screen) {
     ${showForm ? dayEditFormHtml(date, entry) : ""}
     ${
       !editable && !entry
-        ? `<div class="note">Редактирование недоступно — дата вне доступного 30-дневного окна или раньше даты онбординга.</div>`
+        ? `<div class="note">Редактирование доступно только для последних 30 дней и не раньше даты регистрации.</div>`
         : ""
     }
   `;

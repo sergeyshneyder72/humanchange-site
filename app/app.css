@@ -173,6 +173,30 @@ button {
   margin-top: 0;
 }
 
+/* Alcohol input, collapsed by default (17.08.2026) — same details/
+   summary pattern as .hint-details above, but the summary itself is a
+   full field-label-sized tappable row (it replaces three separate field
+   labels), with a chevron instead of hidden native marker. */
+.alcohol-details summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.alcohol-details summary::-webkit-details-marker { display: none; }
+.alcohol-details summary::marker { content: ""; }
+
+.alcohol-details summary::after {
+  content: " ▾";
+}
+
+.alcohol-details[open] summary::after {
+  content: " ▴";
+}
+
 .radio-row {
   display: flex;
   gap: 16px;
