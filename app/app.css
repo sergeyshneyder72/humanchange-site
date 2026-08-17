@@ -15,18 +15,46 @@
 
 * { box-sizing: border-box; }
 
-body {
+/* App-shell layout (17.08.2026 fix — see .bottom-nav below for why):
+   html/body never scroll; #app is a full-height flex column and only
+   its middle item (.wrap) scrolls. This is the second time a "fixed"
+   bottom-nav has visually disappeared during scroll on mobile WebKit/
+   Blink (position:fixed pinned to a page that itself scrolls is a
+   known source of that class of bug — momentum-scroll repaint glitches,
+   dynamic toolbar show/hide changing the viewport). Moving the nav out
+   of the scrolling page entirely and making it a normal flex item
+   removes the whole bug category, not just this one occurrence — no
+   future long screen can reintroduce it by adding content, since
+   nothing scrolls except .wrap. */
+html, body {
+  height: 100%;
   margin: 0;
+}
+
+body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
 }
 
+#app {
+  height: 100vh;
+  height: 100dvh; /* modern browsers only; ignored (falls back to 100vh) elsewhere */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .wrap {
+  flex: 1 1 auto;
+  min-height: 0; /* flexbox default min-height:auto would otherwise ignore overflow-y and grow with content instead of scrolling */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 24px 20px 100px;
+  padding: 24px 20px;
 }
 
 h1, h2, h3 { margin: 0 0 8px; }
@@ -279,17 +307,18 @@ button {
   color: var(--accent);
 }
 
-/* Nav (TZ section 7, 13.08.2026: icon-only bottom nav + minimal top bar) */
+/* Nav (TZ section 7, 13.08.2026: icon-only bottom nav + minimal top bar).
+   Both bars are now plain flex items of the #app column (see the
+   app-shell layout above) — neither needs sticky/fixed positioning
+   since the page around them never scrolls; only .wrap does. */
 .top-bar {
-  position: sticky;
-  top: 0;
+  flex: 0 0 auto;
   height: 52px;
   background: var(--bg);
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
   border-bottom: 1px solid var(--line);
-  z-index: 10;
 }
 
 .top-icons {
@@ -317,19 +346,19 @@ button {
 }
 
 /* Raised, floating bar (TZ, 13.08.2026 — "по аналогии с Гармином"),
-   not flush against the screen edge like the earlier flush version. */
+   not flush against the screen edge like the earlier flush version.
+   17.08.2026: no longer position:fixed — it's a normal flex item at
+   the bottom of #app's column, so the 12px/14px inset that used to be
+   left/right/bottom offsets is now plain margin instead. */
 .bottom-nav {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 14px;
+  flex: 0 0 auto;
+  margin: 0 12px 14px;
   height: 56px;
   display: flex;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  z-index: 10;
 }
 
 .icon-nav-btn {

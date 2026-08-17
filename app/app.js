@@ -1837,6 +1837,24 @@ function dailyEngagementPhrase(today, todayEntry) {
   return { text: pickPhrase(pool, `${today}:${positive ? "g" : "b"}`), positive };
 }
 
+// Snapshot of the daily-log form's current field values (TZ, 17.08.2026
+// dirty-flag for "Сохранить"). Kept as one function, not per-field
+// tracking, so a new field added to the form later just needs adding
+// here — the dirty check itself (comparing this snapshot against a
+// reference taken at render time) doesn't change.
+function collectLogFormValues() {
+  return {
+    cigarettes: document.getElementById("log_cigarettes").value,
+    activityMinutes: document.getElementById("log_activity").value,
+    sleepHoursRange: document.getElementById("log_sleep").value,
+    bedtimeToday: timePickerValue("log_bedtime"),
+    alcoholSpirits: document.getElementById("log_alcohol_spirits").value,
+    alcoholWine: document.getElementById("log_alcohol_wine").value,
+    alcoholBeer: document.getElementById("log_alcohol_beer").value,
+    stressLevel: document.getElementById("log_stress").value,
+  };
+}
+
 function renderDashboard(screen) {
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
@@ -1973,6 +1991,28 @@ function renderDashboard(screen) {
       renderDashboard(screen);
     });
   });
+
+  // Dirty-flag for "Сохранить" (TZ, 17.08.2026): pale/disabled when the
+  // form matches what's already saved for today (nothing to save — the
+  // starting state, and again right after a successful save), green/
+  // enabled as soon as any field's current value differs from that
+  // snapshot. Compares the whole form's values wholesale via
+  // collectLogFormValues rather than watching each field by hand, so it
+  // doesn't need updating when fields are added/removed later.
+  const savedLogSnapshot = JSON.stringify(collectLogFormValues());
+  const saveBtn = document.getElementById("log-save");
+  const updateSaveDirtyState = () => {
+    saveBtn.disabled = JSON.stringify(collectLogFormValues()) === savedLogSnapshot;
+  };
+  updateSaveDirtyState();
+  screen
+    .querySelectorAll(
+      "#log_cigarettes, #log_activity, #log_sleep, #log_bedtime_hour, #log_bedtime_minute, #log_alcohol_spirits, #log_alcohol_wine, #log_alcohol_beer, #log_stress"
+    )
+    .forEach((el) => {
+      el.addEventListener("input", updateSaveDirtyState);
+      el.addEventListener("change", updateSaveDirtyState);
+    });
 
   document.getElementById("log-save").addEventListener("click", () => {
     const seriesBefore = cumulativeSeries();
