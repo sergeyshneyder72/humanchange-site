@@ -205,6 +205,39 @@ const SUPPLEMENTS_REGULARITY_OPTIONS = [
   { value: "none", label: "Не принимаю" },
 ];
 
+// Daily fields for the new collection-only factors added 19.08.2026
+// (focus-group review pass, TZ taxonomy doc 17.08.2026) — same pattern
+// as stress: no formula, plain data collection, "" is the neutral/
+// unanswered value throughout.
+const NUTRITION_QUALITY_OPTIONS = [
+  { value: "mostlyWhole", label: "Преимущественно цельная еда" },
+  { value: "mixed", label: "Смешанно" },
+  { value: "mostlyProcessed", label: "Много обработанной еды" },
+];
+
+const YES_NO_OPTIONS = [
+  { value: "yes", label: "Да" },
+  { value: "no", label: "Нет" },
+];
+
+const SOCIAL_QUALITY_OPTIONS = [
+  { value: "none", label: "Не было" },
+  { value: "some", label: "Немного" },
+  { value: "full", label: "Полноценное общение" },
+];
+
+const PURPOSE_OPTIONS = [
+  { value: "no", label: "Нет" },
+  { value: "somewhat", label: "Отчасти" },
+  { value: "yes", label: "Да" },
+];
+
+const COGNITIVE_ACTIVITY_OPTIONS = [
+  { value: "none", label: "Не было" },
+  { value: "some", label: "Немного" },
+  { value: "full", label: "Насыщенно" },
+];
+
 // Alcohol (TZ section 1 step 5, ranges finalized 11.08.2026) — each
 // beverage type gets its own thresholds (a 100ml spirits pour and 100ml
 // of beer aren't comparable volumes) rather than one shared scale.
@@ -284,6 +317,34 @@ const KNOWLEDGE_BASE = [
     name: "Стресс",
     active: false,
     body: "Раздел в разработке — появится вместе с добавлением фактора стресса в капитал здоровья.",
+    source: "Скоро.",
+  },
+  {
+    key: "social",
+    name: "Социальные связи",
+    active: false,
+    body: "Раздел в разработке — появится вместе с добавлением фактора социальных связей в капитал здоровья.",
+    source: "Скоро.",
+  },
+  {
+    key: "weight",
+    name: "Вес",
+    active: false,
+    body: "Раздел в разработке — появится вместе с добавлением фактора веса в капитал здоровья.",
+    source: "Скоро.",
+  },
+  {
+    key: "purpose",
+    name: "Смысл и цель",
+    active: false,
+    body: "Раздел в разработке — появится вместе с добавлением фактора смысла и цели в капитал здоровья.",
+    source: "Скоро.",
+  },
+  {
+    key: "cognitive",
+    name: "Когнитивная активность",
+    active: false,
+    body: "Раздел в разработке — появится вместе с добавлением фактора когнитивной активности в капитал здоровья.",
     source: "Скоро.",
   },
 ];
@@ -507,7 +568,15 @@ function defaultState() {
     historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
     historyDayEditMode: false, // whether that screen's fill/edit form is expanded, TZ section 7, 17.08.2026
     settingsView: "root", // "root" | "care" | "factors" — sub-screen open within Настройки, TZ section 7, 13.08.2026
-    visibleFactors: ["sport", "sleep", "nutrition", "stress"], // default dashboard factor cards, TZ section 7, 13.08.2026 — deliberately not the same set as the formula factors
+    // TEMP (19.08.2026): all factors on by default for the focus-group
+    // review pass — trim per-user via Настройки → Факторы afterward.
+    // Was a fixed subset (sport/sleep/nutrition/stress). Written out
+    // literally (matching ALL_FACTORS' keys, defined further down)
+    // rather than referencing ALL_FACTORS directly — this runs at
+    // script top-level via `let state = loadState()` before that later
+    // const is initialized, so referencing it here throws a
+    // temporal-dead-zone ReferenceError.
+    visibleFactors: ["smoking", "sport", "sleep", "alcohol", "nutrition", "stress", "social", "weight", "purpose", "cognitive"],
   };
 }
 
@@ -1299,6 +1368,85 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
   `;
 }
 
+// New collection-only daily fields (19.08.2026 focus-group review pass)
+// — same shape as stress's inline block, just factored into named
+// functions since nutrition needs two fields. None feed the formula.
+function nutritionRowHtml(idPrefix, entry) {
+  if (!isFactorVisible("nutrition")) return "";
+  return `
+    <div class="log-row">
+      <div class="field">
+        <label>Питание сегодня</label>
+        <select id="${idPrefix}_nutrition_quality">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(NUTRITION_QUALITY_OPTIONS, entry.nutritionQualityToday)}
+        </select>
+      </div>
+      <div class="field">
+        <label>Было много сладкого?</label>
+        <select id="${idPrefix}_nutrition_sugar">
+          <option value="">Выбрать...</option>
+          ${selectOptionsHtml(YES_NO_OPTIONS, entry.nutritionSugarToday)}
+        </select>
+      </div>
+    </div>
+    <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
+  `;
+}
+
+function socialRowHtml(idPrefix, entry) {
+  if (!isFactorVisible("social")) return "";
+  return `
+    <div class="field">
+      <label>Качественное общение сегодня</label>
+      <select id="${idPrefix}_social">
+        <option value="">Выбрать...</option>
+        ${selectOptionsHtml(SOCIAL_QUALITY_OPTIONS, entry.socialQualityToday)}
+      </select>
+      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
+    </div>
+  `;
+}
+
+function weightRowHtml(idPrefix, entry) {
+  if (!isFactorVisible("weight")) return "";
+  return `
+    <div class="field">
+      <label>Вес сегодня, кг (необязательно)</label>
+      <input type="number" step="0.1" id="${idPrefix}_weight" value="${escapeHtml(entry.weightKg ?? "")}">
+      <div class="hint">Заполняйте по желанию, не обязательно каждый день. На расчёт капитала не влияет.</div>
+    </div>
+  `;
+}
+
+function purposeRowHtml(idPrefix, entry) {
+  if (!isFactorVisible("purpose")) return "";
+  return `
+    <div class="field">
+      <label>Чувствовали сегодня смысл в своих делах?</label>
+      <select id="${idPrefix}_purpose">
+        <option value="">Выбрать...</option>
+        ${selectOptionsHtml(PURPOSE_OPTIONS, entry.purposeToday)}
+      </select>
+      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
+    </div>
+  `;
+}
+
+function cognitiveRowHtml(idPrefix, entry) {
+  if (!isFactorVisible("cognitive")) return "";
+  return `
+    <div class="field">
+      <label>Была сегодня умственно сложная деятельность/обучение?</label>
+      <select id="${idPrefix}_cognitive">
+        <option value="">Выбрать...</option>
+        ${selectOptionsHtml(COGNITIVE_ACTIVITY_OPTIONS, entry.cognitiveActivityToday)}
+      </select>
+      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
+    </div>
+  `;
+}
+
 function renderOnboarding() {
   const step = state.onboardingStep || ONBOARDING_STEPS[0];
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
@@ -1907,6 +2055,10 @@ const ALL_FACTORS = [
   { key: "alcohol", label: "Алкоголь", active: true },
   { key: "nutrition", label: "Питание", active: false },
   { key: "stress", label: "Стресс", active: false },
+  { key: "social", label: "Социальные связи", active: false },
+  { key: "weight", label: "Вес", active: false },
+  { key: "purpose", label: "Смысл и цель", active: false },
+  { key: "cognitive", label: "Когнитивная активность", active: false },
 ];
 
 function isFactorVisible(key) {
@@ -1926,6 +2078,11 @@ const FACTOR_NEUTRAL_VALUES = {
   sleep: { sleepHoursRange: "7to8", bedtimeToday: "" },
   alcohol: { alcoholSpirits: "0", alcoholWine: "0", alcoholBeer: "0" },
   stress: { stressLevel: "" },
+  nutrition: { nutritionQualityToday: "", nutritionSugarToday: "" },
+  social: { socialQualityToday: "" },
+  weight: { weightKg: "" },
+  purpose: { purposeToday: "" },
+  cognitive: { cognitiveActivityToday: "" },
 };
 
 // A field counts as "already answered for real" if it's not undefined
@@ -2025,6 +2182,12 @@ function collectLogFormValues() {
     alcoholWine: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_wine").value : null,
     alcoholBeer: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_beer").value : null,
     stressLevel: isFactorVisible("stress") ? document.getElementById("log_stress").value : null,
+    nutritionQualityToday: isFactorVisible("nutrition") ? document.getElementById("log_nutrition_quality").value : null,
+    nutritionSugarToday: isFactorVisible("nutrition") ? document.getElementById("log_nutrition_sugar").value : null,
+    socialQualityToday: isFactorVisible("social") ? document.getElementById("log_social").value : null,
+    weightKg: isFactorVisible("weight") ? document.getElementById("log_weight").value : null,
+    purposeToday: isFactorVisible("purpose") ? document.getElementById("log_purpose").value : null,
+    cognitiveActivityToday: isFactorVisible("cognitive") ? document.getElementById("log_cognitive").value : null,
   };
 }
 
@@ -2068,6 +2231,11 @@ function renderDashboard(screen) {
       ${smokingActivityRowHtml("log", todayEntry, "Сигарет сегодня", "Минут активности сегодня", true)}
       ${sleepRowHtml("log", todayEntry, "Сон прошлой ночью")}
       ${alcoholFieldsHtml("log", todayEntry, "Алкоголь сегодня")}
+      ${nutritionRowHtml("log", todayEntry)}
+      ${socialRowHtml("log", todayEntry)}
+      ${weightRowHtml("log", todayEntry)}
+      ${purposeRowHtml("log", todayEntry)}
+      ${cognitiveRowHtml("log", todayEntry)}
       ${
         isFactorVisible("stress")
           ? `<div class="field">
@@ -2136,7 +2304,7 @@ function renderDashboard(screen) {
   updateSaveDirtyState();
   screen
     .querySelectorAll(
-      "#log_cigarettes, #log_activity, #log_sleep, #log_bedtime_hour, #log_bedtime_minute, #log_alcohol_spirits, #log_alcohol_wine, #log_alcohol_beer, #log_stress"
+      "#log_cigarettes, #log_activity, #log_sleep, #log_bedtime_hour, #log_bedtime_minute, #log_alcohol_spirits, #log_alcohol_wine, #log_alcohol_beer, #log_stress, #log_nutrition_quality, #log_nutrition_sugar, #log_social, #log_weight, #log_purpose, #log_cognitive"
     )
     .forEach((el) => {
       el.addEventListener("input", updateSaveDirtyState);
@@ -2165,6 +2333,22 @@ function renderDashboard(screen) {
     const stress = resolvedFactorFields("stress", existing, () => ({
       stressLevel: document.getElementById("log_stress").value,
     }));
+    const nutrition = resolvedFactorFields("nutrition", existing, () => ({
+      nutritionQualityToday: document.getElementById("log_nutrition_quality").value,
+      nutritionSugarToday: document.getElementById("log_nutrition_sugar").value,
+    }));
+    const social = resolvedFactorFields("social", existing, () => ({
+      socialQualityToday: document.getElementById("log_social").value,
+    }));
+    const weight = resolvedFactorFields("weight", existing, () => ({
+      weightKg: document.getElementById("log_weight").value,
+    }));
+    const purpose = resolvedFactorFields("purpose", existing, () => ({
+      purposeToday: document.getElementById("log_purpose").value,
+    }));
+    const cognitive = resolvedFactorFields("cognitive", existing, () => ({
+      cognitiveActivityToday: document.getElementById("log_cognitive").value,
+    }));
     state.ledger[today] = {
       ...(existing || {}),
       ...smoking,
@@ -2172,6 +2356,11 @@ function renderDashboard(screen) {
       ...sleep,
       ...alcohol,
       ...stress,
+      ...nutrition,
+      ...social,
+      ...weight,
+      ...purpose,
+      ...cognitive,
     };
     // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
     // today alone this is equivalent to the old single-day computation,
