@@ -1280,6 +1280,7 @@ function smokingActivityRowHtml(idPrefix, entry, smokingLabel, activityLabel, wi
 
 function sleepRowHtml(idPrefix, entry, sleepLabel) {
   if (!isFactorVisible("sleep")) return "";
+  const bedtimeLabel = idPrefix === "log" ? "Во сколько легли спать вчера" : "Во сколько легли спать накануне";
   return `
     <div class="log-row">
       <div class="field">
@@ -1290,9 +1291,9 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
         </select>
       </div>
       <div class="field">
-        <label>Время отхода ко сну</label>
+        <label>${bedtimeLabel}</label>
         ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
-        <div class="hint">Необязательно — нужно только для расчёта регулярности сна.</div>
+        <div class="hint">Ночь, которая закончилась сегодняшним пробуждением. Необязательно — нужно только для расчёта регулярности сна.</div>
       </div>
     </div>
   `;
@@ -2694,7 +2695,7 @@ function dayEditFormHtml(date, entry) {
     <div class="log-card">
       <h3>${entry ? "Изменить день" : "Заполнить день"}</h3>
       ${smokingActivityRowHtml("edit", e, "Сигарет", "Минут активности", false)}
-      ${sleepRowHtml("edit", e, "Сон")}
+      ${sleepRowHtml("edit", e, "Сон (за прошедшую ночь)")}
       ${alcoholFieldsHtml("edit", e, "Алкоголь")}
       <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
     </div>
