@@ -409,11 +409,14 @@ test("resolvedFactorFields treats an explicit 0 as real data, not as 'never answ
 
 test("resolvedFactorFields treats an empty-string select value as 'never answered', not as real data", () => {
   state.visibleFactors = [];
-  const existingEntry = { sleepHoursRange: "", bedtimeToday: "" }; // field existed but was left blank
+  // Legacy entry from before the 20.08.2026 exact-hours change: only the
+  // old bucket field was ever set (and left blank); sleepHoursExact was
+  // never written at all, so it must fall back to the neutral default.
+  const existingEntry = { sleepHoursRange: "", bedtimeToday: "" };
   const result = resolvedFactorFields("sleep", existingEntry, () => {
     throw new Error("must not read from the form");
   });
-  assert.deepStrictEqual(result, { sleepHoursRange: "7to8", bedtimeToday: "" });
+  assert.deepStrictEqual(result, { sleepHoursExact: 7.5, bedtimeToday: "" });
 });
 `;
 

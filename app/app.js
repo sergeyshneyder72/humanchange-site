@@ -220,22 +220,35 @@ const YES_NO_OPTIONS = [
   { value: "no", label: "Нет" },
 ];
 
-const SOCIAL_QUALITY_OPTIONS = [
+// Replaces the old yes/no "Было много сладкого?" — a 3-level scale
+// reads more naturally and matches the "best first" ordering convention
+// below (20.08.2026, focus-group UI pass).
+const SUGAR_AMOUNT_OPTIONS = [
   { value: "none", label: "Не было" },
   { value: "some", label: "Немного" },
+  { value: "lots", label: "Много" },
+];
+
+// Options in every dropdown below are ordered best-first, descending to
+// worst (20.08.2026 UI pass) — matches STRESS_LEVEL_OPTIONS/
+// WAIST_RANGE_OPTIONS/NUTRITION_QUALITY_OPTIONS above, which already
+// followed this convention.
+const SOCIAL_QUALITY_OPTIONS = [
   { value: "full", label: "Полноценное общение" },
+  { value: "some", label: "Немного" },
+  { value: "none", label: "Не было" },
 ];
 
 const PURPOSE_OPTIONS = [
-  { value: "no", label: "Нет" },
-  { value: "somewhat", label: "Отчасти" },
   { value: "yes", label: "Да" },
+  { value: "somewhat", label: "Отчасти" },
+  { value: "no", label: "Нет" },
 ];
 
 const COGNITIVE_ACTIVITY_OPTIONS = [
-  { value: "none", label: "Не было" },
-  { value: "some", label: "Немного" },
   { value: "full", label: "Насыщенно" },
+  { value: "some", label: "Немного" },
+  { value: "none", label: "Не было" },
 ];
 
 // Alcohol (TZ section 1 step 5, ranges finalized 11.08.2026) — each
@@ -495,7 +508,7 @@ const ONBOARDING_RESULT_PHRASES = {
 };
 
 const DAILY_GOOD_PHRASES = ["Депозит принят", "Капитал растёт", "Ещё один кирпичик", "Вклад засчитан"];
-const DAILY_BAD_PHRASES = ["Списание учтено — завтра наверстаем", "Не идеально, но это данные, а не приговор"];
+const DAILY_BAD_PHRASES = ["Не идеально, но это данные, а не приговор"];
 const DAILY_RECORD_PHRASE = "Лучший результат за всё время";
 
 function simpleHash(str) {
@@ -1004,8 +1017,15 @@ function cascadeRecalcFrom(fromDate) {
 
     const gapDays = Math.max(daysBetweenDates(runningDebtDate, date), 0);
     const decayed = runningDebt * Math.pow(SLEEP_DEBT_DECAY_K, gapDays);
-    const factHours = rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, entry.sleepHoursRange, "midpointHours");
-    const deviation = factHours !== undefined ? SLEEP_DEBT_NORM_HOURS - factHours : 0;
+    // Exact hours (20.08.2026, entered via sleepRowHtml's number input)
+    // wins when present; falls back to the old bucket-midpoint lookup
+    // for ledger entries saved before this change, which only have
+    // sleepHoursRange.
+    const factHours =
+      entry.sleepHoursExact !== undefined && entry.sleepHoursExact !== null && entry.sleepHoursExact !== ""
+        ? Number(entry.sleepHoursExact)
+        : rangeLookup(SLEEP_HOURS_RANGE_OPTIONS, entry.sleepHoursRange, "midpointHours");
+    const deviation = factHours !== undefined && !Number.isNaN(factHours) ? SLEEP_DEBT_NORM_HOURS - factHours : 0;
     const debt = decayed + deviation;
     entry.sleepDebt = debt;
     entry.sleepDebtDelta = sleepDebtPenalty(debt);
@@ -1347,22 +1367,24 @@ function smokingActivityRowHtml(idPrefix, entry, smokingLabel, activityLabel, wi
   return `<div class="log-row">${smoking}${activity}</div>`;
 }
 
+// Exact-hours input (20.08.2026 UI pass — replaces the bucket/range
+// select; see sleepHoursExact in cascadeRecalcFrom for the matching
+// formula-side change, which prefers this exact value when present and
+// falls back to the old SLEEP_HOURS_RANGE_OPTIONS bucket for entries
+// saved before this change).
 function sleepRowHtml(idPrefix, entry, sleepLabel) {
   if (!isFactorVisible("sleep")) return "";
-  const bedtimeLabel = idPrefix === "log" ? "Во сколько легли спать вчера" : "Во сколько легли спать накануне";
+  const bedtimeLabel = idPrefix === "edit" ? "Во сколько легли спать накануне" : "Во сколько легли спать вчера";
   return `
     <div class="log-row">
       <div class="field">
         <label>${sleepLabel}</label>
-        <select id="${idPrefix}_sleep">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, entry.sleepHoursRange)}
-        </select>
+        <input type="number" min="0" max="24" step="0.25" placeholder="Например, 7.5" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
+        <div class="hint">В часах, можно дробно.</div>
       </div>
       <div class="field">
         <label>${bedtimeLabel}</label>
         ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
-        <div class="hint">Ночь, которая закончилась сегодняшним пробуждением. Необязательно — нужно только для расчёта регулярности сна.</div>
       </div>
     </div>
   `;
@@ -1383,14 +1405,13 @@ function nutritionRowHtml(idPrefix, entry) {
         </select>
       </div>
       <div class="field">
-        <label>Было много сладкого?</label>
+        <label>Сладкое сегодня</label>
         <select id="${idPrefix}_nutrition_sugar">
           <option value="">Выбрать...</option>
-          ${selectOptionsHtml(YES_NO_OPTIONS, entry.nutritionSugarToday)}
+          ${selectOptionsHtml(SUGAR_AMOUNT_OPTIONS, entry.nutritionSugarToday)}
         </select>
       </div>
     </div>
-    <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
   `;
 }
 
@@ -1398,12 +1419,12 @@ function socialRowHtml(idPrefix, entry) {
   if (!isFactorVisible("social")) return "";
   return `
     <div class="field">
-      <label>Качественное общение сегодня</label>
+      <label>Общение с близкими сегодня</label>
+      ${collapsibleHint("Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.")}
       <select id="${idPrefix}_social">
         <option value="">Выбрать...</option>
         ${selectOptionsHtml(SOCIAL_QUALITY_OPTIONS, entry.socialQualityToday)}
       </select>
-      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
     </div>
   `;
 }
@@ -1414,7 +1435,6 @@ function weightRowHtml(idPrefix, entry) {
     <div class="field">
       <label>Вес сегодня, кг (необязательно)</label>
       <input type="number" step="0.1" id="${idPrefix}_weight" value="${escapeHtml(entry.weightKg ?? "")}">
-      <div class="hint">Заполняйте по желанию, не обязательно каждый день. На расчёт капитала не влияет.</div>
     </div>
   `;
 }
@@ -1428,7 +1448,6 @@ function purposeRowHtml(idPrefix, entry) {
         <option value="">Выбрать...</option>
         ${selectOptionsHtml(PURPOSE_OPTIONS, entry.purposeToday)}
       </select>
-      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
     </div>
   `;
 }
@@ -1437,12 +1456,12 @@ function cognitiveRowHtml(idPrefix, entry) {
   if (!isFactorVisible("cognitive")) return "";
   return `
     <div class="field">
-      <label>Была сегодня умственно сложная деятельность/обучение?</label>
+      <label>Учились сегодня новому или решали непростую задачу?</label>
+      ${collapsibleHint("Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.")}
       <select id="${idPrefix}_cognitive">
         <option value="">Выбрать...</option>
         ${selectOptionsHtml(COGNITIVE_ACTIVITY_OPTIONS, entry.cognitiveActivityToday)}
       </select>
-      <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
     </div>
   `;
 }
@@ -2075,7 +2094,7 @@ function isFactorVisible(key) {
 const FACTOR_NEUTRAL_VALUES = {
   smoking: { cigarettes: 0 },
   sport: { activityMinutes: 0 },
-  sleep: { sleepHoursRange: "7to8", bedtimeToday: "" },
+  sleep: { sleepHoursExact: 7.5, bedtimeToday: "" },
   alcohol: { alcoholSpirits: "0", alcoholWine: "0", alcoholBeer: "0" },
   stress: { stressLevel: "" },
   nutrition: { nutritionQualityToday: "", nutritionSugarToday: "" },
@@ -2162,33 +2181,144 @@ function dailyEngagementPhrase(today, todayEntry) {
   if (priorMax !== -Infinity && todayEntry.deltaDays > priorMax) {
     return { text: DAILY_RECORD_PHRASE, positive: true };
   }
-  const positive = todayEntry.deltaDays >= 0;
+  // Rounded, not the raw value (20.08.2026 fix): decaying sleep debt
+  // asymptotically approaches but never exactly hits 0, so a run of
+  // perfectly normal sleep can leave deltaDays at a real but
+  // sub-cent value like -0.0001 forever. Rounding first means a day
+  // that displays as 0.00 is never scored as "negative" for phrase
+  // selection either — see formatDays for the matching display fix.
+  const positive = Math.round(todayEntry.deltaDays * 100) / 100 >= 0;
   const pool = positive ? DAILY_GOOD_PHRASES : DAILY_BAD_PHRASES;
   return { text: pickPhrase(pool, `${today}:${positive ? "g" : "b"}`), positive };
 }
 
-// Snapshot of the daily-log form's current field values (TZ, 17.08.2026
-// dirty-flag for "Сохранить"). Kept as one function, not per-field
-// tracking, so a new field added to the form later just needs adding
-// here — the dirty check itself (comparing this snapshot against a
-// reference taken at render time) doesn't change.
-function collectLogFormValues() {
-  return {
-    cigarettes: isFactorVisible("smoking") ? document.getElementById("log_cigarettes").value : null,
-    activityMinutes: isFactorVisible("sport") ? document.getElementById("log_activity").value : null,
-    sleepHoursRange: isFactorVisible("sleep") ? document.getElementById("log_sleep").value : null,
-    bedtimeToday: isFactorVisible("sleep") ? timePickerValue("log_bedtime") : null,
-    alcoholSpirits: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_spirits").value : null,
-    alcoholWine: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_wine").value : null,
-    alcoholBeer: isFactorVisible("alcohol") ? document.getElementById("log_alcohol_beer").value : null,
-    stressLevel: isFactorVisible("stress") ? document.getElementById("log_stress").value : null,
-    nutritionQualityToday: isFactorVisible("nutrition") ? document.getElementById("log_nutrition_quality").value : null,
-    nutritionSugarToday: isFactorVisible("nutrition") ? document.getElementById("log_nutrition_sugar").value : null,
-    socialQualityToday: isFactorVisible("social") ? document.getElementById("log_social").value : null,
-    weightKg: isFactorVisible("weight") ? document.getElementById("log_weight").value : null,
-    purposeToday: isFactorVisible("purpose") ? document.getElementById("log_purpose").value : null,
-    cognitiveActivityToday: isFactorVisible("cognitive") ? document.getElementById("log_cognitive").value : null,
-  };
+// Per-factor entry popup (20.08.2026, replaces the always-open
+// "Отметить сегодня" form): each visible factor is a tappable tile in
+// .factor-grid; tapping one opens just that factor's field(s) in an
+// overlay instead of showing every factor's inputs on the dashboard at
+// once. Reuses the same row/field-html functions the retroactive
+// "Изменить/Заполнить день" screen uses, just with idPrefix "modal", and
+// the same resolvedFactorFields/cascadeRecalcFrom save path the old
+// single big form used — only scoped to one factor's fields per save
+// instead of all of them at once.
+function factorModalFieldsHtml(key, entry) {
+  switch (key) {
+    case "smoking":
+      return smokingFieldHtml("modal", entry, "Сигарет сегодня");
+    case "sport":
+      return activityFieldHtml("modal", entry, "Минут активности сегодня", true);
+    case "sleep":
+      return sleepRowHtml("modal", entry, "Сон прошлой ночью");
+    case "alcohol":
+      return alcoholFieldsHtml("modal", entry, "Алкоголь сегодня");
+    case "nutrition":
+      return nutritionRowHtml("modal", entry);
+    case "social":
+      return socialRowHtml("modal", entry);
+    case "weight":
+      return weightRowHtml("modal", entry);
+    case "purpose":
+      return purposeRowHtml("modal", entry);
+    case "cognitive":
+      return cognitiveRowHtml("modal", entry);
+    case "stress":
+      return `
+        <div class="field">
+          <label>Уровень стресса сегодня</label>
+          <select id="modal_stress">
+            <option value="">Выбрать...</option>
+            ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, entry.stressLevel)}
+          </select>
+        </div>`;
+    default:
+      return "";
+  }
+}
+
+function readFactorModalFields(key) {
+  switch (key) {
+    case "smoking":
+      return { cigarettes: Number(document.getElementById("modal_cigarettes").value) || 0 };
+    case "sport":
+      return { activityMinutes: Number(document.getElementById("modal_activity").value) || 0 };
+    case "sleep": {
+      const raw = document.getElementById("modal_sleep_hours").value;
+      return {
+        sleepHoursExact: raw === "" ? undefined : Number(raw),
+        bedtimeToday: timePickerValue("modal_bedtime"),
+      };
+    }
+    case "alcohol":
+      return {
+        alcoholSpirits: document.getElementById("modal_alcohol_spirits").value,
+        alcoholWine: document.getElementById("modal_alcohol_wine").value,
+        alcoholBeer: document.getElementById("modal_alcohol_beer").value,
+      };
+    case "stress":
+      return { stressLevel: document.getElementById("modal_stress").value };
+    case "nutrition":
+      return {
+        nutritionQualityToday: document.getElementById("modal_nutrition_quality").value,
+        nutritionSugarToday: document.getElementById("modal_nutrition_sugar").value,
+      };
+    case "social":
+      return { socialQualityToday: document.getElementById("modal_social").value };
+    case "weight":
+      return { weightKg: document.getElementById("modal_weight").value };
+    case "purpose":
+      return { purposeToday: document.getElementById("modal_purpose").value };
+    case "cognitive":
+      return { cognitiveActivityToday: document.getElementById("modal_cognitive").value };
+    default:
+      return {};
+  }
+}
+
+function closeFactorModal() {
+  const overlay = document.getElementById("factor-modal-overlay");
+  if (overlay) overlay.hidden = true;
+}
+
+function openFactorModal(screen, key) {
+  const today = todayStr();
+  const entry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
+  const factor = ALL_FACTORS.find((f) => f.key === key);
+  const overlay = document.getElementById("factor-modal-overlay");
+  const body = document.getElementById("factor-modal-body");
+  if (!overlay || !body) return;
+  body.innerHTML = `
+    <h3>${factor ? factor.label : ""}</h3>
+    ${factorModalFieldsHtml(key, entry)}
+    <div class="factor-modal-actions">
+      <button class="btn secondary" id="factor-modal-cancel" type="button">Отмена</button>
+      <button class="btn" id="factor-modal-save" type="button">Сохранить</button>
+    </div>
+  `;
+  overlay.hidden = false;
+  document.getElementById("factor-modal-cancel").addEventListener("click", closeFactorModal);
+  overlay.addEventListener(
+    "click",
+    (e) => {
+      if (e.target === overlay) closeFactorModal();
+    },
+    { once: true }
+  );
+  document.getElementById("factor-modal-save").addEventListener("click", () => {
+    const seriesBefore = cumulativeSeries();
+    const oldCapitalValue = seriesBefore.length ? seriesBefore[seriesBefore.length - 1].value : 0;
+    const existing = state.ledger[today];
+    const fields = readFactorModalFields(key);
+    state.ledger[today] = { ...(existing || {}), ...fields };
+    // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
+    // today alone this is equivalent to the old single-day computation,
+    // it just goes through the shared path now.
+    cascadeRecalcFrom(today);
+    saveState();
+    renderDashboard(screen);
+    const seriesAfter = cumulativeSeries();
+    const newCapitalValue = seriesAfter.length ? seriesAfter[seriesAfter.length - 1].value : 0;
+    animateCapitalValue(screen.querySelector(".capital-value"), oldCapitalValue, newCapitalValue);
+  });
 }
 
 function renderDashboard(screen) {
@@ -2226,49 +2356,21 @@ function renderDashboard(screen) {
       <div>${todaySummary(todayEntry)}</div>
     </div>
 
-    <div class="log-card">
-      <h3>Отметить сегодня</h3>
-      ${smokingActivityRowHtml("log", todayEntry, "Сигарет сегодня", "Минут активности сегодня", true)}
-      ${sleepRowHtml("log", todayEntry, "Сон прошлой ночью")}
-      ${alcoholFieldsHtml("log", todayEntry, "Алкоголь сегодня")}
-      ${nutritionRowHtml("log", todayEntry)}
-      ${socialRowHtml("log", todayEntry)}
-      ${weightRowHtml("log", todayEntry)}
-      ${purposeRowHtml("log", todayEntry)}
-      ${cognitiveRowHtml("log", todayEntry)}
-      ${
-        isFactorVisible("stress")
-          ? `<div class="field">
-        <label>Уровень стресса сегодня</label>
-        <select id="log_stress">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, todayEntry.stressLevel)}
-        </select>
-        <div class="hint">Пока только сбор данных — на расчёт капитала не влияет.</div>
-      </div>`
-          : ""
-      }
-      <button class="btn" id="log-save" style="width:100%">Сохранить</button>
-    </div>
-
     ${
       engagement
         ? `<div class="engagement-card ${engagement.positive ? "positive" : "negative"}">${escapeHtml(engagement.text)}</div>`
         : ""
     }
 
+    <h3>Отметить сегодня</h3>
     <div class="factor-grid">
       ${ALL_FACTORS.filter((f) => state.visibleFactors.includes(f.key))
-        .map((f) =>
-          f.active
-            ? `<div class="factor-card">
-                <div class="name">${f.label}</div>
-                <div class="hint">Активный фактор</div>
-              </div>`
-            : `<div class="factor-card disabled">
-                <div class="name">${f.label}</div>
-                <div class="soon">скоро</div>
-              </div>`
+        .map(
+          (f) => `
+            <button type="button" class="factor-card clickable ${f.active ? "" : "disabled"}" data-factor-key="${f.key}">
+              <div class="name">${f.label}</div>
+              ${f.active ? "" : `<div class="soon">скоро</div>`}
+            </button>`
         )
         .join("")}
       <div class="factor-card disabled">
@@ -2277,8 +2379,9 @@ function renderDashboard(screen) {
       </div>
     </div>
 
-    <h3>Последние операции</h3>
-    ${renderFeed()}
+    <div class="factor-modal-overlay" id="factor-modal-overlay" hidden>
+      <div class="factor-modal" id="factor-modal-body"></div>
+    </div>
   `;
 
   screen.querySelectorAll("[data-period]").forEach((btn) => {
@@ -2289,94 +2392,21 @@ function renderDashboard(screen) {
     });
   });
 
-  // Dirty-flag for "Сохранить" (TZ, 17.08.2026): pale/disabled when the
-  // form matches what's already saved for today (nothing to save — the
-  // starting state, and again right after a successful save), green/
-  // enabled as soon as any field's current value differs from that
-  // snapshot. Compares the whole form's values wholesale via
-  // collectLogFormValues rather than watching each field by hand, so it
-  // doesn't need updating when fields are added/removed later.
-  const savedLogSnapshot = JSON.stringify(collectLogFormValues());
-  const saveBtn = document.getElementById("log-save");
-  const updateSaveDirtyState = () => {
-    saveBtn.disabled = JSON.stringify(collectLogFormValues()) === savedLogSnapshot;
-  };
-  updateSaveDirtyState();
-  screen
-    .querySelectorAll(
-      "#log_cigarettes, #log_activity, #log_sleep, #log_bedtime_hour, #log_bedtime_minute, #log_alcohol_spirits, #log_alcohol_wine, #log_alcohol_beer, #log_stress, #log_nutrition_quality, #log_nutrition_sugar, #log_social, #log_weight, #log_purpose, #log_cognitive"
-    )
-    .forEach((el) => {
-      el.addEventListener("input", updateSaveDirtyState);
-      el.addEventListener("change", updateSaveDirtyState);
-    });
-
-  document.getElementById("log-save").addEventListener("click", () => {
-    const seriesBefore = cumulativeSeries();
-    const oldCapitalValue = seriesBefore.length ? seriesBefore[seriesBefore.length - 1].value : 0;
-    const existing = state.ledger[today];
-    const smoking = resolvedFactorFields("smoking", existing, () => ({
-      cigarettes: Number(document.getElementById("log_cigarettes").value) || 0,
-    }));
-    const sport = resolvedFactorFields("sport", existing, () => ({
-      activityMinutes: Number(document.getElementById("log_activity").value) || 0,
-    }));
-    const sleep = resolvedFactorFields("sleep", existing, () => ({
-      sleepHoursRange: document.getElementById("log_sleep").value,
-      bedtimeToday: timePickerValue("log_bedtime"),
-    }));
-    const alcohol = resolvedFactorFields("alcohol", existing, () => ({
-      alcoholSpirits: document.getElementById("log_alcohol_spirits").value,
-      alcoholWine: document.getElementById("log_alcohol_wine").value,
-      alcoholBeer: document.getElementById("log_alcohol_beer").value,
-    }));
-    const stress = resolvedFactorFields("stress", existing, () => ({
-      stressLevel: document.getElementById("log_stress").value,
-    }));
-    const nutrition = resolvedFactorFields("nutrition", existing, () => ({
-      nutritionQualityToday: document.getElementById("log_nutrition_quality").value,
-      nutritionSugarToday: document.getElementById("log_nutrition_sugar").value,
-    }));
-    const social = resolvedFactorFields("social", existing, () => ({
-      socialQualityToday: document.getElementById("log_social").value,
-    }));
-    const weight = resolvedFactorFields("weight", existing, () => ({
-      weightKg: document.getElementById("log_weight").value,
-    }));
-    const purpose = resolvedFactorFields("purpose", existing, () => ({
-      purposeToday: document.getElementById("log_purpose").value,
-    }));
-    const cognitive = resolvedFactorFields("cognitive", existing, () => ({
-      cognitiveActivityToday: document.getElementById("log_cognitive").value,
-    }));
-    state.ledger[today] = {
-      ...(existing || {}),
-      ...smoking,
-      ...sport,
-      ...sleep,
-      ...alcohol,
-      ...stress,
-      ...nutrition,
-      ...social,
-      ...weight,
-      ...purpose,
-      ...cognitive,
-    };
-    // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
-    // today alone this is equivalent to the old single-day computation,
-    // it just goes through the shared path now.
-    cascadeRecalcFrom(today);
-    saveState();
-    renderDashboard(screen);
-    const seriesAfter = cumulativeSeries();
-    const newCapitalValue = seriesAfter.length ? seriesAfter[seriesAfter.length - 1].value : 0;
-    animateCapitalValue(screen.querySelector(".capital-value"), oldCapitalValue, newCapitalValue);
+  screen.querySelectorAll("[data-factor-key]").forEach((btn) => {
+    btn.addEventListener("click", () => openFactorModal(screen, btn.dataset.factorKey));
   });
 }
 
+// Suppresses the display-only "−0.00" artifact (20.08.2026 fix): a
+// value that rounds to 0.00 shows with no sign, even if the raw number
+// is a tiny nonzero residual (e.g. slowly-decaying sleep debt after a
+// run of normal sleep — see dailyEngagementPhrase for the matching
+// phrase-selection fix). Real values still round normally.
 function formatDays(value) {
-  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
-  return `${sign}${Math.abs(value).toFixed(2)} дн.`;
+  const rounded = Math.round(Math.abs(value) * 100) / 100;
+  if (rounded === 0) return "0.00 дн.";
+  const sign = value > 0 ? "+" : "−";
+  return `${sign}${rounded.toFixed(2)} дн.`;
 }
 
 // "Итог дня" (renamed from "Следующий шаг", TZ section 8, 11.08.2026):
@@ -2444,57 +2474,6 @@ function renderChartSvg(series, period) {
       <path d="${path}" fill="none" stroke="#1f6f4a" stroke-width="2.5" />
     </svg>
   `;
-}
-
-function renderFeed() {
-  const dates = sortedLedgerDates().slice(-14).reverse();
-  if (dates.length === 0) {
-    return `<div class="empty-state">Операций пока нет.</div>`;
-  }
-  return `<ul class="feed-list">
-    ${dates
-      .map((date) => {
-        const e = state.ledger[date];
-        const items = [];
-        const waterline = Number(state.smokingWaterline) || 0;
-        const smokingTerm = (waterline - (Number(e.cigarettes) || 0)) * 0.014;
-        if (smokingTerm !== 0) {
-          const sign = smokingTerm > 0 ? "positive" : "negative";
-          const arrow = smokingTerm > 0 ? "+" : "−";
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon smoke">К</span>Курение: ${e.cigarettes} шт.</span><span class="amount ${sign}">${arrow}${Math.abs(smokingTerm).toFixed(2)} дн.</span></li>`
-          );
-        }
-        if (e.activityMinutes > 0) {
-          const gain = Math.min((e.activityMinutes / 60) * 6, 9) / 24;
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Активность: ${e.activityMinutes} мин.</span><span class="amount positive">+${gain.toFixed(2)} дн.</span></li>`
-          );
-        }
-        if (e.weeklyBonusDays > 0) {
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon sport">С</span>Недельная доплата за спорт</span><span class="amount positive">+${e.weeklyBonusDays.toFixed(2)} дн.</span></li>`
-          );
-        }
-        if (e.sleepDebtDelta) {
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Долг сна</span><span class="amount negative">−${Math.abs(e.sleepDebtDelta).toFixed(2)} дн.</span></li>`
-          );
-        }
-        if (e.sleepRegularityDelta) {
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon sleep">Сн</span>Нерегулярный отход ко сну</span><span class="amount negative">−${Math.abs(e.sleepRegularityDelta).toFixed(2)} дн.</span></li>`
-          );
-        }
-        if (e.alcoholDelta) {
-          items.push(
-            `<li class="feed-item"><span class="badge"><span class="icon alcohol">А</span>Алкоголь сегодня</span><span class="amount negative">−${Math.abs(e.alcoholDelta).toFixed(2)} дн.</span></li>`
-          );
-        }
-        return items.join("");
-      })
-      .join("")}
-  </ul>`;
 }
 
 /* ---- Knowledge base ---- */
@@ -2945,10 +2924,13 @@ function renderHistoryDay(screen) {
       const sport = resolvedFactorFields("sport", existing, () => ({
         activityMinutes: Number(document.getElementById("edit_activity").value) || 0,
       }));
-      const sleep = resolvedFactorFields("sleep", existing, () => ({
-        sleepHoursRange: document.getElementById("edit_sleep").value,
-        bedtimeToday: timePickerValue("edit_bedtime"),
-      }));
+      const sleep = resolvedFactorFields("sleep", existing, () => {
+        const raw = document.getElementById("edit_sleep_hours").value;
+        return {
+          sleepHoursExact: raw === "" ? undefined : Number(raw),
+          bedtimeToday: timePickerValue("edit_bedtime"),
+        };
+      });
       const alcohol = resolvedFactorFields("alcohol", existing, () => ({
         alcoholSpirits: document.getElementById("edit_alcohol_spirits").value,
         alcoholWine: document.getElementById("edit_alcohol_wine").value,
