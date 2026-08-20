@@ -512,6 +512,37 @@ button {
 
 .log-row .field { flex: 1; margin-bottom: 0; }
 
+/* Nutrition redesign (20.08.2026) — 6 separate cards instead of fields
+   inside one shared .log-card; see nutritionRowHtml/renderFactorEditScreen
+   in app.js. Same visual language as .log-card, just repeated per tile
+   with spacing between so each reads as its own plate. */
+.nutrition-tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.nutrition-tile h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.nutrition-tile .field:last-child { margin-bottom: 0; }
+.nutrition-tile .log-row:last-child { margin-bottom: 0; }
+
+/* Amount + unit side by side (same pattern as .time-picker-row) — the
+   amount input gets most of the width, the мл/л select stays narrow. */
+.nutrition-water-row input[type="number"] {
+  flex: 3;
+}
+
+.nutrition-water-row select {
+  flex: 1;
+  min-width: 72px;
+}
+
 .methodology-warning {
   background: var(--surface);
   border: 1px solid var(--line);

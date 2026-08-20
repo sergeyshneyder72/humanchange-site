@@ -209,24 +209,36 @@ const SUPPLEMENTS_REGULARITY_OPTIONS = [
 // (focus-group review pass, TZ taxonomy doc 17.08.2026) — same pattern
 // as stress: no formula, plain data collection, "" is the neutral/
 // unanswered value throughout.
-const NUTRITION_QUALITY_OPTIONS = [
-  { value: "mostlyWhole", label: "Преимущественно цельная еда" },
-  { value: "mixed", label: "Смешанно" },
-  { value: "mostlyProcessed", label: "Много обработанной еды" },
-];
-
 const YES_NO_OPTIONS = [
   { value: "yes", label: "Да" },
   { value: "no", label: "Нет" },
 ];
 
-// Replaces the old yes/no "Было много сладкого?" — a 3-level scale
-// reads more naturally and matches the "best first" ordering convention
-// below (20.08.2026, focus-group UI pass).
-const SUGAR_AMOUNT_OPTIONS = [
+// Nutrition redesign, 20.08.2026 (replaces the earlier 2-dropdown
+// "Питание сегодня"/"Сладкое сегодня" version): six separate tiles —
+// count, protein, water, flour products, sugar sources, supplements.
+// Still collection-only, no formula.
+const NUTRITION_FLOUR_OPTIONS = [
   { value: "none", label: "Не было" },
-  { value: "some", label: "Немного" },
-  { value: "lots", label: "Много" },
+  { value: "wholegrainSourdough", label: "Цельнозерновой хлеб на закваске" },
+  { value: "wholegrainPasta", label: "Паста из твёрдых сортов" },
+  { value: "white", label: "Белый хлеб" },
+];
+
+// Checkbox groups (multi-select) — "Нет" is mutually exclusive with the
+// other sugar sources, wired in wireNutritionExclusiveCheckboxes.
+const NUTRITION_SUGAR_SOURCES = [
+  { key: "none", label: "Не было" },
+  { key: "inProducts", label: "В составе продуктов" },
+  { key: "juices", label: "Соки" },
+  { key: "sweetDrinks", label: "Сладкие напитки" },
+  { key: "added", label: "Добавленный (в чай, кофе и т.п.)" },
+];
+
+const NUTRITION_SUPPLEMENT_TYPES = [
+  { key: "vitamins", label: "Витамины" },
+  { key: "minerals", label: "Минералы" },
+  { key: "other", label: "Другое" },
 ];
 
 // Options in every dropdown below are ordered best-first, descending to
@@ -1391,29 +1403,135 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
   `;
 }
 
-// New collection-only daily fields (19.08.2026 focus-group review pass)
-// — same shape as stress's inline block, just factored into named
-// functions since nutrition needs two fields. None feed the formula.
+// Small helper for the 1..N select fields below (приёмы пищи, перекусы,
+// белок — раз в день) — values stored as strings, same convention as
+// every other select in the app (selectOptionsHtml does a strict ===
+// match against the stored string).
+function numberOptionsHtml(max, selectedValue) {
+  return Array.from({ length: max }, (_, i) => String(i + 1))
+    .map((n) => `<option value="${n}" ${selectedValue === n ? "selected" : ""}>${n}</option>`)
+    .join("");
+}
+
+// Nutrition redesign (20.08.2026) — replaces the earlier two-dropdown
+// version with six separate tiles/cards, per the user's explicit list:
+// Количество, Белок, Чистая вода, Мучное, Сахар, БАДы. Still
+// collection-only (no formula) — see FACTOR_NEUTRAL_VALUES comment.
+// Rendered as .nutrition-tile cards rather than inside the shared
+// .log-card wrapper — renderFactorEditScreen skips that wrapper class
+// for the "nutrition" key specifically so these read as 6 distinct
+// tiles instead of one big card with 6 rows.
 function nutritionRowHtml(idPrefix, entry) {
   if (!isFactorVisible("nutrition")) return "";
+  const sugar = entry.nutritionSugarSources || {};
+  const supplements = entry.nutritionSupplements || {};
   return `
-    <div class="log-row">
-      <div class="field">
-        <label>Питание сегодня</label>
-        <select id="${idPrefix}_nutrition_quality">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(NUTRITION_QUALITY_OPTIONS, entry.nutritionQualityToday)}
-        </select>
+    <div class="nutrition-tile">
+      <h3>Количество</h3>
+      <div class="log-row">
+        <div class="field">
+          <label>Приёмов пищи</label>
+          <select id="${idPrefix}_nutrition_meals">
+            <option value="">Выбрать...</option>
+            ${numberOptionsHtml(6, entry.nutritionMealsCount ?? "")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Перекусов</label>
+          <select id="${idPrefix}_nutrition_snacks">
+            <option value="">Выбрать...</option>
+            ${numberOptionsHtml(3, entry.nutritionSnacksCount ?? "")}
+          </select>
+        </div>
       </div>
+    </div>
+
+    <div class="nutrition-tile">
+      <h3>Белок</h3>
+      <div class="log-row">
+        <div class="field">
+          <label>Раз в день</label>
+          <select id="${idPrefix}_nutrition_protein_times">
+            <option value="">Выбрать...</option>
+            ${numberOptionsHtml(6, entry.nutritionProteinTimes ?? "")}
+          </select>
+        </div>
+        <div class="field">
+          <label>Граммы/день</label>
+          <input type="number" id="${idPrefix}_nutrition_protein_grams" min="0" step="1" placeholder="г" value="${entry.nutritionProteinGrams ?? ""}">
+        </div>
+      </div>
+    </div>
+
+    <div class="nutrition-tile">
       <div class="field">
-        <label>Сладкое сегодня</label>
-        <select id="${idPrefix}_nutrition_sugar">
+        <label>Чистая вода</label>
+        <div class="log-row nutrition-water-row">
+          <input type="number" id="${idPrefix}_nutrition_water_amount" min="0" step="1" placeholder="Количество" value="${entry.nutritionWaterAmount ?? ""}">
+          <select id="${idPrefix}_nutrition_water_unit">
+            <option value="ml" ${(entry.nutritionWaterUnit || "ml") === "ml" ? "selected" : ""}>мл</option>
+            <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>л</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="nutrition-tile">
+      <div class="field">
+        <label>Мучное</label>
+        <select id="${idPrefix}_nutrition_flour">
           <option value="">Выбрать...</option>
-          ${selectOptionsHtml(SUGAR_AMOUNT_OPTIONS, entry.nutritionSugarToday)}
+          ${selectOptionsHtml(NUTRITION_FLOUR_OPTIONS, entry.nutritionFlourType)}
         </select>
       </div>
     </div>
+
+    <div class="nutrition-tile">
+      <div class="field">
+        <label>Сахар</label>
+        <div class="checkbox-list">
+          ${NUTRITION_SUGAR_SOURCES.map(
+            (s) =>
+              `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_sugar_${s.key}" ${sugar[s.key] ? "checked" : ""}> ${s.label}</label>`
+          ).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="nutrition-tile">
+      <div class="field">
+        <label>БАДы</label>
+        <div class="checkbox-list">
+          ${NUTRITION_SUPPLEMENT_TYPES.map(
+            (s) =>
+              `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_supplements_${s.key}" ${supplements[s.key] ? "checked" : ""}> ${s.label}</label>`
+          ).join("")}
+        </div>
+      </div>
+    </div>
   `;
+}
+
+// "Не было" is mutually exclusive with the other sugar-source checkboxes
+// (checking one unchecks the other side) — otherwise the data reads as
+// contradictory ("не было" + "соки" both checked). Only wired for
+// nutrition's "modal" instance (its only rendering context — see
+// factorModalFieldsHtml).
+function wireNutritionExclusiveCheckboxes() {
+  const none = document.getElementById("modal_nutrition_sugar_none");
+  if (!none) return;
+  const others = NUTRITION_SUGAR_SOURCES.filter((s) => s.key !== "none").map((s) =>
+    document.getElementById(`modal_nutrition_sugar_${s.key}`)
+  );
+  none.addEventListener("change", () => {
+    if (none.checked) others.forEach((cb) => cb && (cb.checked = false));
+  });
+  others.forEach((cb) => {
+    if (!cb) return;
+    cb.addEventListener("change", () => {
+      if (cb.checked) none.checked = false;
+    });
+  });
 }
 
 function socialRowHtml(idPrefix, entry) {
@@ -2098,7 +2216,17 @@ const FACTOR_NEUTRAL_VALUES = {
   sleep: { sleepHoursExact: 7.5, bedtimeToday: "" },
   alcohol: { alcoholSpirits: "0", alcoholWine: "0", alcoholBeer: "0" },
   stress: { stressLevel: "" },
-  nutrition: { nutritionQualityToday: "", nutritionSugarToday: "" },
+  nutrition: {
+    nutritionMealsCount: "",
+    nutritionSnacksCount: "",
+    nutritionProteinTimes: "",
+    nutritionProteinGrams: "",
+    nutritionWaterAmount: "",
+    nutritionWaterUnit: "ml",
+    nutritionFlourType: "",
+    nutritionSugarSources: {},
+    nutritionSupplements: {},
+  },
   social: { socialQualityToday: "" },
   weight: { weightKg: "" },
   purpose: { purposeToday: "" },
@@ -2259,8 +2387,25 @@ function readFactorModalFields(key) {
       return { stressLevel: document.getElementById("modal_stress").value };
     case "nutrition":
       return {
-        nutritionQualityToday: document.getElementById("modal_nutrition_quality").value,
-        nutritionSugarToday: document.getElementById("modal_nutrition_sugar").value,
+        nutritionMealsCount: document.getElementById("modal_nutrition_meals").value,
+        nutritionSnacksCount: document.getElementById("modal_nutrition_snacks").value,
+        nutritionProteinTimes: document.getElementById("modal_nutrition_protein_times").value,
+        nutritionProteinGrams: document.getElementById("modal_nutrition_protein_grams").value,
+        nutritionWaterAmount: document.getElementById("modal_nutrition_water_amount").value,
+        nutritionWaterUnit: document.getElementById("modal_nutrition_water_unit").value,
+        nutritionFlourType: document.getElementById("modal_nutrition_flour").value,
+        nutritionSugarSources: {
+          none: !!document.getElementById("modal_nutrition_sugar_none")?.checked,
+          inProducts: !!document.getElementById("modal_nutrition_sugar_inProducts")?.checked,
+          juices: !!document.getElementById("modal_nutrition_sugar_juices")?.checked,
+          sweetDrinks: !!document.getElementById("modal_nutrition_sugar_sweetDrinks")?.checked,
+          added: !!document.getElementById("modal_nutrition_sugar_added")?.checked,
+        },
+        nutritionSupplements: {
+          vitamins: !!document.getElementById("modal_nutrition_supplements_vitamins")?.checked,
+          minerals: !!document.getElementById("modal_nutrition_supplements_minerals")?.checked,
+          other: !!document.getElementById("modal_nutrition_supplements_other")?.checked,
+        },
       };
     case "social":
       return { socialQualityToday: document.getElementById("modal_social").value };
@@ -2287,14 +2432,22 @@ function renderFactorEditScreen(screen, key) {
   const entry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
   const factor = ALL_FACTORS.find((f) => f.key === key);
 
+  // Nutrition renders as 6 separate .nutrition-tile cards (see
+  // nutritionRowHtml) rather than fields inside one big .log-card — the
+  // wrapper below skips the "log-card" class for it so those tiles read
+  // as distinct plates instead of one boxed card containing 6 rows.
+  const wrapperClass = key === "nutrition" ? "factor-edit-screen" : "factor-edit-screen log-card";
+
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
     <h2 class="screen-title">${factor ? escapeHtml(factor.label) : ""}</h2>
-    <div class="factor-edit-screen log-card">
+    <div class="${wrapperClass}">
       ${factorModalFieldsHtml(key, entry)}
       <button class="btn factor-edit-save" id="factor-edit-save" type="button">Сохранить</button>
     </div>
   `;
+
+  if (key === "nutrition") wireNutritionExclusiveCheckboxes();
 
   document.getElementById("settings-back").addEventListener("click", () => {
     state.dashboardEditFactor = null;
