@@ -2287,8 +2287,10 @@ function openFactorModal(screen, key) {
   const body = document.getElementById("factor-modal-body");
   if (!overlay || !body) return;
   body.innerHTML = `
-    <h3>${factor ? factor.label : ""}</h3>
-    ${factorModalFieldsHtml(key, entry)}
+    <div class="factor-modal-fields">
+      <h3>${factor ? factor.label : ""}</h3>
+      ${factorModalFieldsHtml(key, entry)}
+    </div>
     <div class="factor-modal-actions">
       <button class="btn secondary" id="factor-modal-cancel" type="button">Отмена</button>
       <button class="btn" id="factor-modal-save" type="button">Сохранить</button>
@@ -2331,12 +2333,19 @@ function renderDashboard(screen) {
   const todayEntry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
   const engagement = dailyEngagementPhrase(today, todayEntry);
 
+  // Rounded before choosing the positive/negative color and the arrow
+  // (20.08.2026 fix, same root cause as formatDays/reportClickableAmount/
+  // the calendar's day-cell coloring): a cumulative value that displays
+  // as 0.00 must not get colored/arrowed as if it were really negative.
+  const capitalValueRounded = Math.round(capitalValue * 100) / 100;
+  const trendRounded = Math.round(trend * 100) / 100;
+
   screen.innerHTML = `
     <div class="dashboard-sticky-top">
       <h2 class="screen-title">Портфель</h2>
       <div class="capital-header">
-        <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
-        <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
+        <div class="capital-value ${capitalValueRounded >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
+        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
       </div>
     </div>
 
@@ -2375,10 +2384,6 @@ function renderDashboard(screen) {
             </button>`
         )
         .join("")}
-      <div class="factor-card disabled">
-        <div class="name">Активные годы</div>
-        <div class="soon">скоро</div>
-      </div>
     </div>
 
     <div class="factor-modal-overlay" id="factor-modal-overlay" hidden>
@@ -2993,7 +2998,11 @@ function renderHistory(screen) {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(mon).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const entry = state.ledger[dateStr];
-    const delta = entry?.deltaDays || 0;
+    // Rounded before classifying (20.08.2026 fix, same root cause as
+    // formatDays/reportClickableAmount): a tiny nonzero deltaDays that
+    // displays as 0.00 — e.g. slowly-decaying sleep debt after a run of
+    // normal sleep — must not paint the day red/green on the calendar.
+    const delta = entry ? Math.round((entry.deltaDays || 0) * 100) / 100 : 0;
     const cls = delta > 0 ? "positive" : delta < 0 ? "negative" : "empty";
     const editable = isDateEditable(dateStr);
     // Locked days stay visible and, if they have data, still tappable

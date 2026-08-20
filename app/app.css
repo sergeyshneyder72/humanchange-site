@@ -596,14 +596,28 @@ button {
   display: none;
 }
 
+/* 20.08.2026 fix: on phones, opening the on-screen keyboard to type into
+   a field could push the Save/Cancel row down past the visible area (a
+   plain 80vh doesn't shrink for the keyboard, and the buttons were part
+   of the same scrolling block as the fields) — reported as "impossible
+   to save or close". Now the modal is a flex column with its OWN fixed
+   (non-scrolling) actions footer, so Save/Cancel are always on screen
+   regardless of scroll position or keyboard, and max-height uses dvh
+   (shrinks with the keyboard) with vh as a fallback for older browsers. */
 .factor-modal {
   background: var(--surface);
   border-radius: 18px 18px 0 0;
-  padding: 20px 20px 24px;
   width: 100%;
   max-width: var(--max-width);
   max-height: 80vh;
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.factor-modal-fields {
   overflow-y: auto;
+  padding: 20px 20px 8px;
 }
 
 .factor-modal h3 {
@@ -611,9 +625,11 @@ button {
 }
 
 .factor-modal-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 10px;
-  margin-top: 8px;
+  padding: 12px 20px 24px;
+  border-top: 1px solid var(--line);
 }
 
 .factor-modal-actions .btn {
