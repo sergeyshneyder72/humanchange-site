@@ -400,16 +400,22 @@ button {
 }
 
 /* Dashboard */
-/* 20.08.2026 fix: the title and the capital number used to stick
-   separately (title scrolled away normally, only capital-header was
-   sticky with a top offset) — the title would scroll out from under a
-   pinned number with a visible gap. Now the title + number are one
-   sticky unit pinned to the top of .wrap, so nothing scrolls out from
-   under a still-visible number. */
+/* 20.08.2026 fix, take 2: the first fix (title + number as one sticky
+   unit) still left a visible unstuck strip at the very top on real
+   devices. Root cause: .wrap itself has padding-top:24px, and a
+   position:sticky child can only stick within its scrolling ancestor's
+   padding box — that top padding is NOT part of the sticky child's
+   "reach", so it stays behind as a persistent gap that scrolls oddly.
+   Fix: cancel .wrap's padding with a matching negative margin on this
+   wrapper (so it starts at .wrap's true top/left/right edge), then
+   re-add the same padding INSIDE itself for the same visual spacing.
+   Now there's no leftover strip for anything to peek through. */
 .dashboard-sticky-top {
   position: sticky;
   top: 0;
   z-index: 5;
+  margin: -24px -20px 0;
+  padding: 24px 20px 0;
   background: var(--bg);
 }
 
@@ -578,63 +584,20 @@ button {
   opacity: 0.55;
 }
 
-/* Per-factor entry popup (20.08.2026 — replaces the always-open
-   "Отметить сегодня" form; tapping a factor tile opens just that
-   factor's field(s) here instead of showing every factor's inputs at
-   once on the dashboard). */
-.factor-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(31, 31, 29, 0.45);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 50;
-}
-
-.factor-modal-overlay[hidden] {
-  display: none;
-}
-
-/* 20.08.2026 fix: on phones, opening the on-screen keyboard to type into
-   a field could push the Save/Cancel row down past the visible area (a
-   plain 80vh doesn't shrink for the keyboard, and the buttons were part
-   of the same scrolling block as the fields) — reported as "impossible
-   to save or close". Now the modal is a flex column with its OWN fixed
-   (non-scrolling) actions footer, so Save/Cancel are always on screen
-   regardless of scroll position or keyboard, and max-height uses dvh
-   (shrinks with the keyboard) with vh as a fallback for older browsers. */
-.factor-modal {
-  background: var(--surface);
-  border-radius: 18px 18px 0 0;
-  width: 100%;
-  max-width: var(--max-width);
-  max-height: 80vh;
-  max-height: 80dvh;
-  display: flex;
-  flex-direction: column;
-}
-
-.factor-modal-fields {
-  overflow-y: auto;
-  padding: 20px 20px 8px;
-}
-
-.factor-modal h3 {
+/* Per-factor entry screen (20.08.2026, take 2 — replaces the earlier
+   bottom-sheet overlay, which on real devices left the Save/Cancel row
+   unreachable behind the on-screen keyboard/looked "criво-косо"). Now a
+   plain full-screen page, same pattern as "Транзакции за день" /
+   "Изменить день": a normal scrolling page in the flow of .wrap, with a
+   full-width Save button as the last element — nothing fixed/overlaid,
+   nothing for the keyboard to cover. */
+.factor-edit-screen h3 {
   margin-bottom: 16px;
 }
 
-.factor-modal-actions {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 10px;
-  padding: 12px 20px 24px;
-  border-top: 1px solid var(--line);
-}
-
-.factor-modal-actions .btn {
-  flex: 1;
-  text-align: center;
+.factor-edit-save {
+  width: 100%;
+  margin-top: 8px;
 }
 
 .factor-card .name { font-weight: 600; font-size: 15px; }

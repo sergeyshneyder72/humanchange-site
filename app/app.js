@@ -581,6 +581,7 @@ function defaultState() {
     historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
     historyDayEditMode: false, // whether that screen's fill/edit form is expanded, TZ section 7, 17.08.2026
     settingsView: "root", // "root" | "care" | "factors" — sub-screen open within Настройки, TZ section 7, 13.08.2026
+    dashboardEditFactor: null, // factor key whose full-screen entry page is open, or null for the normal dashboard, 20.08.2026
     // TEMP (19.08.2026): all factors on by default for the focus-group
     // review pass — trim per-user via Настройки → Факторы afterward.
     // Was a fixed subset (sport/sleep/nutrition/stress). Written out
@@ -2274,40 +2275,34 @@ function readFactorModalFields(key) {
   }
 }
 
-function closeFactorModal() {
-  const overlay = document.getElementById("factor-modal-overlay");
-  if (overlay) overlay.hidden = true;
-}
-
-function openFactorModal(screen, key) {
+// Full-screen factor entry page (20.08.2026, take 2 — replaces the
+// bottom-sheet overlay from earlier the same day, which was unusable on
+// real devices: the Save/Cancel row could end up unreachable behind the
+// on-screen keyboard). Same page pattern as "Транзакции за день" —
+// a plain screen reached via state.dashboardEditFactor, with a visible
+// "← Назад" button and a full-width "Сохранить" button as normal page
+// content, so there's no overlay/z-index/keyboard interaction to break.
+function renderFactorEditScreen(screen, key) {
   const today = todayStr();
   const entry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
   const factor = ALL_FACTORS.find((f) => f.key === key);
-  const overlay = document.getElementById("factor-modal-overlay");
-  const body = document.getElementById("factor-modal-body");
-  if (!overlay || !body) return;
-  body.innerHTML = `
-    <div class="factor-modal-fields">
-      <h3>${factor ? factor.label : ""}</h3>
+
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">${factor ? escapeHtml(factor.label) : ""}</h2>
+    <div class="factor-edit-screen log-card">
       ${factorModalFieldsHtml(key, entry)}
-    </div>
-    <div class="factor-modal-actions">
-      <button class="btn secondary" id="factor-modal-cancel" type="button">Отмена</button>
-      <button class="btn" id="factor-modal-save" type="button">Сохранить</button>
+      <button class="btn factor-edit-save" id="factor-edit-save" type="button">Сохранить</button>
     </div>
   `;
-  overlay.hidden = false;
-  document.getElementById("factor-modal-cancel").addEventListener("click", closeFactorModal);
-  overlay.addEventListener(
-    "click",
-    (e) => {
-      if (e.target === overlay) closeFactorModal();
-    },
-    { once: true }
-  );
-  document.getElementById("factor-modal-save").addEventListener("click", () => {
-    const seriesBefore = cumulativeSeries();
-    const oldCapitalValue = seriesBefore.length ? seriesBefore[seriesBefore.length - 1].value : 0;
+
+  document.getElementById("settings-back").addEventListener("click", () => {
+    state.dashboardEditFactor = null;
+    saveState();
+    renderDashboard(screen);
+  });
+
+  document.getElementById("factor-edit-save").addEventListener("click", () => {
     const existing = state.ledger[today];
     const fields = readFactorModalFields(key);
     state.ledger[today] = { ...(existing || {}), ...fields };
@@ -2315,15 +2310,17 @@ function openFactorModal(screen, key) {
     // today alone this is equivalent to the old single-day computation,
     // it just goes through the shared path now.
     cascadeRecalcFrom(today);
+    state.dashboardEditFactor = null;
     saveState();
     renderDashboard(screen);
-    const seriesAfter = cumulativeSeries();
-    const newCapitalValue = seriesAfter.length ? seriesAfter[seriesAfter.length - 1].value : 0;
-    animateCapitalValue(screen.querySelector(".capital-value"), oldCapitalValue, newCapitalValue);
   });
 }
 
 function renderDashboard(screen) {
+  if (state.dashboardEditFactor) {
+    renderFactorEditScreen(screen, state.dashboardEditFactor);
+    return;
+  }
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
   const trend = sevenDayTrend();
@@ -2385,10 +2382,6 @@ function renderDashboard(screen) {
         )
         .join("")}
     </div>
-
-    <div class="factor-modal-overlay" id="factor-modal-overlay" hidden>
-      <div class="factor-modal" id="factor-modal-body"></div>
-    </div>
   `;
 
   screen.querySelectorAll("[data-period]").forEach((btn) => {
@@ -2400,7 +2393,11 @@ function renderDashboard(screen) {
   });
 
   screen.querySelectorAll("[data-factor-key]").forEach((btn) => {
-    btn.addEventListener("click", () => openFactorModal(screen, btn.dataset.factorKey));
+    btn.addEventListener("click", () => {
+      state.dashboardEditFactor = btn.dataset.factorKey;
+      saveState();
+      renderDashboard(screen);
+    });
   });
 }
 
