@@ -2332,10 +2332,12 @@ function renderDashboard(screen) {
   const engagement = dailyEngagementPhrase(today, todayEntry);
 
   screen.innerHTML = `
-    <h2 class="screen-title">Портфель</h2>
-    <div class="capital-header">
-      <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
-      <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
+    <div class="dashboard-sticky-top">
+      <h2 class="screen-title">Портфель</h2>
+      <div class="capital-header">
+        <div class="capital-value ${capitalValue >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
+        <div class="capital-trend ${trend >= 0 ? "positive" : "negative"}">${trend >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
+      </div>
     </div>
 
     <div class="period-switch">
@@ -2483,18 +2485,22 @@ function renderKnowledge(screen) {
     <h2 class="screen-title">База знаний</h2>
     ${KNOWLEDGE_BASE.map(
       (item) => `
-      <div class="kb-card ${item.active || item.note ? "" : "disabled"}">
-        <div class="name">${item.name}${
-          item.active
-            ? ""
-            : item.note
-            ? ` <span class="optional-badge">${escapeHtml(item.note)}</span>`
-            : ' <span class="optional-badge">скоро</span>'
-        }</div>
-        <div>${item.body}</div>
-        <div class="source">${item.source}</div>
-        ${item.sourceKeys ? `<div class="source">${sourceLinksHtml(item.sourceKeys)}</div>` : ""}
-      </div>`
+      <details class="kb-card ${item.active || item.note ? "" : "disabled"}">
+        <summary>
+          <span class="name">${item.name}</span>${
+            item.active
+              ? ""
+              : item.note
+              ? ` <span class="optional-badge">${escapeHtml(item.note)}</span>`
+              : ' <span class="optional-badge">скоро</span>'
+          }
+        </summary>
+        <div class="kb-card-body">
+          <div>${item.body}</div>
+          <div class="source">${item.source}</div>
+          ${item.sourceKeys ? `<div class="source">${sourceLinksHtml(item.sourceKeys)}</div>` : ""}
+        </div>
+      </details>`
     ).join("")}
 
     <h2>Что почитать</h2>

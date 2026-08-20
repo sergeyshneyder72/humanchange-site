@@ -400,13 +400,26 @@ button {
 }
 
 /* Dashboard */
+/* 20.08.2026 fix: the title and the capital number used to stick
+   separately (title scrolled away normally, only capital-header was
+   sticky with a top offset) — the title would scroll out from under a
+   pinned number with a visible gap. Now the title + number are one
+   sticky unit pinned to the top of .wrap, so nothing scrolls out from
+   under a still-visible number. */
+.dashboard-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+}
+
+.dashboard-sticky-top .screen-title {
+  padding-top: 4px;
+}
+
 .capital-header {
   text-align: center;
   padding: 28px 0 8px;
-  position: sticky;
-  top: 52px;
-  background: var(--bg);
-  z-index: 5;
 }
 
 .capital-header .capital-value {
@@ -664,7 +677,9 @@ button {
 
 .feed-item .date { color: var(--muted); font-size: 13px; }
 
-/* Knowledge */
+/* Knowledge — cards are <details> accordions (20.08.2026: was one long
+   wall of text per card, now collapsed by default; tap the name to
+   expand). */
 .kb-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -673,7 +688,29 @@ button {
   margin-bottom: 14px;
 }
 
-.kb-card .name { font-weight: 700; margin-bottom: 4px; }
+.kb-card summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.kb-card summary::-webkit-details-marker { display: none; }
+.kb-card summary::marker { content: ""; }
+
+.kb-card summary::after {
+  content: " ▾";
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.kb-card[open] summary::after {
+  content: " ▴";
+}
+
+.kb-card-body {
+  margin-top: 10px;
+}
+
+.kb-card .name { font-weight: 700; }
 .kb-card .source { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .kb-card.disabled { opacity: 0.7; }
 
