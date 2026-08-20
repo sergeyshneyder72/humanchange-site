@@ -57,6 +57,23 @@ body {
   padding: 24px 20px;
 }
 
+/* 20.08.2026 fix, take 3 — the take-2 negative-margin trick on
+   .dashboard-sticky-top LOOKED right unscrolled but was still broken:
+   per spec, a sticky element's stuck position is computed against its
+   scrolling ancestor's PADDING edge, not its margin box — so the moment
+   scrolling actually engaged stickiness, the browser re-anchored the
+   header 24px below the true top (at .wrap's padding edge), exposing
+   the exact gap the fix was meant to remove. Confirmed live via
+   devtools: rect.y was 76 instead of 52 the instant it stuck.
+   The only sticky-safe fix is to not give .wrap any top padding to
+   begin with when a sticky child needs to reach the true top — this
+   class (toggled in renderApp for the dashboard nav only) zeroes just
+   that, while .dashboard-sticky-top supplies the same 24px visually via
+   its own padding-top instead. */
+.wrap.wrap-no-top-pad {
+  padding-top: 0;
+}
+
 h1, h2, h3 { margin: 0 0 8px; }
 
 /* TZ section 7, 13.08.2026: only the top-of-screen title centers (also
@@ -400,22 +417,18 @@ button {
 }
 
 /* Dashboard */
-/* 20.08.2026 fix, take 2: the first fix (title + number as one sticky
-   unit) still left a visible unstuck strip at the very top on real
-   devices. Root cause: .wrap itself has padding-top:24px, and a
-   position:sticky child can only stick within its scrolling ancestor's
-   padding box — that top padding is NOT part of the sticky child's
-   "reach", so it stays behind as a persistent gap that scrolls oddly.
-   Fix: cancel .wrap's padding with a matching negative margin on this
-   wrapper (so it starts at .wrap's true top/left/right edge), then
-   re-add the same padding INSIDE itself for the same visual spacing.
-   Now there's no leftover strip for anything to peek through. */
+/* 20.08.2026 fix, take 3 (see .wrap.wrap-no-top-pad above for the full
+   explanation of why take 2's negative-margin trick didn't survive
+   actual stickiness). .wrap has no top padding for the dashboard now,
+   so this element's own top edge IS the scrollport's true top — "top:0"
+   sticks it flush with no gap, in both the unscrolled and stuck states.
+   padding-top here reproduces the same 24px visual spacing .wrap used
+   to provide; horizontal padding still comes from .wrap as before. */
 .dashboard-sticky-top {
   position: sticky;
   top: 0;
   z-index: 5;
-  margin: -24px -20px 0;
-  padding: 24px 20px 0;
+  padding-top: 24px;
   background: var(--bg);
 }
 

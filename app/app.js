@@ -2114,6 +2114,10 @@ function renderApp() {
   });
 
   const screen = document.getElementById("screen");
+  // See .wrap.wrap-no-top-pad in app.css (20.08.2026, sticky-header fix
+  // take 3) — only the dashboard's sticky header needs .wrap's own top
+  // padding removed; every other screen keeps the normal 24px.
+  screen.classList.toggle("wrap-no-top-pad", nav === "dashboard");
   if (nav === "dashboard") renderDashboard(screen);
   else if (nav === "history") renderHistory(screen);
   else if (nav === "history-day") renderHistoryDay(screen);
