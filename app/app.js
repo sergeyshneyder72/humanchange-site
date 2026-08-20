@@ -2813,8 +2813,17 @@ function reconcileBreakdownForDisplay(total, items) {
 // table for the "Транзакции за день" popup): the number itself is the
 // <summary> of a <details> block — tapping it expands the per-factor
 // breakdown underneath.
-function reportClickableAmount(amount, cssClass, items) {
-  if (!amount || items.length === 0) return `<span class="${cssClass}">—</span>`;
+// 20.08.2026 fix: the "positive"/"negative" color and the "no data" (—)
+// fallback are both now decided from the ROUNDED (displayed) value, not
+// the raw one. Previously "Списания" always got a hardcoded negative
+// (red) class regardless of amount, and a tiny nonzero residual (e.g.
+// slowly-decaying sleep debt after normal sleep) fell through the
+// `!amount` check and rendered as a red "0.00 дн." — same underlying
+// issue as formatDays' −0.00 fix, just in this screen's own code path.
+function reportClickableAmount(amount, items) {
+  const roundedCents = Math.round(amount * 100);
+  if (roundedCents === 0 || items.length === 0) return `<span class="amount">—</span>`;
+  const cssClass = roundedCents > 0 ? "amount positive" : "amount negative";
   const reconciled = reconcileBreakdownForDisplay(amount, items);
   const detail = reconciled.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
   return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
@@ -2841,15 +2850,15 @@ function dayTransactionsHtml(date) {
   return `
     <div class="modal-row">
       <span>Личные накопления</span>
-      ${reportClickableAmount(savings, savings >= 0 ? "amount positive" : "amount negative", breakdown)}
+      ${reportClickableAmount(savings, breakdown)}
     </div>
     <div class="modal-row">
       <span>Дивиденды</span>
-      ${reportClickableAmount(dividends, "amount positive", dividendItems)}
+      ${reportClickableAmount(dividends, dividendItems)}
     </div>
     <div class="modal-row">
       <span>Списания</span>
-      ${reportClickableAmount(charges, "amount negative", chargeItems)}
+      ${reportClickableAmount(charges, chargeItems)}
     </div>
   `;
 }
