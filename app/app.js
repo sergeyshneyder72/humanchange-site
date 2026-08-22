@@ -179,7 +179,7 @@ const LAST_MEAL_TIME_OPTIONS = [
 
 const MEALS_PER_DAY_OPTIONS = [
   { value: "1to2", label: "1–2" },
-  { value: "3", label: "3" },
+  { value: "3to4", label: "3-4" },
   { value: "4to5", label: "4–5" },
   { value: "moreIrregular", label: "больше, нерегулярно" },
 ];
@@ -1246,6 +1246,40 @@ function reqMark() {
   return `<span class="required-mark">*</span>`;
 }
 
+// Russian pluralisation for the reveal-screen day count (21.08.2026
+// onboarding redesign) — день/дня/дней, standard mod-10/mod-100 rule.
+function dayWord(n) {
+  const abs = Math.abs(Math.round(n || 0)) % 100;
+  const last = abs % 10;
+  if (abs >= 11 && abs <= 14) return "дней";
+  if (last === 1) return "день";
+  if (last >= 2 && last <= 4) return "дня";
+  return "дней";
+}
+
+// Required-field gate for the onboarding "Далее"/"Рассчитать" button
+// (21.08.2026): mirrors the same conditions previously enforced only via
+// alert() on click — now also drives a live-disabled pale button so the
+// person can see before clicking whether they're done with a step.
+// Steps not listed here (recovery, nutrition, health) have no required
+// fields yet, so they're always valid.
+function isStepValid(step, draft) {
+  if (step === "basics") {
+    return !!(draft.age && draft.gender && draft.region);
+  }
+  if (step === "activity_form") {
+    if (!draft.activityRange) return false;
+    if (draft.activityRange === "lt150" && draft.activityGoalConfirmed === undefined) return false;
+    return true;
+  }
+  if (step === "habits") {
+    if (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null) return false;
+    if (Number(draft.cigarettesPerDay) > 0 && draft.smokingGoalConfirmed === undefined) return false;
+    return true;
+  }
+  return true;
+}
+
 // TZ section 1, item 8 (11.08.2026): long field explanations stay
 // collapsed behind an "ⓘ" by default, expand on tap — screen density fix
 // so "Далее" fits without scrolling. Native <details>/<summary> gives
@@ -1725,14 +1759,14 @@ function renderOnboarding() {
         </select>
       </div>
       <div class="field">
-        <label>Часы между приёмами пищи (в среднем)</label>
+        <label>Пауза между приёмами пищи (в среднем)</label>
         <select id="f_hoursBetweenMealsRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(HOURS_BETWEEN_MEALS_OPTIONS, draft.hoursBetweenMealsRange)}
         </select>
       </div>
       <div class="field">
-        <label>Окно между первым и последним приёмом пищи</label>
+        <label>Пауза между последним и первым приёмом пищи</label>
         <select id="f_eatingWindowRange">
           <option value="">Выбрать...</option>
           ${selectOptionsHtml(EATING_WINDOW_OPTIONS, draft.eatingWindowRange)}
@@ -1784,25 +1818,34 @@ function renderOnboarding() {
         </div>
       </div>
       <div class="field">
-        <label>Крепкий алкоголь, мл/нед</label>
-        <select id="f_alcoholSpiritsRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, draft.alcoholSpirits)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Вино, мл/нед</label>
-        <select id="f_alcoholWineRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, draft.alcoholWine)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Пиво и слабоалкогольные коктейли</label>
-        <select id="f_alcoholBeerRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
-        </select>
+        <details class="alcohol-details" ${alcoholSummaryText(draft) || draft.alcoholOtherHas ? "open" : ""}>
+          <summary>Алкоголь${alcoholSummaryText(draft) ? ` — ${escapeHtml(alcoholSummaryText(draft))}` : ""}</summary>
+          <div class="field">
+            <label>Крепкий алкоголь, мл/нед</label>
+            <select id="f_alcoholSpiritsRange">
+              <option value="">Выбрать...</option>
+              ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, draft.alcoholSpirits)}
+            </select>
+          </div>
+          <div class="field">
+            <label>Вино, мл/нед</label>
+            <select id="f_alcoholWineRange">
+              <option value="">Выбрать...</option>
+              ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, draft.alcoholWine)}
+            </select>
+          </div>
+          <div class="field">
+            <label>Пиво и слабоалкогольные коктейли</label>
+            <select id="f_alcoholBeerRange">
+              <option value="">Выбрать...</option>
+              ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
+            </select>
+          </div>
+          <div class="field">
+            <label class="checkbox-row"><input type="checkbox" id="f_alcoholOtherHas" ${draft.alcoholOtherHas ? "checked" : ""}> Другое</label>
+            <input type="text" id="f_alcoholOtherText" placeholder="Что именно?" value="${escapeHtml(draft.alcoholOtherText ?? "")}">
+          </div>
+        </details>
       </div>
     `;
   } else if (step === "health") {
@@ -1820,7 +1863,6 @@ function renderOnboarding() {
       <div class="field">
         <label>Уточнение</label>
         <input type="text" id="f_illnessDetail" value="${escapeHtml(draft.illnessDetail ?? "")}">
-        <div class="hint">Этот пункт всегда можно пропустить.</div>
       </div>
     `;
   } else if (step === "reveal") {
@@ -1829,14 +1871,13 @@ function renderOnboarding() {
     const resultPhrase = pickPhrase(ONBOARDING_RESULT_PHRASES[tier], JSON.stringify(draft));
     body = `
       <div class="onboarding-header">
-        <h1>Ваш стартовый капитал готов</h1>
+        <h1 class="screen-title">Ваш стартовый капитал готов:</h1>
       </div>
       <div class="reveal-number">
-        <div class="value" id="reveal-value">0</div>
-        <div class="label">дней ожидаемого капитала здоровья</div>
+        <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${dayWord(revealDays)}</span></div>
+        <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
       </div>
-      <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.</div>
       <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? "Сохранить пересчёт" : "Перейти в приложение"}</button>
     `;
   }
@@ -1891,6 +1932,18 @@ function renderOnboarding() {
         document.getElementById("f_bedtimeExact").style.display = e.target.value === "custom" ? "block" : "none";
       });
     }
+    // Pale/disabled "Далее" until required fields are filled (21.08.2026
+    // onboarding redesign) — re-checks on every change within the step
+    // without touching the fields themselves, so nothing typed is lost.
+    const nextBtn = document.getElementById("ob-next");
+    const wrapEl = document.querySelector(".wrap");
+    const refreshNextState = () => {
+      collectStepFields(step, draft);
+      nextBtn.disabled = !isStepValid(step, draft);
+    };
+    wrapEl.addEventListener("input", refreshNextState);
+    wrapEl.addEventListener("change", refreshNextState);
+    refreshNextState();
     document.getElementById("ob-next").addEventListener("click", () => {
       collectStepFields(step, draft);
       if (step === "basics" && (!draft.age || !draft.gender || !draft.region)) {
@@ -1983,6 +2036,8 @@ function collectStepFields(step, draft) {
     draft.alcoholSpirits = val("f_alcoholSpiritsRange") || "";
     draft.alcoholWine = val("f_alcoholWineRange") || "";
     draft.alcoholBeer = val("f_alcoholBeerRange") || "";
+    draft.alcoholOtherHas = !!document.getElementById("f_alcoholOtherHas")?.checked;
+    draft.alcoholOtherText = val("f_alcoholOtherText") || "";
     if (Number(draft.cigarettesPerDay) > 0) {
       const goalChecked = checkedRadio("f_smokingGoal");
       draft.smokingGoalConfirmed = goalChecked ? goalChecked.value === "yes" : draft.smokingGoalConfirmed;
