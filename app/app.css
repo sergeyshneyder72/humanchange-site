@@ -193,14 +193,30 @@ button {
 /* Alcohol input, collapsed by default (17.08.2026) — same details/
    summary pattern as .hint-details above, but the summary itself is a
    full field-label-sized tappable row (it replaces three separate field
-   labels), with a chevron instead of hidden native marker. */
+   labels), with a chevron instead of hidden native marker.
+   21.08.2026: styled as a bordered card (same look as .kb-card in the
+   Knowledge base accordion) — plain muted text with no border read as
+   inert, not tappable, in onboarding testing. */
+.alcohol-details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+
 .alcohol-details summary {
   cursor: pointer;
   list-style: none;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--muted);
-  padding: 4px 0;
+  color: var(--text);
+}
+
+.alcohol-details[open] summary {
+  margin-bottom: 10px;
 }
 
 .alcohol-details summary::-webkit-details-marker { display: none; }
