@@ -569,6 +569,69 @@ if (new URLSearchParams(location.search).get("reset") === "true") {
   location.replace(location.pathname);
 }
 
+/* ---------------------------------------------------------------------
+ * Auth (Supabase) — added 22.08.2026. Fully optional layer: the app
+ * works exactly as before with no account (local-only, per-device). An
+ * account exists only so a user CAN pay and/or sync across devices —
+ * it does not gate any existing screen or feature.
+ *
+ * TODO(backend): merging pre-existing local data into a freshly created
+ * account is NOT handled yet (deliberately deferred — see chat log
+ * 22.08.2026, risk of silently overwriting a user's local history).
+ * Right now sign-up/sign-in only sets state.authEmail; local ledger
+ * data stays local either way.
+ * ------------------------------------------------------------------- */
+
+const SUPABASE_URL = "https://srapibbfdhjpvjtkuzjb.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_qbue7KqQH5_UQ4hdQge9iw_spRCFCvn";
+
+const sb =
+  typeof window !== "undefined" && window.supabase
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+async function authSignUp(email, password) {
+  if (!sb) return { error: { message: "Supabase недоступен (не загрузился SDK)." } };
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (!error && data.user) {
+    state.authEmail = data.user.email;
+    saveState();
+  }
+  return { data, error };
+}
+
+async function authSignIn(email, password) {
+  if (!sb) return { error: { message: "Supabase недоступен (не загрузился SDK)." } };
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (!error && data.user) {
+    state.authEmail = data.user.email;
+    saveState();
+  }
+  return { data, error };
+}
+
+async function authSignOut() {
+  if (sb) await sb.auth.signOut();
+  state.authEmail = null;
+  saveState();
+}
+
+// Restores a persisted Supabase session (SDK keeps it in its own
+// localStorage key) after the first paint, so a returning logged-in
+// user sees their email in Settings without needing to log in again.
+// Fire-and-forget: does nothing if there's no session or SDK failed to
+// load, and never blocks the initial render.
+async function authRestoreSession() {
+  if (!sb) return;
+  const { data } = await sb.auth.getSession();
+  const email = data && data.session && data.session.user ? data.session.user.email : null;
+  if (email && email !== state.authEmail) {
+    state.authEmail = email;
+    saveState();
+    if (state.nav === "settings") render();
+  }
+}
+
 function todayStr(d = new Date()) {
   return d.toISOString().slice(0, 10);
 }
@@ -592,7 +655,8 @@ function defaultState() {
     historyMonth: null, // "YYYY-MM" currently viewed in the История calendar, defaults to the current month when unset
     historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
     historyDayEditMode: false, // whether that screen's fill/edit form is expanded, TZ section 7, 17.08.2026
-    settingsView: "root", // "root" | "care" | "factors" — sub-screen open within Настройки, TZ section 7, 13.08.2026
+    settingsView: "root", // "root" | "care" | "factors" | "account" — sub-screen open within Настройки, TZ section 7, 13.08.2026
+    authEmail: null, // email of the logged-in Supabase account, or null if using the app locally without one (22.08.2026)
     dashboardEditFactor: null, // factor key whose full-screen entry page is open, or null for the normal dashboard, 20.08.2026
     // TEMP (19.08.2026): all factors on by default for the focus-group
     // review pass — trim per-user via Настройки → Факторы afterward.
@@ -2208,9 +2272,14 @@ function renderSettings(screen) {
     renderFactorSettings(screen);
     return;
   }
+  if (view === "account") {
+    renderAccountSettings(screen);
+    return;
+  }
   screen.innerHTML = `
     <h2 class="screen-title">Настройки</h2>
     <div class="settings-list">
+      <button class="settings-row" data-view="account">${state.authEmail ? `Аккаунт — ${state.authEmail}` : "Войти / Зарегистрироваться"}</button>
       <button class="settings-row" data-view="care">Служба заботы и Фонд идей</button>
       <button class="settings-row" data-view="factors">Факторы на главном экране</button>
       <a class="settings-row" href="/product/" target="_blank" rel="noopener">Тарифы и оплата</a>
@@ -2234,6 +2303,80 @@ function wireSettingsBackButton(screen) {
   document.getElementById("settings-back").addEventListener("click", () => {
     state.settingsView = "root";
     saveState();
+    renderSettings(screen);
+  });
+}
+
+// Login/registration (email+password via Supabase) — fully optional,
+// see the "Auth (Supabase)" block near the top of the file. Purely
+// additive UI: nothing here blocks or reads from the local ledger.
+// mode toggles the form between "Войти" and "Зарегистрироваться" copy;
+// state itself (authEmail) decides whether we show the form at all or
+// the logged-in view instead.
+let accountFormMode = "signin"; // "signin" | "signup" — local UI toggle, not persisted
+
+function renderAccountSettings(screen) {
+  if (state.authEmail) {
+    screen.innerHTML = `
+      ${settingsBackButtonHtml()}
+      <h2 class="screen-title">Аккаунт</h2>
+      <div class="field">
+        <div class="hint">Вы вошли как ${escapeHtml(state.authEmail)}.</div>
+      </div>
+      <button class="btn secondary" id="account-signout" style="width:100%">Выйти</button>
+    `;
+    wireSettingsBackButton(screen);
+    document.getElementById("account-signout").addEventListener("click", async () => {
+      await authSignOut();
+      renderSettings(screen);
+    });
+    return;
+  }
+
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">Аккаунт</h2>
+    <div class="hint" style="margin-bottom:16px;">Аккаунт нужен только для оплаты и синхронизации между устройствами — без него приложение продолжает работать как раньше, все данные остаются на этом устройстве.</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="account-email" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="account-password" autocomplete="${accountFormMode === "signup" ? "new-password" : "current-password"}">
+    </div>
+    <div id="account-error" class="hint" style="color:var(--danger, #c0392b); display:none;"></div>
+    <button class="btn" id="account-submit" style="width:100%">${accountFormMode === "signup" ? "Зарегистрироваться" : "Войти"}</button>
+    <button class="btn secondary" id="account-toggle-mode" style="width:100%; margin-top:12px;">${accountFormMode === "signup" ? "У меня уже есть аккаунт" : "Ещё нет аккаунта — зарегистрироваться"}</button>
+  `;
+  wireSettingsBackButton(screen);
+
+  document.getElementById("account-toggle-mode").addEventListener("click", () => {
+    accountFormMode = accountFormMode === "signup" ? "signin" : "signup";
+    renderAccountSettings(screen);
+  });
+
+  document.getElementById("account-submit").addEventListener("click", async () => {
+    const email = document.getElementById("account-email").value.trim();
+    const password = document.getElementById("account-password").value;
+    const errorEl = document.getElementById("account-error");
+    errorEl.style.display = "none";
+    if (!email || !password) {
+      errorEl.textContent = "Заполните email и пароль.";
+      errorEl.style.display = "block";
+      return;
+    }
+    const submitBtn = document.getElementById("account-submit");
+    submitBtn.disabled = true;
+    const { error } = accountFormMode === "signup"
+      ? await authSignUp(email, password)
+      : await authSignIn(email, password);
+    submitBtn.disabled = false;
+    if (error) {
+      errorEl.textContent = error.message || "Не получилось. Проверьте данные и попробуйте снова.";
+      errorEl.style.display = "block";
+      return;
+    }
     renderSettings(screen);
   });
 }
@@ -3268,3 +3411,4 @@ function renderHistory(screen) {
  * ------------------------------------------------------------------- */
 
 render();
+authRestoreSession();
