@@ -1246,6 +1246,31 @@ function escapeHtml(value) {
   }[c]));
 }
 
+// Shared "copy text, briefly confirm on the button itself" helper
+// (23.08.2026) — used by the reveal screen's "Поделиться результатом"
+// and Настройки → "Пригласить друга". No toast component in this app,
+// so the confirmation is just the button's own label swapping to
+// "Скопировано!" for a beat, then reverting — self-contained, no new UI
+// primitive needed for two call sites.
+function copyTextToClipboard(text, btn, originalLabel) {
+  const revert = () => {
+    btn.textContent = originalLabel;
+  };
+  const showCopied = () => {
+    btn.textContent = "Скопировано!";
+    setTimeout(revert, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showCopied, () => {
+      btn.textContent = "Не удалось скопировать";
+      setTimeout(revert, 1500);
+    });
+  } else {
+    btn.textContent = "Не удалось скопировать";
+    setTimeout(revert, 1500);
+  }
+}
+
 const root = document.getElementById("app");
 
 function render() {
@@ -1934,22 +1959,41 @@ function renderOnboarding() {
     revealDays = computeStartingCapitalDays(draft);
     const tier = onboardingResultTier(draft);
     const resultPhrase = pickPhrase(ONBOARDING_RESULT_PHRASES[tier], JSON.stringify(draft));
+    // Loss-aversion line (23.08.2026): only for someone whose answers
+    // actually put them below the two WHO/waterline-neutral thresholds
+    // this app tracks (smokes at all, or under the 150min/week activity
+    // floor) — showing it to everyone would be either meaningless or
+    // guilt-tripping people who already answered "0"/"active". No
+    // invented daily-rate number: the formula's smoking delta is
+    // relative to the person's OWN waterline (their stated habit is the
+    // neutral reference point, not a penalty), so there's no existing
+    // constant that honestly converts "kept smoking at my own rate"
+    // into an ongoing days-lost figure — the disclosed, unsourced
+    // wording below is what's actually true without fabricating one.
+    const hasRiskHabits = Number(draft.cigarettesPerDay) > 0 || draft.activityRange === "lt150";
     body = `
       <div class="onboarding-header">
-        <h1 class="screen-title">Ваш стартовый капитал готов:</h1>
+        <h1 class="screen-title">Это уже ваш капитал:</h1>
       </div>
       <div class="reveal-number">
         <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${dayWord(revealDays)}</span></div>
         <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
+        ${hasRiskHabits ? `<div class="disclaimer">Без изменений эти дни продолжали бы уходить.</div>` : ""}
       </div>
       <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? "Сохранить пересчёт" : "Перейти в приложение"}</button>
+      ${
+        state.recalcMode
+          ? ""
+          : `<button class="btn secondary" id="share-reveal" style="width:100%; margin-top:10px;">Поделиться результатом</button>`
+      }
     `;
   }
 
   root.innerHTML = `
     <div class="wrap">
       <div class="progress-dots">${dots}</div>
+      ${step !== "reveal" ? `<div class="onboarding-step-counter">Вопрос ${stepIndex + 1} из 6</div>` : ""}
       ${body}
       ${
         step !== "reveal"
@@ -1977,6 +2021,13 @@ function renderOnboarding() {
       saveState();
       render();
     });
+    const shareBtn = document.getElementById("share-reveal");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", () => {
+        const text = `Мой стартовый капитал здоровья — ${revealDays} ${dayWord(revealDays)}. Считаю каждый день в «Капитал здоровья»: humanchange.app`;
+        copyTextToClipboard(text, shareBtn, "Поделиться результатом");
+      });
+    }
   } else {
     // Goal-confirmation blocks (Evan Forman feedback, 08.08.2026): shown
     // only when relevant (insufficient activity / actually smokes), and

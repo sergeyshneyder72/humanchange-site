@@ -310,6 +310,13 @@ button {
 }
 
 /* Onboarding */
+.onboarding-step-counter {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
 .onboarding-header {
   margin-bottom: 24px;
 }
