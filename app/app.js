@@ -2328,10 +2328,15 @@ function renderSettings(screen) {
     renderAccountSettings(screen);
     return;
   }
+  if (view === "referral") {
+    renderReferralSettings(screen);
+    return;
+  }
   screen.innerHTML = `
     <h2 class="screen-title">Настройки</h2>
     <div class="settings-list">
       <button class="settings-row" data-view="account">${state.authEmail ? `Аккаунт — ${state.authEmail}` : "Войти / Зарегистрироваться"}</button>
+      <button class="settings-row" data-view="referral">Пригласить друга</button>
       <button class="settings-row" data-view="care">Служба заботы и Фонд идей</button>
       <button class="settings-row" data-view="factors">Факторы на главном экране</button>
       <a class="settings-row" href="/product/" target="_blank" rel="noopener">Тарифы и оплата</a>
@@ -2355,6 +2360,31 @@ function wireSettingsBackButton(screen) {
     state.settingsView = "root";
     saveState();
     renderSettings(screen);
+  });
+}
+
+// Simplest possible referral step (23.08.2026) — a single prewritten
+// text to copy and send yourself, no personal links/codes/tracking
+// yet. Deliberately minimal: this is meant to be replaced by a real
+// referral ladder later, not extended in place.
+const REFERRAL_SHARE_TEXT = "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app";
+
+function renderReferralSettings(screen) {
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">Пригласить друга</h2>
+    <div class="field">
+      <div class="hint">Скопируйте и отправьте — без ссылок и кодов, просто короткое приглашение.</div>
+    </div>
+    <div class="field">
+      <textarea id="referral-text" readonly rows="3">${escapeHtml(REFERRAL_SHARE_TEXT)}</textarea>
+    </div>
+    <button class="btn" id="referral-copy" style="width:100%">Скопировать</button>
+  `;
+  wireSettingsBackButton(screen);
+  const copyBtn = document.getElementById("referral-copy");
+  copyBtn.addEventListener("click", () => {
+    copyTextToClipboard(REFERRAL_SHARE_TEXT, copyBtn, "Скопировать");
   });
 }
 
