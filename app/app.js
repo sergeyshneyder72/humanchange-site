@@ -1613,14 +1613,14 @@ function nutritionRowHtml(idPrefix, entry) {
 
 // "Не было" is mutually exclusive with the other sugar-source checkboxes
 // (checking one unchecks the other side) — otherwise the data reads as
-// contradictory ("не было" + "соки" both checked). Only wired for
-// nutrition's "modal" instance (its only rendering context — see
-// factorModalFieldsHtml).
-function wireNutritionExclusiveCheckboxes() {
-  const none = document.getElementById("modal_nutrition_sugar_none");
+// contradictory ("не было" + "соки" both checked). idPrefix-generic
+// (23.08.2026) so it works for both the dashboard's "modal" popup and
+// the retroactive "edit" form — see factorModalFieldsHtml.
+function wireNutritionExclusiveCheckboxes(idPrefix) {
+  const none = document.getElementById(`${idPrefix}_nutrition_sugar_none`);
   if (!none) return;
   const others = NUTRITION_SUGAR_SOURCES.filter((s) => s.key !== "none").map((s) =>
-    document.getElementById(`modal_nutrition_sugar_${s.key}`)
+    document.getElementById(`${idPrefix}_nutrition_sugar_${s.key}`)
   );
   none.addEventListener("change", () => {
     if (none.checked) others.forEach((cb) => cb && (cb.checked = false));
@@ -2539,31 +2539,38 @@ function dailyEngagementPhrase(today, todayEntry) {
 // the same resolvedFactorFields/cascadeRecalcFrom save path the old
 // single big form used — only scoped to one factor's fields per save
 // instead of all of them at once.
-function factorModalFieldsHtml(key, entry) {
+// idPrefix-generic (23.08.2026 — was hardcoded to "modal", the
+// dashboard's per-factor popup being the only caller at the time).
+// Reused by dayEditFormHtml (idPrefix "edit") so the retroactive
+// "Изменить/Заполнить день" form covers every visible factor via the
+// same one dispatcher, not a hand-picked subset.
+function factorModalFieldsHtml(idPrefix, key, entry) {
+  const todayFlavor = idPrefix === "modal";
   switch (key) {
     case "smoking":
-      return smokingFieldHtml("modal", entry, "Сигарет сегодня");
+      return smokingFieldHtml(idPrefix, entry, todayFlavor ? "Сигарет сегодня" : "Сигарет");
     case "sport":
-      return activityFieldHtml("modal", entry, "Минут активности сегодня", true);
+      return activityFieldHtml(idPrefix, entry, todayFlavor ? "Минут активности сегодня" : "Минут активности", todayFlavor);
     case "sleep":
-      return sleepRowHtml("modal", entry, "Сон прошлой ночью");
+      return sleepRowHtml(idPrefix, entry, todayFlavor ? "Сон прошлой ночью" : "Сон (за прошедшую ночь)");
     case "alcohol":
-      return alcoholFieldsHtml("modal", entry, "Алкоголь сегодня");
+      return alcoholFieldsHtml(idPrefix, entry, todayFlavor ? "Алкоголь сегодня" : "Алкоголь");
     case "nutrition":
-      return nutritionRowHtml("modal", entry);
+      return nutritionRowHtml(idPrefix, entry);
     case "social":
-      return socialRowHtml("modal", entry);
+      return socialRowHtml(idPrefix, entry);
     case "weight":
-      return weightRowHtml("modal", entry);
+      return weightRowHtml(idPrefix, entry);
     case "purpose":
-      return purposeRowHtml("modal", entry);
+      return purposeRowHtml(idPrefix, entry);
     case "cognitive":
-      return cognitiveRowHtml("modal", entry);
+      return cognitiveRowHtml(idPrefix, entry);
     case "stress":
+      if (!isFactorVisible("stress")) return "";
       return `
         <div class="field">
-          <label>Уровень стресса сегодня</label>
-          <select id="modal_stress">
+          <label>${todayFlavor ? "Уровень стресса сегодня" : "Уровень стресса"}</label>
+          <select id="${idPrefix}_stress">
             <option value="">Выбрать...</option>
             ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, entry.stressLevel)}
           </select>
@@ -2573,57 +2580,57 @@ function factorModalFieldsHtml(key, entry) {
   }
 }
 
-function readFactorModalFields(key) {
+function readFactorModalFields(idPrefix, key) {
   switch (key) {
     case "smoking":
-      return { cigarettes: Number(document.getElementById("modal_cigarettes").value) || 0 };
+      return { cigarettes: Number(document.getElementById(`${idPrefix}_cigarettes`).value) || 0 };
     case "sport":
-      return { activityMinutes: Number(document.getElementById("modal_activity").value) || 0 };
+      return { activityMinutes: Number(document.getElementById(`${idPrefix}_activity`).value) || 0 };
     case "sleep": {
-      const raw = document.getElementById("modal_sleep_hours").value;
+      const raw = document.getElementById(`${idPrefix}_sleep_hours`).value;
       return {
         sleepHoursExact: raw === "" ? undefined : Number(raw),
-        bedtimeToday: timePickerValue("modal_bedtime"),
+        bedtimeToday: timePickerValue(`${idPrefix}_bedtime`),
       };
     }
     case "alcohol":
       return {
-        alcoholSpirits: document.getElementById("modal_alcohol_spirits").value,
-        alcoholWine: document.getElementById("modal_alcohol_wine").value,
-        alcoholBeer: document.getElementById("modal_alcohol_beer").value,
+        alcoholSpirits: document.getElementById(`${idPrefix}_alcohol_spirits`).value,
+        alcoholWine: document.getElementById(`${idPrefix}_alcohol_wine`).value,
+        alcoholBeer: document.getElementById(`${idPrefix}_alcohol_beer`).value,
       };
     case "stress":
-      return { stressLevel: document.getElementById("modal_stress").value };
+      return { stressLevel: document.getElementById(`${idPrefix}_stress`).value };
     case "nutrition":
       return {
-        nutritionMealsCount: document.getElementById("modal_nutrition_meals").value,
-        nutritionSnacksCount: document.getElementById("modal_nutrition_snacks").value,
-        nutritionProteinTimes: document.getElementById("modal_nutrition_protein_times").value,
-        nutritionProteinGrams: document.getElementById("modal_nutrition_protein_grams").value,
-        nutritionWaterAmount: document.getElementById("modal_nutrition_water_amount").value,
-        nutritionWaterUnit: document.getElementById("modal_nutrition_water_unit").value,
-        nutritionFlourType: document.getElementById("modal_nutrition_flour").value,
+        nutritionMealsCount: document.getElementById(`${idPrefix}_nutrition_meals`).value,
+        nutritionSnacksCount: document.getElementById(`${idPrefix}_nutrition_snacks`).value,
+        nutritionProteinTimes: document.getElementById(`${idPrefix}_nutrition_protein_times`).value,
+        nutritionProteinGrams: document.getElementById(`${idPrefix}_nutrition_protein_grams`).value,
+        nutritionWaterAmount: document.getElementById(`${idPrefix}_nutrition_water_amount`).value,
+        nutritionWaterUnit: document.getElementById(`${idPrefix}_nutrition_water_unit`).value,
+        nutritionFlourType: document.getElementById(`${idPrefix}_nutrition_flour`).value,
         nutritionSugarSources: {
-          none: !!document.getElementById("modal_nutrition_sugar_none")?.checked,
-          inProducts: !!document.getElementById("modal_nutrition_sugar_inProducts")?.checked,
-          juices: !!document.getElementById("modal_nutrition_sugar_juices")?.checked,
-          sweetDrinks: !!document.getElementById("modal_nutrition_sugar_sweetDrinks")?.checked,
-          added: !!document.getElementById("modal_nutrition_sugar_added")?.checked,
+          none: !!document.getElementById(`${idPrefix}_nutrition_sugar_none`)?.checked,
+          inProducts: !!document.getElementById(`${idPrefix}_nutrition_sugar_inProducts`)?.checked,
+          juices: !!document.getElementById(`${idPrefix}_nutrition_sugar_juices`)?.checked,
+          sweetDrinks: !!document.getElementById(`${idPrefix}_nutrition_sugar_sweetDrinks`)?.checked,
+          added: !!document.getElementById(`${idPrefix}_nutrition_sugar_added`)?.checked,
         },
         nutritionSupplements: {
-          vitamins: !!document.getElementById("modal_nutrition_supplements_vitamins")?.checked,
-          minerals: !!document.getElementById("modal_nutrition_supplements_minerals")?.checked,
-          other: !!document.getElementById("modal_nutrition_supplements_other")?.checked,
+          vitamins: !!document.getElementById(`${idPrefix}_nutrition_supplements_vitamins`)?.checked,
+          minerals: !!document.getElementById(`${idPrefix}_nutrition_supplements_minerals`)?.checked,
+          other: !!document.getElementById(`${idPrefix}_nutrition_supplements_other`)?.checked,
         },
       };
     case "social":
-      return { socialQualityToday: document.getElementById("modal_social").value };
+      return { socialQualityToday: document.getElementById(`${idPrefix}_social`).value };
     case "weight":
-      return { weightKg: document.getElementById("modal_weight").value };
+      return { weightKg: document.getElementById(`${idPrefix}_weight`).value };
     case "purpose":
-      return { purposeToday: document.getElementById("modal_purpose").value };
+      return { purposeToday: document.getElementById(`${idPrefix}_purpose`).value };
     case "cognitive":
-      return { cognitiveActivityToday: document.getElementById("modal_cognitive").value };
+      return { cognitiveActivityToday: document.getElementById(`${idPrefix}_cognitive`).value };
     default:
       return {};
   }
@@ -2651,12 +2658,12 @@ function renderFactorEditScreen(screen, key) {
     ${settingsBackButtonHtml()}
     <h2 class="screen-title">${factor ? escapeHtml(factor.label) : ""}</h2>
     <div class="${wrapperClass}">
-      ${factorModalFieldsHtml(key, entry)}
+      ${factorModalFieldsHtml("modal", key, entry)}
       <button class="btn factor-edit-save" id="factor-edit-save" type="button">Сохранить</button>
     </div>
   `;
 
-  if (key === "nutrition") wireNutritionExclusiveCheckboxes();
+  if (key === "nutrition") wireNutritionExclusiveCheckboxes("modal");
 
   document.getElementById("settings-back").addEventListener("click", () => {
     state.dashboardEditFactor = null;
@@ -2666,7 +2673,7 @@ function renderFactorEditScreen(screen, key) {
 
   document.getElementById("factor-edit-save").addEventListener("click", () => {
     const existing = state.ledger[today];
-    const fields = readFactorModalFields(key);
+    const fields = readFactorModalFields("modal", key);
     state.ledger[today] = { ...(existing || {}), ...fields };
     // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
     // today alone this is equivalent to the old single-day computation,
@@ -3180,22 +3187,25 @@ function reconcileBreakdownForDisplay(total, items) {
 
 // Tappable amount (TZ, 12.08.2026 pattern, reused 13.08.2026 outside a
 // table for the "Транзакции за день" popup): the number itself is the
-// <summary> of a <details> block — tapping it expands the per-factor
-// breakdown underneath.
-// 20.08.2026 fix: the "positive"/"negative" color and the "no data" (—)
-// fallback are both now decided from the ROUNDED (displayed) value, not
-// the raw one. Previously "Списания" always got a hardcoded negative
-// (red) class regardless of amount, and a tiny nonzero residual (e.g.
-// slowly-decaying sleep debt after normal sleep) fell through the
-// `!amount` check and rendered as a red "0.00 дн." — same underlying
-// issue as formatDays' −0.00 fix, just in this screen's own code path.
+// <summary> of a <details> block — the breakdown below it is now open
+// by default (23.08.2026, same pattern as .alcohol-details) rather than
+// hidden behind a tap, since users weren't discovering the click target.
+//
+// "No data" (—) is decided purely from whether there ARE any items, not
+// from the rounded amount — a day whose factors happen to net to
+// exactly 0.00 (e.g. an activity gain that cancels a smoking charge)
+// used to fall through as "no data" and hide a real breakdown entirely.
+// The 20.08.2026 fix folded in here: color class comes from the ROUNDED
+// (displayed) value, not the raw one, so a tiny nonzero residual that
+// displays as "0.00 дн." gets a neutral class instead of a misleading
+// red one.
 function reportClickableAmount(amount, items) {
+  if (items.length === 0) return `<span class="amount">—</span>`;
   const roundedCents = Math.round(amount * 100);
-  if (roundedCents === 0 || items.length === 0) return `<span class="amount">—</span>`;
-  const cssClass = roundedCents > 0 ? "amount positive" : "amount negative";
+  const cssClass = roundedCents > 0 ? "amount positive" : roundedCents < 0 ? "amount negative" : "amount";
   const reconciled = reconcileBreakdownForDisplay(amount, items);
   const detail = reconciled.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
-  return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
+  return `<details class="report-cell" open><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
 }
 
 // TZ section 7, 13.08.2026: tapping a date now navigates to a full
@@ -3232,19 +3242,29 @@ function dayTransactionsHtml(date) {
   `;
 }
 
-// Retroactive fill/edit form (TZ, 16.08.2026) — same 4 formula factors as
-// the Dashboard's "Отметить сегодня" card (курение, спорт, сон, алкоголь);
-// stress is collection-only there and isn't part of this retroactive form.
+// Retroactive fill/edit form (23.08.2026 — was hardcoded to the 4
+// formula factors, courение/спорт/сон/алкоголь; now covers every
+// factor currently visible on the dashboard, same
+// ALL_FACTORS.filter(isFactorVisible) list renderDashboard's
+// factor-grid uses, via the same idPrefix-generic dispatcher the
+// per-factor modal uses — see factorModalFieldsHtml). Nutrition renders
+// as its own tiles outside the .log-card, matching
+// renderFactorEditScreen's treatment of it.
 function dayEditFormHtml(date, entry) {
   const e = entry || {};
+  const visibleKeys = ALL_FACTORS.filter((f) => isFactorVisible(f.key)).map((f) => f.key);
+  const nutritionVisible = visibleKeys.includes("nutrition");
+  const otherFieldsHtml = visibleKeys
+    .filter((key) => key !== "nutrition")
+    .map((key) => factorModalFieldsHtml("edit", key, e))
+    .join("");
   return `
     <div class="log-card">
       <h3>${entry ? "Изменить день" : "Заполнить день"}</h3>
-      ${smokingActivityRowHtml("edit", e, "Сигарет", "Минут активности", false)}
-      ${sleepRowHtml("edit", e, "Сон (за прошедшую ночь)")}
-      ${alcoholFieldsHtml("edit", e, "Алкоголь")}
-      <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
+      ${otherFieldsHtml}
     </div>
+    ${nutritionVisible ? factorModalFieldsHtml("edit", "nutrition", e) : ""}
+    <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
   `;
 }
 
@@ -3294,33 +3314,17 @@ function renderHistoryDay(screen) {
     });
   }
   if (showForm) {
+    if (isFactorVisible("nutrition")) wireNutritionExclusiveCheckboxes("edit");
     document.getElementById("day-edit-save").addEventListener("click", () => {
       const existing = state.ledger[date];
-      const smoking = resolvedFactorFields("smoking", existing, () => ({
-        cigarettes: Number(document.getElementById("edit_cigarettes").value) || 0,
-      }));
-      const sport = resolvedFactorFields("sport", existing, () => ({
-        activityMinutes: Number(document.getElementById("edit_activity").value) || 0,
-      }));
-      const sleep = resolvedFactorFields("sleep", existing, () => {
-        const raw = document.getElementById("edit_sleep_hours").value;
-        return {
-          sleepHoursExact: raw === "" ? undefined : Number(raw),
-          bedtimeToday: timePickerValue("edit_bedtime"),
+      let fields = {};
+      for (const factor of ALL_FACTORS) {
+        fields = {
+          ...fields,
+          ...resolvedFactorFields(factor.key, existing, () => readFactorModalFields("edit", factor.key)),
         };
-      });
-      const alcohol = resolvedFactorFields("alcohol", existing, () => ({
-        alcoholSpirits: document.getElementById("edit_alcohol_spirits").value,
-        alcoholWine: document.getElementById("edit_alcohol_wine").value,
-        alcoholBeer: document.getElementById("edit_alcohol_beer").value,
-      }));
-      state.ledger[date] = {
-        ...(existing || {}),
-        ...smoking,
-        ...sport,
-        ...sleep,
-        ...alcohol,
-      };
+      }
+      state.ledger[date] = { ...(existing || {}), ...fields };
       cascadeRecalcFrom(date);
       state.historyDayEditMode = false;
       saveState();
