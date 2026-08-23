@@ -100,37 +100,37 @@ function daysAhead(n) {
 }
 
 test("onboarding date itself is editable", () => {
-  state.createdAt = daysAgo(10);
+  state.createdAt = daysAgo(3);
   assert.strictEqual(isDateEditable(state.createdAt), true);
 });
 
-test("exactly 30 days ago is editable (onboarding well before that)", () => {
+test("exactly 7 days ago is editable (onboarding well before that)", () => {
   state.createdAt = daysAgo(60);
-  assert.strictEqual(isDateEditable(daysAgo(30)), true);
+  assert.strictEqual(isDateEditable(daysAgo(7)), true);
 });
 
-test("31 days ago is NOT editable (older than the 30-day window)", () => {
+test("8 days ago is NOT editable (older than the 7-day window)", () => {
   state.createdAt = daysAgo(60);
-  assert.strictEqual(isDateEditable(daysAgo(31)), false);
+  assert.strictEqual(isDateEditable(daysAgo(8)), false);
 });
 
 test("tomorrow is NOT editable", () => {
-  state.createdAt = daysAgo(10);
+  state.createdAt = daysAgo(3);
   assert.strictEqual(isDateEditable(daysAhead(1)), false);
 });
 
 test("the day before onboarding is NOT editable", () => {
-  state.createdAt = daysAgo(10);
-  assert.strictEqual(isDateEditable(daysAgo(11)), false);
+  state.createdAt = daysAgo(3);
+  assert.strictEqual(isDateEditable(daysAgo(4)), false);
 });
 
-test("onboarding date older than 30 days is NOT editable (cutoff wins)", () => {
+test("onboarding date older than 7 days is NOT editable (cutoff wins)", () => {
   state.createdAt = daysAgo(60);
   assert.strictEqual(isDateEditable(state.createdAt), false);
 });
 
 test("today is editable", () => {
-  state.createdAt = daysAgo(10);
+  state.createdAt = daysAgo(3);
   assert.strictEqual(isDateEditable(todayStr()), true);
 });
 

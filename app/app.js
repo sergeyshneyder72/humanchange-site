@@ -1038,11 +1038,12 @@ function sortedLedgerDates() {
  * normal same-day save, just re-run over a range. See cascadeRecalcFrom.
  * ------------------------------------------------------------------- */
 
-// Furthest-back editable date: 30 days before today, inclusive (today
-// minus 30 days is still editable; today minus 31 is not).
+// Furthest-back editable date: 7 days before today, inclusive (today
+// minus 7 days is still editable; today minus 8 is not). Was 30 days —
+// narrowed 23.08.2026.
 function retroCutoffDate(today = todayStr()) {
   const cutoff = new Date(today + "T00:00:00Z");
-  cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 7);
   return cutoff.toISOString().slice(0, 10);
 }
 
@@ -1899,7 +1900,7 @@ function renderOnboarding() {
             </select>
           </div>
           <div class="field">
-            <label>Пиво и слабоалкогольные коктейли</label>
+            <label>Пиво и слабоалкогольные коктейли, л/нед</label>
             <select id="f_alcoholBeerRange">
               <option value="">Выбрать...</option>
               ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
@@ -2284,7 +2285,6 @@ function renderSettings(screen) {
       <button class="settings-row" data-view="factors">Факторы на главном экране</button>
       <a class="settings-row" href="/product/" target="_blank" rel="noopener">Тарифы и оплата</a>
     </div>
-    <div class="empty-state">Остальные настройки — в разработке.</div>
   `;
   screen.querySelectorAll("[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -3269,7 +3269,7 @@ function renderHistoryDay(screen) {
     ${showForm ? dayEditFormHtml(date, entry) : ""}
     ${
       !editable && !entry
-        ? `<div class="note">Редактирование доступно только для последних 30 дней и не раньше даты регистрации.</div>`
+        ? `<div class="note">Редактирование доступно только для последних 7 дней и не раньше даты регистрации.</div>`
         : ""
     }
   `;
