@@ -2388,17 +2388,24 @@ function renderAccountSettings(screen) {
 // relevant even without a formula yet, Smoking/Alcohol are hidden by
 // default since they're not relevant to everyone. Toggle list is flat,
 // no categories (would be overkill at 6 factors).
+// Order matters here — it drives both renderFactorSettings' checkbox
+// list and the dashboard's factor-grid (23.08.2026 reorder), not just
+// this list's own display. `active` (whether the factor runs in the
+// capital formula) was dropped 23.08.2026 — the dashboard no longer
+// visually distinguishes formula factors from collection-only ones
+// (no more "скоро" badge/disabled styling), and nothing else in the
+// codebase read this field.
 const ALL_FACTORS = [
-  { key: "smoking", label: "Курение", active: true },
-  { key: "sport", label: "Активность", active: true },
-  { key: "sleep", label: "Сон", active: true },
-  { key: "alcohol", label: "Алкоголь", active: true },
-  { key: "nutrition", label: "Питание", active: false },
-  { key: "stress", label: "Стресс", active: false },
-  { key: "social", label: "Социальные связи", active: false },
-  { key: "weight", label: "Вес", active: false },
-  { key: "purpose", label: "Смысл и цель", active: false },
-  { key: "cognitive", label: "Когнитивная активность", active: false },
+  { key: "sport", label: "Активность" },
+  { key: "sleep", label: "Сон" },
+  { key: "nutrition", label: "Питание" },
+  { key: "smoking", label: "Курение" },
+  { key: "alcohol", label: "Алкоголь" },
+  { key: "stress", label: "Стресс" },
+  { key: "weight", label: "Вес" },
+  { key: "social", label: "Социальные связи" },
+  { key: "cognitive", label: "Когнитивная активность" },
+  { key: "purpose", label: "Смысл и цель" },
 ];
 
 function isFactorVisible(key) {
@@ -2730,9 +2737,8 @@ function renderDashboard(screen) {
       ${ALL_FACTORS.filter((f) => state.visibleFactors.includes(f.key))
         .map(
           (f) => `
-            <button type="button" class="factor-card clickable ${f.active ? "" : "disabled"}" data-factor-key="${f.key}">
+            <button type="button" class="factor-card clickable" data-factor-key="${f.key}">
               <div class="name">${f.label}</div>
-              ${f.active ? "" : `<div class="soon">скоро</div>`}
             </button>`
         )
         .join("")}
