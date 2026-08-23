@@ -810,6 +810,64 @@ function yearsLostForGender(factor, gender) {
   return (v.male + v.female) / 2; // non-binary/unspecified: same averaging as interpolateLifeExpectancyYears
 }
 
+// Population prevalence of each risk factor (23.08.2026 — symmetric-
+// correction methodology review, see chat). Confirmed by re-reading Tsai's
+// own Methods (Table 3, "reference group" column) that the years-lost
+// figures above are NOT "risk factor vs. population average" — they are
+// "risk factor present vs. a specific named reference subgroup" (smoking:
+// current smoker vs never smoker; activity: <3.75 vs >=7.5 MET-h/wk).
+// Tsai's own Discussion states this explicitly: "different health risks
+// based on different reference groups cannot be directly compared." Our
+// baseline table (LIFE_EXPECTANCY_TABLE) is a general population average
+// that already contains smokers/inactive people — so subtracting the full
+// years-lost figure only from people WHO HAVE the risk factor, while
+// giving a "clean" respondent a flat 0, silently (and incorrectly) treats
+// that population-average baseline as if it were the risk-free reference
+// group.
+// Fix: if p = population share WITH the risk factor, keeping the
+// population-weighted average anchored to the baseline table requires:
+//   penalty (has risk factor)      = (1 - p) * Y
+//   bonus   (reference/"clean")    = p * Y
+// (derivation: avg = p*(baseline-penalty) + (1-p)*(baseline+bonus) =
+// baseline  =>  p*penalty = (1-p)*bonus, and penalty+bonus = Y (Tsai's raw
+// figure)  =>  penalty = (1-p)*Y, bonus = p*Y.)
+// Only RU and US have sourced prevalence right now (project's current +
+// planned future audience, per explicit user scope, 23.08.2026); other
+// regions fall back to the RU figures — the same simplification already
+// used by regionAdjustmentPct's flat non-US discount above. Alcohol is
+// deliberately NOT symmetrized yet: Tsai's "regular drinker" definition is
+// a compound frequency+quantity threshold (>=2 drinks, >=3x/week) that
+// doesn't cleanly match the survey categories found so far (quantity-only
+// or frequency-only breakdowns) — left as an open item, do not invent a
+// number for it.
+const RISK_FACTOR_PREVALENCE = {
+  smoking: {
+    // Current smoker: WHO/GSTHR 2024 (RU); CDC NHIS 2024 (US).
+    ru: { male: 0.36, female: 0.12 },
+    us: { male: 0.241, female: 0.139 },
+  },
+  activity: {
+    // Below 150 min/week moderate activity ("insufficient") — our
+    // ACTIVITY_RANGE_OPTIONS "lt150" bucket, used as the working proxy for
+    // Tsai's own <3.75 MET-h/wk threshold (same disclosed approximation
+    // as tsaiYearsLostTotal already made pre-23.08.2026). RU: Rosstat/
+    // GPAQ STEPS 2018-2019, sex-specific. US: CDC combined estimate,
+    // 2017-2020 — no sex-specific split found, so the same figure is used
+    // for both sexes here (a disclosed simplification, not a sourced sex
+    // difference).
+    ru: { male: 0.25, female: 0.28 },
+    us: { male: 0.25, female: 0.25 },
+  },
+};
+
+function riskFactorPrevalence(factor, region, gender) {
+  const table = RISK_FACTOR_PREVALENCE[factor];
+  const regionTable = region === "us" ? table.us : table.ru;
+  if (gender === "male") return regionTable.male;
+  if (gender === "female") return regionTable.female;
+  return (regionTable.male + regionTable.female) / 2; // same averaging convention as yearsLostForGender
+}
+
 // Approximation, NOT from the source (see Source_Chiang_Tsai_2021.md):
 // the paper defines "regular drinker" as >=2 drinks, >=3x/week — a
 // frequency, not a volume. Our onboarding only collects ml/week buckets
@@ -840,14 +898,38 @@ function isRegularDrinkerApprox(ob) {
 // doesn't add, same principle as smoking's onboarding value being a pure
 // reference point rather than a separate standing penalty. See
 // sleepDebtPenalty/dailyAlcoholDelta below for where they live now.
+//
+// 23.08.2026: smoking and activity are now symmetric (see
+// RISK_FACTOR_PREVALENCE above for the full derivation) — someone WITH
+// the risk factor gets a reduced penalty (1-p)*Y, someone WITHOUT it gets
+// a real bonus p*Y (previously a flat 0), where p is the region+gender
+// population prevalence of that risk factor. The return value can now be
+// negative (net bonus, both factors clean) — computeStartingCapitalDays
+// already handles this correctly since it just subtracts this value from
+// baselineYears (subtracting a negative = adding).
 function tsaiYearsLostTotal(ob) {
-  const smokingYears = Number(ob.cigarettesPerDay) > 0 ? yearsLostForGender("smoking", ob.gender) : 0;
+  const region = ob.region;
+  const gender = ob.gender;
+
+  const smokingY = yearsLostForGender("smoking", gender);
+  const pSmoking = riskFactorPrevalence("smoking", region, gender);
+  const smokingHasRisk = Number(ob.cigarettesPerDay) > 0;
+  const smokingYears = smokingHasRisk ? (1 - pSmoking) * smokingY : -(pSmoking * smokingY);
+
   // Approximation, NOT from the source: the paper measures inactivity in
   // MET-hours/week (<3.75 vs a >=7.5 reference); we only collect WHO
   // minutes/week buckets. "lt150" is used as a working proxy for the
   // paper's inactivity threshold, not a verified unit conversion.
   const activityProvided = ACTIVITY_RANGE_OPTIONS.some((o) => o.value === ob.activityRange);
-  const activityYears = activityProvided && ob.activityRange === "lt150" ? yearsLostForGender("activity", ob.gender) : 0;
+  const activityY = yearsLostForGender("activity", gender);
+  const pActivity = riskFactorPrevalence("activity", region, gender);
+  const activityHasRisk = activityProvided && ob.activityRange === "lt150";
+  const activityYears = !activityProvided
+    ? 0 // unanswered stays neutral, not bucketed into either group
+    : activityHasRisk
+      ? (1 - pActivity) * activityY
+      : -(pActivity * activityY);
+
   return smokingYears + activityYears;
 }
 
