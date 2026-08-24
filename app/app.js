@@ -1115,13 +1115,13 @@ const STRINGS = {
       supplementsLabel: "БАДы",
     },
     nutritionFlourOptions: {
-      none: "Не было",
+      none: "Нет",
       wholegrainSourdough: "Цельнозерновой хлеб на закваске",
       wholegrainPasta: "Паста из твёрдых сортов",
       white: "Белый хлеб",
     },
     nutritionSugarOptions: {
-      none: "Не было",
+      none: "Нет",
       inProducts: "В составе продуктов",
       juices: "Соки",
       sweetDrinks: "Сладкие напитки",
@@ -3102,7 +3102,10 @@ function renderOnboarding() {
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
         ${hasRiskHabits ? `<div class="disclaimer">${t("onboarding.revealRiskNote")}</div>` : ""}
       </div>
-      <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? t("onboarding.finishButtonRecalc") : t("onboarding.finishButton")}</button>
+      <div class="step-nav">
+        <button class="btn secondary" id="ob-back">${t("onboarding.back")}</button>
+      </div>
+      <button class="btn" id="finish-onboarding" style="width:100%; margin-top:10px;">${state.recalcMode ? t("onboarding.finishButtonRecalc") : t("onboarding.finishButton")}</button>
       ${
         state.recalcMode
           ? ""
@@ -3173,6 +3176,12 @@ function renderOnboarding() {
         copyTextToClipboard(text, shareBtn, t("onboarding.shareButton"));
       });
     }
+    document.getElementById("ob-back").addEventListener("click", () => {
+      state.onboardingDraft = draft;
+      state.onboardingStep = ONBOARDING_STEPS[ONBOARDING_STEPS.length - 2];
+      saveState();
+      render();
+    });
   } else {
     // Goal-confirmation blocks (Evan Forman feedback, 08.08.2026): shown
     // only when relevant (insufficient activity / actually smokes), and
