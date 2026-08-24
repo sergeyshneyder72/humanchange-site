@@ -54,7 +54,7 @@ body {
   width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 24px 20px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
 }
 
 /* 20.08.2026 fix, take 3 — the take-2 negative-margin trick on
@@ -448,7 +448,7 @@ button {
    left/right/bottom offsets is now plain margin instead. */
 .bottom-nav {
   flex: 0 0 auto;
-  margin: 0 12px 14px;
+  margin: 0 12px calc(14px + env(safe-area-inset-bottom));
   height: 56px;
   display: flex;
   background: var(--surface);
