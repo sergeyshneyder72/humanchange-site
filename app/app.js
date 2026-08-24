@@ -899,8 +899,9 @@ const STRINGS = {
       activityFormTitle: "Активность и форма",
       activityLabel: "Физическая активность, мин/нед",
       activityHint:
-        "Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.",
+        "Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.",
       activityGoalLabel: "Хотите начать регулярно двигаться?",
+      proAthleteQuestionLabel: "Профессиональный спортсмен",
       goalYes: "Да, хочу",
       goalNo: "Не сейчас",
       weightLabel: "Вес, кг",
@@ -936,7 +937,6 @@ const STRINGS = {
       illnessHasLabel: "Есть ли серьёзные заболевания?",
       illnessDetailLabel: "Уточнение",
       revealTitle: "Это уже ваш капитал:",
-      revealRiskNote: "Без изменений эти дни продолжали бы уходить.",
       finishButton: "Перейти в приложение",
       finishButtonRecalc: "Сохранить пересчёт",
       shareButton: "Поделиться результатом",
@@ -1186,8 +1186,9 @@ const STRINGS = {
       activityFormTitle: "Activity & body stats",
       activityLabel: "Physical activity, min/week",
       activityHint:
-        "Only activity that raises your heart rate at least 50% above resting counts (Cleveland Clinic) — talk test: you can talk but not sing along = counts, can sing freely = doesn't. A slow walk doesn't count.",
+        "Only activity that raises your heart rate at least 50% above resting counts — talk test: you can talk but not sing along = counts, can sing freely = doesn't. A slow walk doesn't count.",
       activityGoalLabel: "Want to start moving regularly?",
+      proAthleteQuestionLabel: "Professional athlete",
       goalYes: "Yes, I want to",
       goalNo: "Not right now",
       weightLabel: "Weight, kg",
@@ -1223,7 +1224,6 @@ const STRINGS = {
       illnessHasLabel: "Do you have any serious medical conditions?",
       illnessDetailLabel: "Details",
       revealTitle: "This is already your capital:",
-      revealRiskNote: "Without changes, these days would keep slipping away.",
       finishButton: "Go to the app",
       finishButtonRecalc: "Save recalculation",
       shareButton: "Share result",
@@ -2747,8 +2747,8 @@ function nutritionRowHtml(idPrefix, entry) {
     </div>
 
     <div class="nutrition-tile">
+      <h3>${t("nutrition.waterLabel")}</h3>
       <div class="field">
-        <label>${t("nutrition.waterLabel")}</label>
         ${collapsibleHint(t("nutrition.waterHint"))}
         <div class="log-row nutrition-water-row">
           <input type="number" id="${idPrefix}_nutrition_water_amount" min="0" step="1" placeholder="${t("nutrition.waterAmountPlaceholder")}" value="${entry.nutritionWaterAmount ?? ""}">
@@ -2761,8 +2761,8 @@ function nutritionRowHtml(idPrefix, entry) {
     </div>
 
     <div class="nutrition-tile">
+      <h3>${t("nutrition.flourLabel")}</h3>
       <div class="field">
-        <label>${t("nutrition.flourLabel")}</label>
         <select id="${idPrefix}_nutrition_flour">
           <option value="">${t("onboarding.selectPlaceholder")}</option>
           ${selectOptionsHtml(flourOptions, entry.nutritionFlourType)}
@@ -2771,8 +2771,8 @@ function nutritionRowHtml(idPrefix, entry) {
     </div>
 
     <div class="nutrition-tile">
+      <h3>${t("nutrition.sugarLabel")}</h3>
       <div class="field">
-        <label>${t("nutrition.sugarLabel")}</label>
         ${collapsibleHint(t("nutrition.sugarHint"))}
         <div class="checkbox-list">
           ${sugarOptions
@@ -2786,8 +2786,8 @@ function nutritionRowHtml(idPrefix, entry) {
     </div>
 
     <div class="nutrition-tile">
+      <h3>${t("nutrition.supplementsLabel")}</h3>
       <div class="field">
-        <label>${t("nutrition.supplementsLabel")}</label>
         <div class="checkbox-list">
           ${supplementOptions
             .map(
@@ -2937,6 +2937,13 @@ function renderOnboarding() {
         </div>
       </div>
       <div class="field">
+        <label>${t("onboarding.proAthleteQuestionLabel")}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_proAthlete" value="yes" ${draft.isProAthlete === true ? "checked" : ""}> ${t("onboarding.yesLabel")}</label>
+          <label><input type="radio" name="f_proAthlete" value="no" ${draft.isProAthlete === false ? "checked" : ""}> ${t("onboarding.noLabel")}</label>
+        </div>
+      </div>
+      <div class="field">
         <label>${t("onboarding.weightLabel")}</label>
         <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
@@ -3080,18 +3087,6 @@ function renderOnboarding() {
     revealDays = computeStartingCapitalDays(draft);
     const tier = onboardingResultTier(draft);
     const resultPhrase = pickPhrase(localizedResultPhrases(tier), JSON.stringify(draft));
-    // Loss-aversion line (23.08.2026): only for someone whose answers
-    // actually put them below the two WHO/waterline-neutral thresholds
-    // this app tracks (smokes at all, or under the 150min/week activity
-    // floor) — showing it to everyone would be either meaningless or
-    // guilt-tripping people who already answered "0"/"active". No
-    // invented daily-rate number: the formula's smoking delta is
-    // relative to the person's OWN waterline (their stated habit is the
-    // neutral reference point, not a penalty), so there's no existing
-    // constant that honestly converts "kept smoking at my own rate"
-    // into an ongoing days-lost figure — the disclosed, unsourced
-    // wording below is what's actually true without fabricating one.
-    const hasRiskHabits = Number(draft.cigarettesPerDay) > 0 || draft.activityRange === "lt150";
     body = `
       <div class="onboarding-header">
         <h1 class="screen-title">${t("onboarding.revealTitle")}</h1>
@@ -3100,7 +3095,6 @@ function renderOnboarding() {
         <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${localizedDayWord(revealDays)}</span></div>
         <div class="disclaimer">${t("welcome.disclaimer")}</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
-        ${hasRiskHabits ? `<div class="disclaimer">${t("onboarding.revealRiskNote")}</div>` : ""}
       </div>
       <div class="step-nav">
         <button class="btn secondary" id="ob-back">${t("onboarding.back")}</button>
@@ -3161,11 +3155,14 @@ function renderOnboarding() {
       state.onboarding = draft;
       state.startingCapitalDays = revealDays;
       state.smokingWaterline = Number(draft.cigarettesPerDay) || 0;
+      state.isProAthlete = draft.isProAthlete === true;
       state.createdAt = state.createdAt || todayStr();
       state.onboardingStep = null;
       state.onboardingDraft = null;
       state.recalcMode = false;
       if (wasRecalc) state.nav = "profile";
+      saveState();
+      cascadeRecalcFrom(state.createdAt || todayStr());
       saveState();
       render();
     });
@@ -3274,6 +3271,8 @@ function collectStepFields(step, draft) {
     } else {
       draft.activityGoalConfirmed = undefined;
     }
+    const proAthleteChecked = checkedRadio("f_proAthlete");
+    draft.isProAthlete = proAthleteChecked ? proAthleteChecked.value === "yes" : draft.isProAthlete;
   } else if (step === "recovery") {
     draft.sleepHoursRange = val("f_sleepHoursRange") || "";
     draft.bedtimeRange = val("f_bedtimeRange") || "";
