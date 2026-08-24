@@ -1059,6 +1059,7 @@ const STRINGS = {
       referralShareText: "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app/app/",
       copyButton: "Скопировать",
       languageLabel: "Язык",
+      fitnessTrackersRow: "Обмен данными с фитнес-трекерами",
       proAthleteLabel: "Профессиональный спорт",
       proAthleteHint: "Выше 90 минут активности в день прирост капитала будет расти медленнее, а не останавливаться резко. Это временное решение, не основанное на отдельном исследовании для больших объёмов нагрузки — обычная формула откалибрована на любителей.",
       accountTitle: "Аккаунт",
@@ -1345,6 +1346,7 @@ const STRINGS = {
       referralShareText: "I track my health days in the Health Capital app — try it: humanchange.app/app/",
       copyButton: "Copy",
       languageLabel: "Language",
+      fitnessTrackersRow: "Fitness tracker sync",
       proAthleteLabel: "Professional athlete",
       proAthleteHint: "Above 90 minutes of activity a day, the gain to your capital grows more slowly instead of flat-lining. This is an interim fix, not based on a dedicated study of high training volumes — the regular formula is calibrated for recreational activity levels.",
       accountTitle: "Account",
@@ -3507,6 +3509,7 @@ function renderSettings(screen) {
       <button class="settings-row" data-view="referral">${t("settings.referralRow")}</button>
       <button class="settings-row" data-view="care">${t("settings.careRow")}</button>
       <button class="settings-row" data-view="factors">${t("settings.factorsRow")}</button>
+      <div class="settings-row settings-row-disabled">${t("settings.fitnessTrackersRow")} <span class="optional-badge">${t("knowledge.comingSoon")}</span></div>
       <a class="settings-row" href="/product/" target="_blank" rel="noopener">${t("settings.billingRow")}</a>
     </div>
   `;

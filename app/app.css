@@ -309,6 +309,11 @@ button {
   text-decoration: none;
 }
 
+.settings-row-disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
 /* Onboarding */
 .lang-switcher {
   display: flex;
