@@ -575,6 +575,98 @@ if (new URLSearchParams(location.search).get("reset") === "true") {
 }
 
 /* ---------------------------------------------------------------------
+ * i18n — added 24.08.2026, first checkpoint of the EN localization
+ * scoped in 2026-08-24-anglijskaya-lokalizaciya-obyom-raboty.md. Scope
+ * of THIS checkpoint: language storage/helper + the onboarding "basics"
+ * step only, as a proof of the mechanism before translating the rest.
+ * Everything else in the app still renders Russian-only regardless of
+ * `hc_lang` — that's expected for now, not a bug, until the remaining
+ * steps/screens are translated in the same pattern.
+ *
+ * Separate localStorage key (not part of the main `state` object/
+ * STORAGE_KEY blob) so the switcher works even before onboarding starts
+ * and doesn't require touching the rest of the state shape. Same bare
+ * `localStorage` global already used by STORAGE_KEY above — works in
+ * both the browser and the app.test.js vm sandbox without a
+ * `typeof window` guard, confirmed by the existing pattern.
+ * ------------------------------------------------------------------- */
+
+const LANG_STORAGE_KEY = "hc_lang";
+
+const STRINGS = {
+  ru: {
+    onboarding: {
+      stepCounter: (n) => `Вопрос ${n} из 6`,
+      back: "Назад",
+      next: "Далее",
+      calculate: "Рассчитать",
+      basicsTitle: "Основные данные",
+      ageLabel: "Возраст",
+      genderLabel: "Пол",
+      selectPlaceholder: "Выбрать...",
+      genderMale: "Мужской",
+      genderFemale: "Женский",
+      genderOther: "Другое / не указывать",
+      regionLabel: "Регион (страна)",
+      basicsAlert: "Возраст, пол и регион обязательны для продолжения.",
+    },
+    regions: {
+      us: "США", ru: "Россия", by: "Беларусь", ua: "Украина", kz: "Казахстан",
+      de: "Германия", gb: "Великобритания", fr: "Франция", es: "Испания",
+      it: "Италия", pl: "Польша", il: "Израиль", ca: "Канада", au: "Австралия",
+      other: "Другая страна",
+    },
+  },
+  en: {
+    onboarding: {
+      stepCounter: (n) => `Question ${n} of 6`,
+      back: "Back",
+      next: "Next",
+      calculate: "Calculate",
+      basicsTitle: "Basic info",
+      ageLabel: "Age",
+      genderLabel: "Gender",
+      selectPlaceholder: "Select...",
+      genderMale: "Male",
+      genderFemale: "Female",
+      genderOther: "Other / prefer not to say",
+      regionLabel: "Region (country)",
+      basicsAlert: "Age, gender, and region are required to continue.",
+    },
+    regions: {
+      us: "USA", ru: "Russia", by: "Belarus", ua: "Ukraine", kz: "Kazakhstan",
+      de: "Germany", gb: "United Kingdom", fr: "France", es: "Spain",
+      it: "Italy", pl: "Poland", il: "Israel", ca: "Canada", au: "Australia",
+      other: "Other country",
+    },
+  },
+};
+
+function getLang() {
+  const saved = localStorage.getItem(LANG_STORAGE_KEY);
+  return saved === "en" ? "en" : "ru"; // ru is the default for anything else, including unset
+}
+
+function setLang(lang) {
+  localStorage.setItem(LANG_STORAGE_KEY, lang === "en" ? "en" : "ru");
+}
+
+// t("onboarding.next") -> STRINGS[currentLang].onboarding.next, falling
+// back to the ru value (never to the raw key) if the current language is
+// missing that key — so a partially-translated screen degrades to
+// Russian text instead of showing "onboarding.next" literally.
+function t(key) {
+  const lang = getLang();
+  const lookup = (dict) => key.split(".").reduce((node, part) => (node == null ? undefined : node[part]), dict);
+  const value = lookup(STRINGS[lang]);
+  return value !== undefined ? value : lookup(STRINGS.ru);
+}
+
+function localizedRegionOptions() {
+  return REGION_OPTIONS.map((o) => ({ value: o.value, label: t(`regions.${o.value}`) }));
+}
+
+/* ---------------------------------------------------------------------
  * Auth (Supabase) — added 22.08.2026. Fully optional layer: the app
  * works exactly as before with no account (local-only, per-device). An
  * account exists only so a user CAN pay and/or sync across devices —
@@ -1810,26 +1902,26 @@ function renderOnboarding() {
   if (step === "basics") {
     body = `
       <div class="onboarding-header">
-        <h1>Основные данные</h1>
+        <h1>${t("onboarding.basicsTitle")}</h1>
       </div>
       <div class="field">
-        <label>Возраст ${reqMark()}</label>
+        <label>${t("onboarding.ageLabel")} ${reqMark()}</label>
         <input type="number" min="1" max="120" id="f_age" value="${escapeHtml(draft.age ?? "")}">
       </div>
       <div class="field">
-        <label>Пол ${reqMark()}</label>
+        <label>${t("onboarding.genderLabel")} ${reqMark()}</label>
         <select id="f_gender">
-          <option value="">Выбрать...</option>
-          <option value="male" ${draft.gender === "male" ? "selected" : ""}>Мужской</option>
-          <option value="female" ${draft.gender === "female" ? "selected" : ""}>Женский</option>
-          <option value="other" ${draft.gender === "other" ? "selected" : ""}>Другое / не указывать</option>
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          <option value="male" ${draft.gender === "male" ? "selected" : ""}>${t("onboarding.genderMale")}</option>
+          <option value="female" ${draft.gender === "female" ? "selected" : ""}>${t("onboarding.genderFemale")}</option>
+          <option value="other" ${draft.gender === "other" ? "selected" : ""}>${t("onboarding.genderOther")}</option>
         </select>
       </div>
       <div class="field">
-        <label>Регион (страна) ${reqMark()}</label>
+        <label>${t("onboarding.regionLabel")} ${reqMark()}</label>
         <select id="f_region">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(REGION_OPTIONS, draft.region)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedRegionOptions(), draft.region)}
         </select>
       </div>
     `;
@@ -2026,21 +2118,45 @@ function renderOnboarding() {
     `;
   }
 
+  // Language switcher (24.08.2026, checkpoint 1): shown on every
+  // onboarding step per the agreed placement — after onboarding,
+  // language only changes via Settings (not implemented yet, tracked in
+  // TASKS.md). Only "basics" is actually translated so far; switching on
+  // other steps will visibly still show Russian content — expected for
+  // this checkpoint, not a bug.
+  const langSwitcherHtml =
+    step !== "reveal"
+      ? `<div class="lang-switcher">
+          <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
+          <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
+        </div>`
+      : "";
+
   root.innerHTML = `
     <div class="wrap">
+      ${langSwitcherHtml}
       <div class="progress-dots">${dots}</div>
-      ${step !== "reveal" ? `<div class="onboarding-step-counter">Вопрос ${stepIndex + 1} из 6</div>` : ""}
+      ${step !== "reveal" ? `<div class="onboarding-step-counter">${t("onboarding.stepCounter")(stepIndex + 1)}</div>` : ""}
       ${body}
       ${
         step !== "reveal"
           ? `<div class="step-nav">
-              <button class="btn secondary" id="ob-back" ${stepIndex === 0 ? "disabled" : ""}>Назад</button>
-              <button class="btn" id="ob-next">${stepIndex === ONBOARDING_STEPS.length - 2 ? "Рассчитать" : "Далее"}</button>
+              <button class="btn secondary" id="ob-back" ${stepIndex === 0 ? "disabled" : ""}>${t("onboarding.back")}</button>
+              <button class="btn" id="ob-next">${stepIndex === ONBOARDING_STEPS.length - 2 ? t("onboarding.calculate") : t("onboarding.next")}</button>
             </div>`
           : ""
       }
     </div>
   `;
+
+  if (step !== "reveal") {
+    root.querySelectorAll(".lang-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setLang(btn.dataset.lang);
+        render();
+      });
+    });
+  }
 
   if (step === "reveal") {
     animateRevealNumber(revealDays);
@@ -2100,7 +2216,7 @@ function renderOnboarding() {
     document.getElementById("ob-next").addEventListener("click", () => {
       collectStepFields(step, draft);
       if (step === "basics" && (!draft.age || !draft.gender || !draft.region)) {
-        alert("Возраст, пол и регион обязательны для продолжения.");
+        alert(t("onboarding.basicsAlert"));
         return;
       }
       if (step === "activity_form" && !draft.activityRange) {
