@@ -623,6 +623,15 @@ const STRINGS = {
       activityAlert: "Физическая активность обязательна для продолжения.",
       activityGoalAlert: "Пожалуйста, ответьте на вопрос про цель по активности.",
     },
+    welcome: {
+      title: "Добро пожаловать в «Капитал здоровья»",
+      intro: "Пять обязательных вопросов, и ещё несколько — по желанию. Чем больше заполните, тем точнее будет результат.",
+      dataNote: "Мы собираем эти данные, чтобы рассчитать Ваш персональный капитал здоровья. Сейчас всё хранится локально на Вашем устройстве и никуда не передаётся.",
+      disclaimer:
+        "Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.",
+      consent: "Я прочитал(а) и согласен(на)",
+      start: "Начать →",
+    },
     regions: {
       us: "США", ru: "Россия", by: "Беларусь", ua: "Украина", kz: "Казахстан",
       de: "Германия", gb: "Великобритания", fr: "Франция", es: "Испания",
@@ -669,6 +678,15 @@ const STRINGS = {
       waistExactPlaceholder: "or exact value, cm",
       activityAlert: "Physical activity is required to continue.",
       activityGoalAlert: "Please answer the question about your activity goal.",
+    },
+    welcome: {
+      title: "Welcome to Health Capital",
+      intro: "Five required questions, plus a few optional ones. The more you fill in, the more accurate the result.",
+      dataNote: "We collect this data to calculate your personal health capital. Right now everything is stored locally on your device and isn't sent anywhere.",
+      disclaimer:
+        "An averaged statistical estimate based on data from people with a similar profile — age, gender, region, and other factors (not a precise calculation for you personally) — based on scientific research, not a medical diagnosis or personal recommendation.",
+      consent: "I have read and agree",
+      start: "Start →",
     },
     regions: {
       us: "USA", ru: "Russia", by: "Belarus", ua: "Ukraine", kz: "Kazakhstan",
@@ -1540,20 +1558,37 @@ function render() {
 // checkbox is checked — this is the only gate; nothing here is saved to
 // state.onboarding, only the acceptance flag.
 function renderWelcomeScreen() {
+  // 24.08.2026: this is the very first screen anyone sees, before any
+  // onboarding step — the language switcher belongs here even more than
+  // on the steps that follow it (flagged by the user after checkpoint 2
+  // shipped without it here). Same switcher markup/behavior as
+  // renderOnboarding's, just re-rendering renderWelcomeScreen() instead
+  // of the step flow on click.
+  const langSwitcherHtml = `<div class="lang-switcher">
+    <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
+    <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
+  </div>`;
   root.innerHTML = `
     <div class="wrap">
+      ${langSwitcherHtml}
       <div class="onboarding-header">
-        <h1>Добро пожаловать в «Капитал здоровья»</h1>
-        <p>Пять обязательных вопросов, и ещё несколько — по желанию. Чем больше заполните, тем точнее будет результат.</p>
+        <h1>${t("welcome.title")}</h1>
+        <p>${t("welcome.intro")}</p>
       </div>
-      <p>Мы собираем эти данные, чтобы рассчитать Ваш персональный капитал здоровья. Сейчас всё хранится локально на Вашем устройстве и никуда не передаётся.</p>
-      <p>Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.</p>
+      <p>${t("welcome.dataNote")}</p>
+      <p>${t("welcome.disclaimer")}</p>
       <div class="field">
-        <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> Я прочитал(а) и согласен(на)</label>
+        <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> ${t("welcome.consent")}</label>
       </div>
-      <button class="btn" id="welcome-start" style="width:100%" disabled>Начать →</button>
+      <button class="btn" id="welcome-start" style="width:100%" disabled>${t("welcome.start")}</button>
     </div>
   `;
+  root.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLang(btn.dataset.lang);
+      render();
+    });
+  });
   const checkbox = document.getElementById("welcome-consent");
   const startBtn = document.getElementById("welcome-start");
   checkbox.addEventListener("change", () => {
