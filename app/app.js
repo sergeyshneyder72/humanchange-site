@@ -609,12 +609,36 @@ const STRINGS = {
       genderOther: "Другое / не указывать",
       regionLabel: "Регион (страна)",
       basicsAlert: "Возраст, пол и регион обязательны для продолжения.",
+      activityFormTitle: "Активность и форма",
+      activityLabel: "Физическая активность, мин/нед",
+      activityHint:
+        "Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.",
+      activityGoalLabel: "Хотите начать регулярно двигаться?",
+      goalYes: "Да, хочу",
+      goalNo: "Не сейчас",
+      weightLabel: "Вес, кг",
+      heightLabel: "Рост, см",
+      waistLabel: "Объём талии",
+      waistExactPlaceholder: "или точное значение, см",
+      activityAlert: "Физическая активность обязательна для продолжения.",
+      activityGoalAlert: "Пожалуйста, ответьте на вопрос про цель по активности.",
     },
     regions: {
       us: "США", ru: "Россия", by: "Беларусь", ua: "Украина", kz: "Казахстан",
       de: "Германия", gb: "Великобритания", fr: "Франция", es: "Испания",
       it: "Италия", pl: "Польша", il: "Израиль", ca: "Канада", au: "Австралия",
       other: "Другая страна",
+    },
+    activityOptions: {
+      lt150: "менее 150 мин/нед",
+      "150to300": "150–300 мин/нед",
+      gt300: "более 300 мин/нед",
+    },
+    waistOptions: {
+      lt80: "до 80 см",
+      "80to95": "80–95 см",
+      "95to110": "95–110 см",
+      gt110: "более 110 см",
     },
   },
   en: {
@@ -632,12 +656,36 @@ const STRINGS = {
       genderOther: "Other / prefer not to say",
       regionLabel: "Region (country)",
       basicsAlert: "Age, gender, and region are required to continue.",
+      activityFormTitle: "Activity & body stats",
+      activityLabel: "Physical activity, min/week",
+      activityHint:
+        "Only activity that raises your heart rate at least 50% above resting counts (Cleveland Clinic) — talk test: you can talk but not sing along = counts, can sing freely = doesn't. A slow walk doesn't count.",
+      activityGoalLabel: "Want to start moving regularly?",
+      goalYes: "Yes, I want to",
+      goalNo: "Not right now",
+      weightLabel: "Weight, kg",
+      heightLabel: "Height, cm",
+      waistLabel: "Waist size",
+      waistExactPlaceholder: "or exact value, cm",
+      activityAlert: "Physical activity is required to continue.",
+      activityGoalAlert: "Please answer the question about your activity goal.",
     },
     regions: {
       us: "USA", ru: "Russia", by: "Belarus", ua: "Ukraine", kz: "Kazakhstan",
       de: "Germany", gb: "United Kingdom", fr: "France", es: "Spain",
       it: "Italy", pl: "Poland", il: "Israel", ca: "Canada", au: "Australia",
       other: "Other country",
+    },
+    activityOptions: {
+      lt150: "less than 150 min/wk",
+      "150to300": "150–300 min/wk",
+      gt300: "more than 300 min/wk",
+    },
+    waistOptions: {
+      lt80: "under 80 cm",
+      "80to95": "80–95 cm",
+      "95to110": "95–110 cm",
+      gt110: "over 110 cm",
     },
   },
 };
@@ -664,6 +712,18 @@ function t(key) {
 
 function localizedRegionOptions() {
   return REGION_OPTIONS.map((o) => ({ value: o.value, label: t(`regions.${o.value}`) }));
+}
+
+// Same pattern as localizedRegionOptions: canonical option lists
+// (ACTIVITY_RANGE_OPTIONS/WAIST_RANGE_OPTIONS) keep their extra fields
+// (e.g. midpointMinutes, still used by the formula) untouched — these
+// helpers only produce a value/label pair for rendering the <select>.
+function localizedActivityRangeOptions() {
+  return ACTIVITY_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`activityOptions.${o.value}`) }));
+}
+
+function localizedWaistRangeOptions() {
+  return WAIST_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`waistOptions.${o.value}`) }));
 }
 
 /* ---------------------------------------------------------------------
@@ -1928,38 +1988,38 @@ function renderOnboarding() {
   } else if (step === "activity_form") {
     body = `
       <div class="onboarding-header">
-        <h1>Активность и форма</h1>
+        <h1>${t("onboarding.activityFormTitle")}</h1>
       </div>
       <div class="field">
-        <label>Физическая активность, мин/нед ${reqMark()}</label>
+        <label>${t("onboarding.activityLabel")} ${reqMark()}</label>
         <select id="f_activityRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ACTIVITY_RANGE_OPTIONS, draft.activityRange)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedActivityRangeOptions(), draft.activityRange)}
         </select>
-        ${collapsibleHint("Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя (Cleveland Clinic) — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.")}
+        ${collapsibleHint(t("onboarding.activityHint"))}
       </div>
       <div class="field" id="f_activityGoalBlock" style="display:${draft.activityRange === "lt150" ? "block" : "none"}">
-        <label>Хотите начать регулярно двигаться? ${reqMark()}</label>
+        <label>${t("onboarding.activityGoalLabel")} ${reqMark()}</label>
         <div class="radio-row">
-          <label><input type="radio" name="f_activityGoal" value="yes" ${draft.activityGoalConfirmed === true ? "checked" : ""}> Да, хочу</label>
-          <label><input type="radio" name="f_activityGoal" value="no" ${draft.activityGoalConfirmed === false ? "checked" : ""}> Не сейчас</label>
+          <label><input type="radio" name="f_activityGoal" value="yes" ${draft.activityGoalConfirmed === true ? "checked" : ""}> ${t("onboarding.goalYes")}</label>
+          <label><input type="radio" name="f_activityGoal" value="no" ${draft.activityGoalConfirmed === false ? "checked" : ""}> ${t("onboarding.goalNo")}</label>
         </div>
       </div>
       <div class="field">
-        <label>Вес, кг</label>
+        <label>${t("onboarding.weightLabel")}</label>
         <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
       <div class="field">
-        <label>Рост, см</label>
+        <label>${t("onboarding.heightLabel")}</label>
         <input type="number" id="f_height" value="${escapeHtml(draft.height ?? "")}">
       </div>
       <div class="field">
-        <label>Объём талии</label>
+        <label>${t("onboarding.waistLabel")}</label>
         <select id="f_waistRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(WAIST_RANGE_OPTIONS, draft.waistRange)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedWaistRangeOptions(), draft.waistRange)}
         </select>
-        <input type="number" id="f_waistExact" placeholder="или точное значение, см" value="${escapeHtml(draft.waistExact ?? "")}" style="margin-top:8px">
+        <input type="number" id="f_waistExact" placeholder="${t("onboarding.waistExactPlaceholder")}" value="${escapeHtml(draft.waistExact ?? "")}" style="margin-top:8px">
       </div>
     `;
   } else if (step === "recovery") {
@@ -2220,11 +2280,11 @@ function renderOnboarding() {
         return;
       }
       if (step === "activity_form" && !draft.activityRange) {
-        alert("Физическая активность обязательна для продолжения.");
+        alert(t("onboarding.activityAlert"));
         return;
       }
       if (step === "activity_form" && draft.activityRange === "lt150" && draft.activityGoalConfirmed === undefined) {
-        alert("Пожалуйста, ответьте на вопрос про цель по активности.");
+        alert(t("onboarding.activityGoalAlert"));
         return;
       }
       if (step === "habits" && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
