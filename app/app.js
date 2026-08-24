@@ -485,32 +485,67 @@ const CARE_CATEGORIES = ["Техническая проблема", "Вопро�
 // the app's own established voice (investment vocabulary + elite-sport
 // comparisons, not casual gamification) — see STRATEGY_DIARY.
 const ONBOARDING_RESULT_PHRASES = {
-  top: [
-    "Редкий профиль",
-    "Статистическая аномалия — в хорошем смысле",
-    "Потенциальный долгожитель",
-    "Такому профилю позавидовали бы инженеры Формулы-1",
-    "Вы — из той небольшой выборки, на которую равняются исследования",
-  ],
-  good: [
-    "Сильный старт",
-    "Выше среднего по всем фронтам",
-    "Стартовая позиция, за которую другие бы боролись",
-    "Фундамент, на котором уже приятно строить",
-  ],
-  medium: [
-    "Крепкая база — и есть, куда расти",
-    "Прочная основа — рост уже в ваших руках",
-    "Хорошая точка старта для того, кто решил считать",
-  ],
-  low: [
-    "Точка отсчёта, а не приговор",
-    "Отсюда есть куда расти — и это хорошая новость",
-    "Лучшее время начать — сегодня",
-    "Каждый долгожитель когда-то начинал с этой же точки",
-    "Здесь нет драмы — есть только следующий шаг",
-  ],
+  ru: {
+    top: [
+      "Редкий профиль",
+      "Статистическая аномалия — в хорошем смысле",
+      "Потенциальный долгожитель",
+      "Такому профилю позавидовали бы инженеры Формулы-1",
+      "Вы — из той небольшой выборки, на которую равняются исследования",
+    ],
+    good: [
+      "Сильный старт",
+      "Выше среднего по всем фронтам",
+      "Стартовая позиция, за которую другие бы боролись",
+      "Фундамент, на котором уже приятно строить",
+    ],
+    medium: [
+      "Крепкая база — и есть, куда расти",
+      "Прочная основа — рост уже в ваших руках",
+      "Хорошая точка старта для того, кто решил считать",
+    ],
+    low: [
+      "Точка отсчёта, а не приговор",
+      "Отсюда есть куда расти — и это хорошая новость",
+      "Лучшее время начать — сегодня",
+      "Каждый долгожитель когда-то начинал с этой же точки",
+      "Здесь нет драмы — есть только следующий шаг",
+    ],
+  },
+  en: {
+    top: [
+      "A rare profile",
+      "A statistical outlier — in a good way",
+      "A potential long-liver",
+      "A profile Formula 1 engineers would envy",
+      "You're in the small sample studies point to",
+    ],
+    good: [
+      "A strong start",
+      "Above average on every front",
+      "A starting position others would fight for",
+      "A foundation that's already good to build on",
+    ],
+    medium: [
+      "A solid base — with room to grow",
+      "A solid foundation — the growth is in your hands now",
+      "A good starting point for someone who decided to start counting",
+    ],
+    low: [
+      "A starting point, not a verdict",
+      "There's room to grow from here — and that's good news",
+      "The best time to start is today",
+      "Every long-liver once started from this exact point",
+      "No drama here — just the next step",
+    ],
+  },
 };
+
+function localizedResultPhrases(tier) {
+  const lang = getLang();
+  const pool = ONBOARDING_RESULT_PHRASES[lang]?.[tier];
+  return pool && pool.length ? pool : ONBOARDING_RESULT_PHRASES.ru[tier];
+}
 
 const DAILY_GOOD_PHRASES = [
   "Депозит принят",
@@ -645,6 +680,16 @@ const STRINGS = {
       alcoholBeerPrefix: "пиво",
       cigarettesAlert: "Сигарет в день обязательно для продолжения (0, если не курите).",
       smokingGoalAlert: "Пожалуйста, ответьте на вопрос про цель по курению.",
+      revealTitle: "Это уже ваш капитал:",
+      revealRiskNote: "Без изменений эти дни продолжали бы уходить.",
+      finishButton: "Перейти в приложение",
+      finishButtonRecalc: "Сохранить пересчёт",
+      shareButton: "Поделиться результатом",
+      shareText: (days, word) => `Мой стартовый капитал здоровья — ${days} ${word}. Считаю каждый день в «Капитал здоровья»: humanchange.app`,
+    },
+    common: {
+      copied: "Скопировано!",
+      copyFailed: "Не удалось скопировать",
     },
     recoveryPractices: {
       yoga: "Йога",
@@ -784,6 +829,16 @@ const STRINGS = {
       alcoholBeerPrefix: "beer",
       cigarettesAlert: "Cigarettes per day is required to continue (0 if you don't smoke).",
       smokingGoalAlert: "Please answer the question about your smoking goal.",
+      revealTitle: "This is already your capital:",
+      revealRiskNote: "Without changes, these days would keep slipping away.",
+      finishButton: "Go to the app",
+      finishButtonRecalc: "Save recalculation",
+      shareButton: "Share result",
+      shareText: (days, word) => `My starting health capital — ${days} ${word}. Counting every day in Health Capital: humanchange.app`,
+    },
+    common: {
+      copied: "Copied!",
+      copyFailed: "Couldn't copy",
     },
     recoveryPractices: {
       yoga: "Yoga",
@@ -1711,16 +1766,16 @@ function copyTextToClipboard(text, btn, originalLabel) {
     btn.textContent = originalLabel;
   };
   const showCopied = () => {
-    btn.textContent = "Скопировано!";
+    btn.textContent = t("common.copied");
     setTimeout(revert, 1500);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(showCopied, () => {
-      btn.textContent = "Не удалось скопировать";
+      btn.textContent = t("common.copyFailed");
       setTimeout(revert, 1500);
     });
   } else {
-    btn.textContent = "Не удалось скопировать";
+    btn.textContent = t("common.copyFailed");
     setTimeout(revert, 1500);
   }
 }
@@ -1816,6 +1871,15 @@ function dayWord(n) {
   if (last === 1) return "день";
   if (last >= 2 && last <= 4) return "дня";
   return "дней";
+}
+
+// English has no case system for this — just singular/plural (24.08.2026,
+// i18n reveal-screen checkpoint).
+function localizedDayWord(n) {
+  if (getLang() === "en") {
+    return Math.abs(Math.round(n || 0)) === 1 ? "day" : "days";
+  }
+  return dayWord(n);
 }
 
 // Required-field gate for the onboarding "Далее"/"Рассчитать" button
@@ -2400,7 +2464,7 @@ function renderOnboarding() {
   } else if (step === "reveal") {
     revealDays = computeStartingCapitalDays(draft);
     const tier = onboardingResultTier(draft);
-    const resultPhrase = pickPhrase(ONBOARDING_RESULT_PHRASES[tier], JSON.stringify(draft));
+    const resultPhrase = pickPhrase(localizedResultPhrases(tier), JSON.stringify(draft));
     // Loss-aversion line (23.08.2026): only for someone whose answers
     // actually put them below the two WHO/waterline-neutral thresholds
     // this app tracks (smokes at all, or under the 150min/week activity
@@ -2415,19 +2479,19 @@ function renderOnboarding() {
     const hasRiskHabits = Number(draft.cigarettesPerDay) > 0 || draft.activityRange === "lt150";
     body = `
       <div class="onboarding-header">
-        <h1 class="screen-title">Это уже ваш капитал:</h1>
+        <h1 class="screen-title">${t("onboarding.revealTitle")}</h1>
       </div>
       <div class="reveal-number">
-        <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${dayWord(revealDays)}</span></div>
-        <div class="disclaimer">Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.</div>
+        <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${localizedDayWord(revealDays)}</span></div>
+        <div class="disclaimer">${t("welcome.disclaimer")}</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
-        ${hasRiskHabits ? `<div class="disclaimer">Без изменений эти дни продолжали бы уходить.</div>` : ""}
+        ${hasRiskHabits ? `<div class="disclaimer">${t("onboarding.revealRiskNote")}</div>` : ""}
       </div>
-      <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? "Сохранить пересчёт" : "Перейти в приложение"}</button>
+      <button class="btn" id="finish-onboarding" style="width:100%">${state.recalcMode ? t("onboarding.finishButtonRecalc") : t("onboarding.finishButton")}</button>
       ${
         state.recalcMode
           ? ""
-          : `<button class="btn secondary" id="share-reveal" style="width:100%; margin-top:10px;">Поделиться результатом</button>`
+          : `<button class="btn secondary" id="share-reveal" style="width:100%; margin-top:10px;">${t("onboarding.shareButton")}</button>`
       }
     `;
   }
@@ -2490,8 +2554,8 @@ function renderOnboarding() {
     const shareBtn = document.getElementById("share-reveal");
     if (shareBtn) {
       shareBtn.addEventListener("click", () => {
-        const text = `Мой стартовый капитал здоровья — ${revealDays} ${dayWord(revealDays)}. Считаю каждый день в «Капитал здоровья»: humanchange.app`;
-        copyTextToClipboard(text, shareBtn, "Поделиться результатом");
+        const text = t("onboarding.shareText")(revealDays, localizedDayWord(revealDays));
+        copyTextToClipboard(text, shareBtn, t("onboarding.shareButton"));
       });
     }
   } else {
