@@ -161,49 +161,16 @@ const STRESS_LEVEL_OPTIONS = [
   { value: "5", label: "5 — высокий" },
 ];
 
-// Nutrition step (TZ section 1 step 4) — all descriptive/collected for
-// future use, none feed the current formula (nutrition factor is
-// disabled, see KNOWLEDGE_BASE below).
-const WATER_RANGE_OPTIONS = [
-  { value: "0to500", label: "0–500 мл" },
-  { value: "500to1500", label: "0.5–1.5 л" },
-  { value: "gt1500", label: "более 1.5 л" },
-];
-
-const LAST_MEAL_TIME_OPTIONS = [
-  { value: "before18", label: "до 18:00" },
-  { value: "18to20", label: "18:00–20:00" },
-  { value: "after20", label: "после 20:00" },
-  { value: "varies", label: "когда как" },
-];
-
-const MEALS_PER_DAY_OPTIONS = [
-  { value: "1to2", label: "1–2" },
-  { value: "3to4", label: "3-4" },
-  { value: "4to5", label: "4–5" },
-  { value: "moreIrregular", label: "больше, нерегулярно" },
-];
-
-const HOURS_BETWEEN_MEALS_OPTIONS = [
-  { value: "lt3", label: "менее 3ч" },
-  { value: "3to5", label: "3–5ч" },
-  { value: "gt5", label: "более 5ч" },
-  { value: "irregular", label: "нерегулярно" },
-];
-
-const EATING_WINDOW_OPTIONS = [
-  { value: "lt10", label: "менее 10ч" },
-  { value: "10to14", label: "10–14ч" },
-  { value: "gt14", label: "более 14ч" },
-  { value: "varies", label: "когда как" },
-];
-
-const SUPPLEMENTS_REGULARITY_OPTIONS = [
-  { value: "daily", label: "Ежедневно" },
-  { value: "fewPerWeek", label: "Несколько раз в неделю" },
-  { value: "sometimes", label: "Иногда" },
-  { value: "none", label: "Не принимаю" },
-];
+// Nutrition step (TZ section 1 step 4) used to ask 6 separate range
+// questions here (water/last-meal-time/meals-per-day/hours-between-meals/
+// eating-window/supplements-regularity) that never matched the daily
+// 6-tile nutrition tracker added 20.08.2026 (see nutritionRowHtml) —
+// confirmed 24.08.2026 that none of those old fields were read anywhere
+// else in the file at all, not even the one-time formula. Removed; the
+// onboarding "nutrition" step now renders nutritionRowHtml("f", draft)
+// directly, so onboarding and daily tracking share one field set instead
+// of two disconnected ones. See collectStepFields below for the matching
+// save-side fix.
 
 // Daily fields for the new collection-only factors added 19.08.2026
 // (focus-group review pass, TZ taxonomy doc 17.08.2026) — same pattern
@@ -1943,66 +1910,15 @@ function renderOnboarding() {
       </div>
     `;
   } else if (step === "nutrition") {
+    // 24.08.2026: reuses the same nutritionRowHtml("f", draft) the daily
+    // tracker/history-edit forms use (idPrefix "modal"/"edit") — see
+    // comment above WATER_RANGE_OPTIONS' old home for why. "f" matches
+    // this step's own id-prefix convention (f_age, f_gender, etc.).
     body = `
       <div class="onboarding-header">
         <h1>Питание</h1>
       </div>
-      <div class="field">
-        <label>Объём чистой воды в сутки</label>
-        <select id="f_waterRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(WATER_RANGE_OPTIONS, draft.waterRange)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Время последнего приёма пищи</label>
-        <select id="f_lastMealTimeRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(LAST_MEAL_TIME_OPTIONS, draft.lastMealTimeRange)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Количество приёмов пищи в день</label>
-        <select id="f_mealsPerDayRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(MEALS_PER_DAY_OPTIONS, draft.mealsPerDayRange)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Пауза между приёмами пищи (в среднем)</label>
-        <select id="f_hoursBetweenMealsRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(HOURS_BETWEEN_MEALS_OPTIONS, draft.hoursBetweenMealsRange)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Пауза между последним и первым приёмом пищи</label>
-        <select id="f_eatingWindowRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(EATING_WINDOW_OPTIONS, draft.eatingWindowRange)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Перекусы бывают?</label>
-        <div class="radio-row">
-          <label><input type="radio" name="f_snacksHas" value="yes" ${draft.snacksHas === true ? "checked" : ""}> Да</label>
-          <label><input type="radio" name="f_snacksHas" value="no" ${draft.snacksHas === false ? "checked" : ""}> Нет</label>
-        </div>
-      </div>
-      <div class="field">
-        <label>БАДы — регулярность приёма</label>
-        <select id="f_supplementsRegularity">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(SUPPLEMENTS_REGULARITY_OPTIONS, draft.supplementsRegularity)}
-        </select>
-      </div>
-      <div class="field">
-        <label>Считаете своё питание сбалансированным?</label>
-        <div class="radio-row">
-          <label><input type="radio" name="f_nutritionBalanceSelf" value="yes" ${draft.nutritionBalanceSelf === true ? "checked" : ""}> Да</label>
-          <label><input type="radio" name="f_nutritionBalanceSelf" value="no" ${draft.nutritionBalanceSelf === false ? "checked" : ""}> Нет</label>
-        </div>
-      </div>
+      ${nutritionRowHtml("f", draft)}
     `;
   } else if (step === "habits") {
     body = `
@@ -2168,6 +2084,7 @@ function renderOnboarding() {
         document.getElementById("f_bedtimeExact").style.display = e.target.value === "custom" ? "block" : "none";
       });
     }
+    if (step === "nutrition") wireNutritionExclusiveCheckboxes("f");
     // Pale/disabled "Далее" until required fields are filled (21.08.2026
     // onboarding redesign) — re-checks on every change within the step
     // without touching the fields themselves, so nothing typed is lost.
@@ -2255,16 +2172,29 @@ function collectStepFields(step, draft) {
     };
     draft.stressLevel = val("f_stressLevel") || "";
   } else if (step === "nutrition") {
-    draft.waterRange = val("f_waterRange") || "";
-    draft.lastMealTimeRange = val("f_lastMealTimeRange") || "";
-    draft.mealsPerDayRange = val("f_mealsPerDayRange") || "";
-    draft.hoursBetweenMealsRange = val("f_hoursBetweenMealsRange") || "";
-    draft.eatingWindowRange = val("f_eatingWindowRange") || "";
-    const snacksChecked = checkedRadio("f_snacksHas");
-    draft.snacksHas = snacksChecked ? snacksChecked.value === "yes" : undefined;
-    draft.supplementsRegularity = val("f_supplementsRegularity") || "";
-    const balanceChecked = checkedRadio("f_nutritionBalanceSelf");
-    draft.nutritionBalanceSelf = balanceChecked ? balanceChecked.value === "yes" : undefined;
+    // 24.08.2026: mirrors the daily save-side extraction for the same
+    // nutritionRowHtml("f", ...) fields (compare resolvedFactorFields'
+    // "nutrition" case below) — same field names as daily tracking now,
+    // instead of the old disconnected 8 fields.
+    draft.nutritionMealsCount = val("f_nutrition_meals") || "";
+    draft.nutritionSnacksCount = val("f_nutrition_snacks") || "";
+    draft.nutritionProteinTimes = val("f_nutrition_protein_times") || "";
+    draft.nutritionProteinGrams = val("f_nutrition_protein_grams") || "";
+    draft.nutritionWaterAmount = val("f_nutrition_water_amount") || "";
+    draft.nutritionWaterUnit = val("f_nutrition_water_unit") || "ml";
+    draft.nutritionFlourType = val("f_nutrition_flour") || "";
+    draft.nutritionSugarSources = {
+      none: !!document.getElementById("f_nutrition_sugar_none")?.checked,
+      inProducts: !!document.getElementById("f_nutrition_sugar_inProducts")?.checked,
+      juices: !!document.getElementById("f_nutrition_sugar_juices")?.checked,
+      sweetDrinks: !!document.getElementById("f_nutrition_sugar_sweetDrinks")?.checked,
+      added: !!document.getElementById("f_nutrition_sugar_added")?.checked,
+    };
+    draft.nutritionSupplements = {
+      vitamins: !!document.getElementById("f_nutrition_supplements_vitamins")?.checked,
+      minerals: !!document.getElementById("f_nutrition_supplements_minerals")?.checked,
+      other: !!document.getElementById("f_nutrition_supplements_other")?.checked,
+    };
   } else if (step === "habits") {
     draft.cigarettesPerDay = val("f_cigarettesPerDay");
     const vapeChecked = checkedRadio("f_vape");
