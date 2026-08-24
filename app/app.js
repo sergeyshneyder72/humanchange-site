@@ -629,6 +629,22 @@ const STRINGS = {
       otherLabel: "Другое",
       otherTextPlaceholder: "Что именно?",
       stressLevelLabel: "Уровень стресса",
+      nutritionStepTitle: "Питание",
+      habitsTitle: "Вредные привычки",
+      cigarettesLabel: "Сигарет в день (0, если не курите)",
+      smokingGoalLabel: "Хотите бросить курить?",
+      vapeLabel: "Вейп / кальян — используете?",
+      yesLabel: "Да",
+      noLabel: "Нет",
+      alcoholSummaryLabel: "Алкоголь",
+      alcoholSpiritsLabel: "Крепкий алкоголь, мл/нед",
+      alcoholWineLabel: "Вино, мл/нед",
+      alcoholBeerLabel: "Пиво и слабоалкогольные коктейли, л/нед",
+      alcoholSpiritsPrefix: "крепкий",
+      alcoholWinePrefix: "вино",
+      alcoholBeerPrefix: "пиво",
+      cigarettesAlert: "Сигарет в день обязательно для продолжения (0, если не курите).",
+      smokingGoalAlert: "Пожалуйста, ответьте на вопрос про цель по курению.",
     },
     recoveryPractices: {
       yoga: "Йога",
@@ -646,6 +662,49 @@ const STRINGS = {
     },
     stressLevelOptions: {
       "1": "1 — низкий", "2": "2", "3": "3 — средний", "4": "4", "5": "5 — высокий",
+    },
+    nutrition: {
+      quantityTitle: "Количество",
+      mealsLabel: "Приёмов пищи",
+      snacksLabel: "Перекусов",
+      proteinTitle: "Белок",
+      proteinTimesLabel: "Раз в день",
+      proteinGramsLabel: "Граммы/день",
+      proteinGramsPlaceholder: "г",
+      waterLabel: "Чистая вода",
+      waterAmountPlaceholder: "Количество",
+      unitMl: "мл",
+      unitL: "л",
+      flourLabel: "Мучное",
+      sugarLabel: "Сахар",
+      supplementsLabel: "БАДы",
+    },
+    nutritionFlourOptions: {
+      none: "Не было",
+      wholegrainSourdough: "Цельнозерновой хлеб на закваске",
+      wholegrainPasta: "Паста из твёрдых сортов",
+      white: "Белый хлеб",
+    },
+    nutritionSugarOptions: {
+      none: "Не было",
+      inProducts: "В составе продуктов",
+      juices: "Соки",
+      sweetDrinks: "Сладкие напитки",
+      added: "Добавленный (в чай, кофе и т.п.)",
+    },
+    nutritionSupplementOptions: {
+      vitamins: "Витамины",
+      minerals: "Минералы",
+      other: "Другое",
+    },
+    alcoholSpiritsOptions: {
+      "0": "0", lt100: "до 100 мл/нед", "100to350": "100–350 мл/нед", gt350: "более 350 мл/нед",
+    },
+    alcoholWineOptions: {
+      "0": "0", lt350: "до 350 мл/нед", "350to1000": "350–1000 мл/нед", gt1000: "более 1000 мл/нед",
+    },
+    alcoholBeerOptions: {
+      "0": "0", lt700: "до 0.7 л/нед", "700to2000": "0.7–2 л/нед", gt2000: "более 2 л/нед",
     },
     welcome: {
       title: "Добро пожаловать в «Капитал здоровья»",
@@ -709,6 +768,22 @@ const STRINGS = {
       otherLabel: "Other",
       otherTextPlaceholder: "What exactly?",
       stressLevelLabel: "Stress level",
+      nutritionStepTitle: "Nutrition",
+      habitsTitle: "Habits",
+      cigarettesLabel: "Cigarettes per day (0 if you don't smoke)",
+      smokingGoalLabel: "Want to quit smoking?",
+      vapeLabel: "Do you vape / use hookah?",
+      yesLabel: "Yes",
+      noLabel: "No",
+      alcoholSummaryLabel: "Alcohol",
+      alcoholSpiritsLabel: "Spirits, ml/week",
+      alcoholWineLabel: "Wine, ml/week",
+      alcoholBeerLabel: "Beer & low-alcohol cocktails, l/week",
+      alcoholSpiritsPrefix: "spirits",
+      alcoholWinePrefix: "wine",
+      alcoholBeerPrefix: "beer",
+      cigarettesAlert: "Cigarettes per day is required to continue (0 if you don't smoke).",
+      smokingGoalAlert: "Please answer the question about your smoking goal.",
     },
     recoveryPractices: {
       yoga: "Yoga",
@@ -726,6 +801,49 @@ const STRINGS = {
     },
     stressLevelOptions: {
       "1": "1 — low", "2": "2", "3": "3 — medium", "4": "4", "5": "5 — high",
+    },
+    nutrition: {
+      quantityTitle: "Quantity",
+      mealsLabel: "Meals",
+      snacksLabel: "Snacks",
+      proteinTitle: "Protein",
+      proteinTimesLabel: "Times a day",
+      proteinGramsLabel: "Grams/day",
+      proteinGramsPlaceholder: "g",
+      waterLabel: "Plain water",
+      waterAmountPlaceholder: "Amount",
+      unitMl: "ml",
+      unitL: "l",
+      flourLabel: "Flour/grain foods",
+      sugarLabel: "Sugar",
+      supplementsLabel: "Supplements",
+    },
+    nutritionFlourOptions: {
+      none: "None",
+      wholegrainSourdough: "Whole-grain sourdough bread",
+      wholegrainPasta: "Durum wheat pasta",
+      white: "White bread",
+    },
+    nutritionSugarOptions: {
+      none: "None",
+      inProducts: "In food products",
+      juices: "Juices",
+      sweetDrinks: "Sweet drinks",
+      added: "Added (to tea, coffee, etc.)",
+    },
+    nutritionSupplementOptions: {
+      vitamins: "Vitamins",
+      minerals: "Minerals",
+      other: "Other",
+    },
+    alcoholSpiritsOptions: {
+      "0": "0", lt100: "under 100 ml/wk", "100to350": "100–350 ml/wk", gt350: "over 350 ml/wk",
+    },
+    alcoholWineOptions: {
+      "0": "0", lt350: "under 350 ml/wk", "350to1000": "350–1000 ml/wk", gt1000: "over 1000 ml/wk",
+    },
+    alcoholBeerOptions: {
+      "0": "0", lt700: "under 0.7 l/wk", "700to2000": "0.7–2 l/wk", gt2000: "over 2 l/wk",
     },
     welcome: {
       title: "Welcome to Health Capital",
@@ -809,6 +927,18 @@ function localizedStressLevelOptions() {
 // the checkbox-rendering template already reads, not "value".
 function localizedRecoveryPractices() {
   return RECOVERY_PRACTICES.map((p) => ({ key: p.key, label: t(`recoveryPractices.${p.key}`) }));
+}
+
+function localizedAlcoholSpiritsOptions() {
+  return ALCOHOL_SPIRITS_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`alcoholSpiritsOptions.${o.value}`) }));
+}
+
+function localizedAlcoholWineOptions() {
+  return ALCOHOL_WINE_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`alcoholWineOptions.${o.value}`) }));
+}
+
+function localizedAlcoholBeerOptions() {
+  return ALCOHOL_BEER_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`alcoholBeerOptions.${o.value}`) }));
 }
 
 /* ---------------------------------------------------------------------
@@ -1768,13 +1898,18 @@ function timePickerValue(idPrefix) {
 // idPrefix; storage/calc for the three fields is unchanged, only how
 // they're shown.
 function alcoholSummaryText(entry) {
+  // 24.08.2026: prefixes and range labels localized (t()) instead of
+  // hardcoded Russian — reads from the same localized*Options() helpers
+  // used to build the <select> lists in the habits step, via
+  // rangeLookup against those localized arrays instead of the raw
+  // (Russian-only) ALCOHOL_*_RANGE_OPTIONS constants.
   const parts = [];
-  const spirits = rangeLookup(ALCOHOL_SPIRITS_RANGE_OPTIONS, entry.alcoholSpirits, "label");
-  if (spirits) parts.push(`крепкий: ${spirits}`);
-  const wine = rangeLookup(ALCOHOL_WINE_RANGE_OPTIONS, entry.alcoholWine, "label");
-  if (wine) parts.push(`вино: ${wine}`);
-  const beer = rangeLookup(ALCOHOL_BEER_RANGE_OPTIONS, entry.alcoholBeer, "label");
-  if (beer) parts.push(`пиво: ${beer}`);
+  const spirits = rangeLookup(localizedAlcoholSpiritsOptions(), entry.alcoholSpirits, "label");
+  if (spirits) parts.push(`${t("onboarding.alcoholSpiritsPrefix")}: ${spirits}`);
+  const wine = rangeLookup(localizedAlcoholWineOptions(), entry.alcoholWine, "label");
+  if (wine) parts.push(`${t("onboarding.alcoholWinePrefix")}: ${wine}`);
+  const beer = rangeLookup(localizedAlcoholBeerOptions(), entry.alcoholBeer, "label");
+  if (beer) parts.push(`${t("onboarding.alcoholBeerPrefix")}: ${beer}`);
   return parts.join(", ");
 }
 
@@ -1890,21 +2025,32 @@ function nutritionRowHtml(idPrefix, entry) {
   if (!isFactorVisible("nutrition")) return "";
   const sugar = entry.nutritionSugarSources || {};
   const supplements = entry.nutritionSupplements || {};
+  // 24.08.2026: translated as part of the onboarding "nutrition" step
+  // checkpoint — this function is shared with the dashboard "modal" and
+  // history "edit" forms, so those pick up the translation too, not just
+  // onboarding. NUTRITION_FLOUR_OPTIONS/NUTRITION_SUGAR_SOURCES/
+  // NUTRITION_SUPPLEMENT_TYPES themselves stay Russian-labeled (untouched
+  // canonical lists); only a localized value/label or key/label
+  // projection is built here for rendering, same pattern as
+  // localizedRegionOptions et al.
+  const flourOptions = NUTRITION_FLOUR_OPTIONS.map((o) => ({ value: o.value, label: t(`nutritionFlourOptions.${o.value}`) }));
+  const sugarOptions = NUTRITION_SUGAR_SOURCES.map((s) => ({ key: s.key, label: t(`nutritionSugarOptions.${s.key}`) }));
+  const supplementOptions = NUTRITION_SUPPLEMENT_TYPES.map((s) => ({ key: s.key, label: t(`nutritionSupplementOptions.${s.key}`) }));
   return `
     <div class="nutrition-tile">
-      <h3>Количество</h3>
+      <h3>${t("nutrition.quantityTitle")}</h3>
       <div class="log-row">
         <div class="field">
-          <label>Приёмов пищи</label>
+          <label>${t("nutrition.mealsLabel")}</label>
           <select id="${idPrefix}_nutrition_meals">
-            <option value="">Выбрать...</option>
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${numberOptionsHtml(6, entry.nutritionMealsCount ?? "")}
           </select>
         </div>
         <div class="field">
-          <label>Перекусов</label>
+          <label>${t("nutrition.snacksLabel")}</label>
           <select id="${idPrefix}_nutrition_snacks">
-            <option value="">Выбрать...</option>
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${numberOptionsHtml(3, entry.nutritionSnacksCount ?? "")}
           </select>
         </div>
@@ -1912,30 +2058,30 @@ function nutritionRowHtml(idPrefix, entry) {
     </div>
 
     <div class="nutrition-tile">
-      <h3>Белок</h3>
+      <h3>${t("nutrition.proteinTitle")}</h3>
       <div class="log-row">
         <div class="field">
-          <label>Раз в день</label>
+          <label>${t("nutrition.proteinTimesLabel")}</label>
           <select id="${idPrefix}_nutrition_protein_times">
-            <option value="">Выбрать...</option>
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${numberOptionsHtml(6, entry.nutritionProteinTimes ?? "")}
           </select>
         </div>
         <div class="field">
-          <label>Граммы/день</label>
-          <input type="number" id="${idPrefix}_nutrition_protein_grams" min="0" step="1" placeholder="г" value="${entry.nutritionProteinGrams ?? ""}">
+          <label>${t("nutrition.proteinGramsLabel")}</label>
+          <input type="number" id="${idPrefix}_nutrition_protein_grams" min="0" step="1" placeholder="${t("nutrition.proteinGramsPlaceholder")}" value="${entry.nutritionProteinGrams ?? ""}">
         </div>
       </div>
     </div>
 
     <div class="nutrition-tile">
       <div class="field">
-        <label>Чистая вода</label>
+        <label>${t("nutrition.waterLabel")}</label>
         <div class="log-row nutrition-water-row">
-          <input type="number" id="${idPrefix}_nutrition_water_amount" min="0" step="1" placeholder="Количество" value="${entry.nutritionWaterAmount ?? ""}">
+          <input type="number" id="${idPrefix}_nutrition_water_amount" min="0" step="1" placeholder="${t("nutrition.waterAmountPlaceholder")}" value="${entry.nutritionWaterAmount ?? ""}">
           <select id="${idPrefix}_nutrition_water_unit">
-            <option value="ml" ${(entry.nutritionWaterUnit || "ml") === "ml" ? "selected" : ""}>мл</option>
-            <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>л</option>
+            <option value="ml" ${(entry.nutritionWaterUnit || "ml") === "ml" ? "selected" : ""}>${t("nutrition.unitMl")}</option>
+            <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>${t("nutrition.unitL")}</option>
           </select>
         </div>
       </div>
@@ -1943,34 +2089,38 @@ function nutritionRowHtml(idPrefix, entry) {
 
     <div class="nutrition-tile">
       <div class="field">
-        <label>Мучное</label>
+        <label>${t("nutrition.flourLabel")}</label>
         <select id="${idPrefix}_nutrition_flour">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(NUTRITION_FLOUR_OPTIONS, entry.nutritionFlourType)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(flourOptions, entry.nutritionFlourType)}
         </select>
       </div>
     </div>
 
     <div class="nutrition-tile">
       <div class="field">
-        <label>Сахар</label>
+        <label>${t("nutrition.sugarLabel")}</label>
         <div class="checkbox-list">
-          ${NUTRITION_SUGAR_SOURCES.map(
-            (s) =>
-              `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_sugar_${s.key}" ${sugar[s.key] ? "checked" : ""}> ${s.label}</label>`
-          ).join("")}
+          ${sugarOptions
+            .map(
+              (s) =>
+                `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_sugar_${s.key}" ${sugar[s.key] ? "checked" : ""}> ${s.label}</label>`
+            )
+            .join("")}
         </div>
       </div>
     </div>
 
     <div class="nutrition-tile">
       <div class="field">
-        <label>БАДы</label>
+        <label>${t("nutrition.supplementsLabel")}</label>
         <div class="checkbox-list">
-          ${NUTRITION_SUPPLEMENT_TYPES.map(
-            (s) =>
-              `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_supplements_${s.key}" ${supplements[s.key] ? "checked" : ""}> ${s.label}</label>`
-          ).join("")}
+          ${supplementOptions
+            .map(
+              (s) =>
+                `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_supplements_${s.key}" ${supplements[s.key] ? "checked" : ""}> ${s.label}</label>`
+            )
+            .join("")}
         </div>
       </div>
     </div>
@@ -2172,60 +2322,60 @@ function renderOnboarding() {
     // this step's own id-prefix convention (f_age, f_gender, etc.).
     body = `
       <div class="onboarding-header">
-        <h1>Питание</h1>
+        <h1>${t("onboarding.nutritionStepTitle")}</h1>
       </div>
       ${nutritionRowHtml("f", draft)}
     `;
   } else if (step === "habits") {
     body = `
       <div class="onboarding-header">
-        <h1>Вредные привычки</h1>
+        <h1>${t("onboarding.habitsTitle")}</h1>
       </div>
       <div class="field">
-        <label>Сигарет в день (0, если не курите) ${reqMark()}</label>
+        <label>${t("onboarding.cigarettesLabel")} ${reqMark()}</label>
         <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
       </div>
       <div class="field" id="f_smokingGoalBlock" style="display:${Number(draft.cigarettesPerDay) > 0 ? "block" : "none"}">
-        <label>Хотите бросить курить? ${reqMark()}</label>
+        <label>${t("onboarding.smokingGoalLabel")} ${reqMark()}</label>
         <div class="radio-row">
-          <label><input type="radio" name="f_smokingGoal" value="yes" ${draft.smokingGoalConfirmed === true ? "checked" : ""}> Да, хочу</label>
-          <label><input type="radio" name="f_smokingGoal" value="no" ${draft.smokingGoalConfirmed === false ? "checked" : ""}> Не сейчас</label>
+          <label><input type="radio" name="f_smokingGoal" value="yes" ${draft.smokingGoalConfirmed === true ? "checked" : ""}> ${t("onboarding.goalYes")}</label>
+          <label><input type="radio" name="f_smokingGoal" value="no" ${draft.smokingGoalConfirmed === false ? "checked" : ""}> ${t("onboarding.goalNo")}</label>
         </div>
       </div>
       <div class="field">
-        <label>Вейп / кальян — используете?</label>
+        <label>${t("onboarding.vapeLabel")}</label>
         <div class="radio-row">
-          <label><input type="radio" name="f_vape" value="yes" ${draft.vapeHookah === "yes" ? "checked" : ""}> Да</label>
-          <label><input type="radio" name="f_vape" value="no" ${draft.vapeHookah === "no" ? "checked" : ""}> Нет</label>
+          <label><input type="radio" name="f_vape" value="yes" ${draft.vapeHookah === "yes" ? "checked" : ""}> ${t("onboarding.yesLabel")}</label>
+          <label><input type="radio" name="f_vape" value="no" ${draft.vapeHookah === "no" ? "checked" : ""}> ${t("onboarding.noLabel")}</label>
         </div>
       </div>
       <div class="field">
         <details class="alcohol-details" ${alcoholSummaryText(draft) || draft.alcoholOtherHas ? "open" : ""}>
-          <summary>Алкоголь${alcoholSummaryText(draft) ? ` — ${escapeHtml(alcoholSummaryText(draft))}` : ""}</summary>
+          <summary>${t("onboarding.alcoholSummaryLabel")}${alcoholSummaryText(draft) ? ` — ${escapeHtml(alcoholSummaryText(draft))}` : ""}</summary>
           <div class="field">
-            <label>Крепкий алкоголь, мл/нед</label>
+            <label>${t("onboarding.alcoholSpiritsLabel")}</label>
             <select id="f_alcoholSpiritsRange">
-              <option value="">Выбрать...</option>
-              ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, draft.alcoholSpirits)}
+              <option value="">${t("onboarding.selectPlaceholder")}</option>
+              ${selectOptionsHtml(localizedAlcoholSpiritsOptions(), draft.alcoholSpirits)}
             </select>
           </div>
           <div class="field">
-            <label>Вино, мл/нед</label>
+            <label>${t("onboarding.alcoholWineLabel")}</label>
             <select id="f_alcoholWineRange">
-              <option value="">Выбрать...</option>
-              ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, draft.alcoholWine)}
+              <option value="">${t("onboarding.selectPlaceholder")}</option>
+              ${selectOptionsHtml(localizedAlcoholWineOptions(), draft.alcoholWine)}
             </select>
           </div>
           <div class="field">
-            <label>Пиво и слабоалкогольные коктейли, л/нед</label>
+            <label>${t("onboarding.alcoholBeerLabel")}</label>
             <select id="f_alcoholBeerRange">
-              <option value="">Выбрать...</option>
-              ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, draft.alcoholBeer)}
+              <option value="">${t("onboarding.selectPlaceholder")}</option>
+              ${selectOptionsHtml(localizedAlcoholBeerOptions(), draft.alcoholBeer)}
             </select>
           </div>
           <div class="field">
-            <label class="checkbox-row"><input type="checkbox" id="f_alcoholOtherHas" ${draft.alcoholOtherHas ? "checked" : ""}> Другое</label>
-            <input type="text" id="f_alcoholOtherText" placeholder="Что именно?" value="${escapeHtml(draft.alcoholOtherText ?? "")}">
+            <label class="checkbox-row"><input type="checkbox" id="f_alcoholOtherHas" ${draft.alcoholOtherHas ? "checked" : ""}> ${t("onboarding.otherLabel")}</label>
+            <input type="text" id="f_alcoholOtherText" placeholder="${t("onboarding.otherTextPlaceholder")}" value="${escapeHtml(draft.alcoholOtherText ?? "")}">
           </div>
         </details>
       </div>
@@ -2392,11 +2542,11 @@ function renderOnboarding() {
         return;
       }
       if (step === "habits" && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
-        alert("Сигарет в день обязательно для продолжения (0, если не курите).");
+        alert(t("onboarding.cigarettesAlert"));
         return;
       }
       if (step === "habits" && Number(draft.cigarettesPerDay) > 0 && draft.smokingGoalConfirmed === undefined) {
-        alert("Пожалуйста, ответьте на вопрос про цель по курению.");
+        alert(t("onboarding.smokingGoalAlert"));
         return;
       }
       state.onboardingDraft = draft;
