@@ -208,6 +208,16 @@ const NUTRITION_SUPPLEMENT_TYPES = [
   { key: "other", label: "Другое" },
 ];
 
+// Meals-per-day switched from an exact 1..6 count to ranges (25.08.2026,
+// user feedback) — precision here wasn't meaningful (no formula reads
+// this field, see FACTOR_NEUTRAL_VALUES/nutrition), and a range is an
+// easier, less fussy tap than picking one exact number.
+const NUTRITION_MEALS_RANGE_OPTIONS = [
+  { value: "1-2", label: "1-2" },
+  { value: "3-4", label: "3-4" },
+  { value: "5+", label: "5+" },
+];
+
 // Options in every dropdown below are ordered best-first, descending to
 // worst (20.08.2026 UI pass) — matches STRESS_LEVEL_OPTIONS/
 // WAIST_RANGE_OPTIONS/NUTRITION_QUALITY_OPTIONS above, which already
@@ -694,7 +704,6 @@ const ONBOARDING_RESULT_PHRASES = {
       "Редкий профиль",
       "Статистическая аномалия — в хорошем смысле",
       "Потенциальный долгожитель",
-      "Такому профилю позавидовали бы инженеры Формулы-1",
       "Вы — из той небольшой выборки, на которую равняются исследования",
     ],
     good: [
@@ -721,7 +730,6 @@ const ONBOARDING_RESULT_PHRASES = {
       "A rare profile",
       "A statistical outlier — in a good way",
       "A potential long-liver",
-      "A profile Formula 1 engineers would envy",
       "You're in the small sample studies point to",
     ],
     good: [
@@ -1076,9 +1084,11 @@ const STRINGS = {
       snacksLabel: "Перекусов",
       proteinTitle: "Белок",
       proteinTimesLabel: "Раз в день",
+      proteinEveryMeal: "В каждом приёме пищи",
       proteinGramsLabel: "Граммы/день",
       proteinGramsPlaceholder: "г",
-      waterLabel: "Чистая вода",
+      waterLabel: "Вода",
+      waterHint: "Считается только чистая вода — чай, кофе и другие напитки не считаются.",
       waterAmountPlaceholder: "Количество",
       unitMl: "мл",
       unitL: "л",
@@ -1176,7 +1186,7 @@ const STRINGS = {
       otherTextPlaceholder: "What exactly?",
       stressLevelLabel: "Stress level",
       nutritionStepTitle: "Nutrition",
-      habitsTitle: "Habits",
+      habitsTitle: "Bad habits",
       cigarettesLabel: "Cigarettes per day (0 if you don't smoke)",
       smokingGoalLabel: "Want to quit smoking?",
       vapeLabel: "Do you vape / use hookah?",
@@ -1355,9 +1365,11 @@ const STRINGS = {
       snacksLabel: "Snacks",
       proteinTitle: "Protein",
       proteinTimesLabel: "Times a day",
+      proteinEveryMeal: "With every meal",
       proteinGramsLabel: "Grams/day",
       proteinGramsPlaceholder: "g",
-      waterLabel: "Plain water",
+      waterLabel: "Water",
+      waterHint: "Only plain water counts — tea, coffee, and other drinks don't count.",
       waterAmountPlaceholder: "Amount",
       unitMl: "ml",
       unitL: "l",
@@ -2612,7 +2624,7 @@ function nutritionRowHtml(idPrefix, entry) {
           <label>${t("nutrition.mealsLabel")}</label>
           <select id="${idPrefix}_nutrition_meals">
             <option value="">${t("onboarding.selectPlaceholder")}</option>
-            ${numberOptionsHtml(6, entry.nutritionMealsCount ?? "")}
+            ${selectOptionsHtml(NUTRITION_MEALS_RANGE_OPTIONS, entry.nutritionMealsCount ?? "")}
           </select>
         </div>
         <div class="field">
@@ -2633,6 +2645,7 @@ function nutritionRowHtml(idPrefix, entry) {
           <select id="${idPrefix}_nutrition_protein_times">
             <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${numberOptionsHtml(6, entry.nutritionProteinTimes ?? "")}
+            <option value="every_meal" ${entry.nutritionProteinTimes === "every_meal" ? "selected" : ""}>${t("nutrition.proteinEveryMeal")}</option>
           </select>
         </div>
         <div class="field">
@@ -2645,6 +2658,7 @@ function nutritionRowHtml(idPrefix, entry) {
     <div class="nutrition-tile">
       <div class="field">
         <label>${t("nutrition.waterLabel")}</label>
+        ${collapsibleHint(t("nutrition.waterHint"))}
         <div class="log-row nutrition-water-row">
           <input type="number" id="${idPrefix}_nutrition_water_amount" min="0" step="1" placeholder="${t("nutrition.waterAmountPlaceholder")}" value="${entry.nutritionWaterAmount ?? ""}">
           <select id="${idPrefix}_nutrition_water_unit">
