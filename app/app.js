@@ -884,6 +884,9 @@ const STRINGS = {
       alcoholBeerPrefix: "пиво",
       cigarettesAlert: "Сигарет в день обязательно для продолжения (0, если не курите).",
       smokingGoalAlert: "Пожалуйста, ответьте на вопрос про цель по курению.",
+      healthTitle: "Здоровье",
+      illnessHasLabel: "Есть ли серьёзные заболевания?",
+      illnessDetailLabel: "Уточнение",
       revealTitle: "Это уже ваш капитал:",
       revealRiskNote: "Без изменений эти дни продолжали бы уходить.",
       finishButton: "Перейти в приложение",
@@ -1044,6 +1047,9 @@ const STRINGS = {
       alcoholBeerPrefix: "beer",
       cigarettesAlert: "Cigarettes per day is required to continue (0 if you don't smoke).",
       smokingGoalAlert: "Please answer the question about your smoking goal.",
+      healthTitle: "Health",
+      illnessHasLabel: "Do you have any serious medical conditions?",
+      illnessDetailLabel: "Details",
       revealTitle: "This is already your capital:",
       revealRiskNote: "Without changes, these days would keep slipping away.",
       finishButton: "Go to the app",
@@ -2673,17 +2679,17 @@ function renderOnboarding() {
   } else if (step === "health") {
     body = `
       <div class="onboarding-header">
-        <h1>Здоровье</h1>
+        <h1>${t("onboarding.healthTitle")}</h1>
       </div>
       <div class="field">
-        <label>Есть ли серьёзные заболевания?</label>
+        <label>${t("onboarding.illnessHasLabel")}</label>
         <div class="radio-row">
-          <label><input type="radio" name="f_illnessHas" value="yes" ${draft.illnessHas === true ? "checked" : ""}> Да</label>
-          <label><input type="radio" name="f_illnessHas" value="no" ${draft.illnessHas === false ? "checked" : ""}> Нет</label>
+          <label><input type="radio" name="f_illnessHas" value="yes" ${draft.illnessHas === true ? "checked" : ""}> ${t("onboarding.yesLabel")}</label>
+          <label><input type="radio" name="f_illnessHas" value="no" ${draft.illnessHas === false ? "checked" : ""}> ${t("onboarding.noLabel")}</label>
         </div>
       </div>
       <div class="field">
-        <label>Уточнение</label>
+        <label>${t("onboarding.illnessDetailLabel")}</label>
         <input type="text" id="f_illnessDetail" value="${escapeHtml(draft.illnessDetail ?? "")}">
       </div>
     `;
