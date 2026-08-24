@@ -296,9 +296,9 @@ const KNOWLEDGE_BASE = {
       key: "sleep",
       name: "Сон",
       active: true,
-      body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском, причём нелинейно и несимметрично — пересып несёт больший риск на каждый лишний час, чем недосып на каждый недостающий. Вместо разового дневного штрафа приложение ведёт накопительный «долг сна»: недосып одного дня не компенсируется одной «лишней» ночью сна один к одному, организм восстанавливается постепенно — долг затухает со временем, а штраф в капитал растёт ускоренно (нелинейно) с размером накопленного долга, а не с разовым отклонением. Отдельно и независимо — штраф за нерегулярное время отхода ко сну (если это поле заполняется 7+ дней подряд), даже при нормальном количестве часов. Модель «долг сна + регулярность» — собственная интерпретация проекта, собранная из нескольких независимых исследований (модель гомеостатического давления сна, дозозависимый метаанализ смертности, Sleep Regularity Index UK Biobank), а не прямая цитата единой признанной методологии.",
+      body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском, причём нелинейно и несимметрично — пересып несёт больший риск на каждый лишний час, чем недосып на каждый недостающий. Вместо разового дневного штрафа приложение ведёт накопительный «долг сна»: недосып одного дня не компенсируется одной «лишней» ночью сна один к одному, организм восстанавливается постепенно — долг затухает со временем, а штраф в капитал растёт ускоренно (нелинейно) с размером накопленного долга, а не с разовым отклонением. Отдельно и независимо — штраф за нерегулярное время отхода ко сну (если это поле заполняется 7+ дней подряд), даже при нормальном количестве часов. С 25.08.2026: сон в норме (7–8ч) и стабильное время отхода ко сну дают небольшой положительный прирост капитала, а не только отсутствие штрафа — величина рассчитана как доля доли населения, не досыпающей норму (30,5%, CDC/NHIS 2024), от уже откалиброванного штрафа модели, а не произвольное число. Модель «долг сна + регулярность» — собственная интерпретация проекта, собранная из нескольких независимых исследований (модель гомеостатического давления сна, дозозависимый метаанализ смертности, Sleep Regularity Index UK Biobank), а не прямая цитата единой признанной методологии.",
       source: "Источники: Yin J. et al., JAHA (2017, дозозависимая связь смертности со сном); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) и Belenky et al. (2003, динамика восстановления после ограничения сна); Sleep Regularity Index, UK Biobank; метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников, фоновая U-образная связь).",
-      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
+      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep", "cdc-nhis-sleep-2024"],
     },
     {
       key: "alcohol",
@@ -372,9 +372,9 @@ const KNOWLEDGE_BASE = {
       key: "sleep",
       name: "Sleep",
       active: true,
-      body: "The lowest mortality risk is associated with 7–8 hours of sleep a night; both shorter and longer sleep are linked to higher risk, and the relationship is non-linear and asymmetric — oversleeping carries a bigger risk per extra hour than undersleeping carries per missing hour. Instead of a one-off daily penalty, the app tracks a cumulative 'sleep debt': one night's shortfall isn't offset one-to-one by a single 'extra' night — the body recovers gradually, so the debt decays over time while the charge to your capital grows faster than linearly as the accumulated debt grows, rather than reacting to a single day's deviation. Separately and independently, there's a penalty for an irregular bedtime (once that field has 7+ consecutive days of data), even with a normal number of hours. The 'sleep debt + regularity' model is the project's own synthesis, built from several independent lines of research (the homeostatic sleep-pressure model, a dose-response mortality meta-analysis, and the UK Biobank Sleep Regularity Index) — not a direct quote of one single recognized methodology.",
+      body: "The lowest mortality risk is associated with 7–8 hours of sleep a night; both shorter and longer sleep are linked to higher risk, and the relationship is non-linear and asymmetric — oversleeping carries a bigger risk per extra hour than undersleeping carries per missing hour. Instead of a one-off daily penalty, the app tracks a cumulative 'sleep debt': one night's shortfall isn't offset one-to-one by a single 'extra' night — the body recovers gradually, so the debt decays over time while the charge to your capital grows faster than linearly as the accumulated debt grows, rather than reacting to a single day's deviation. Separately and independently, there's a penalty for an irregular bedtime (once that field has 7+ consecutive days of data), even with a normal number of hours. As of 25.08.2026: sleep in range (7–8h) and a stable bedtime now earn a small positive capital gain, not just the absence of a penalty — sized as the share of the population that falls short of that target (30.5%, CDC/NHIS 2024) applied to the model's own already-calibrated penalty, not an arbitrary figure. The 'sleep debt + regularity' model is the project's own synthesis, built from several independent lines of research (the homeostatic sleep-pressure model, a dose-response mortality meta-analysis, and the UK Biobank Sleep Regularity Index) — not a direct quote of one single recognized methodology.",
       source: "Sources: Yin J. et al., JAHA (2017, dose-response relationship between sleep and mortality); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) and Belenky et al. (2003, recovery dynamics after sleep restriction); Sleep Regularity Index, UK Biobank; Cappuccio et al. meta-analysis (~1.3–1.5 million participants, background U-shaped relationship).",
-      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
+      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep", "cdc-nhis-sleep-2024"],
     },
     {
       key: "alcohol",
@@ -521,6 +521,12 @@ const SOURCES = {
       citation: "Windred D.P. et al., UK Biobank (2024), «Sleep regularity and mortality: a prospective analysis in the UK Biobank»",
       url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
     },
+    {
+      key: "cdc-nhis-sleep-2024",
+      label: "Доля взрослых, недосыпающих норму (для бонуса за хороший сон)",
+      citation: "CDC/NCHS, National Health Interview Survey (2024), Data Brief №559 «Short Sleep Duration and Sleep Difficulties Among Adults: United States, 2024» — 30,5% взрослых спят в среднем менее 7ч/сутки",
+      url: "https://www.cdc.gov/nchs/products/databriefs/db559.htm",
+    },
   ],
   en: [
     {
@@ -602,6 +608,12 @@ const SOURCES = {
       label: "Sleep Regularity Index — sleep regularity methodology",
       citation: "Windred D.P. et al., UK Biobank (2024), \"Sleep regularity and mortality: a prospective analysis in the UK Biobank\"",
       url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
+    },
+    {
+      key: "cdc-nhis-sleep-2024",
+      label: "Share of adults not meeting the sleep target (for the good-sleep bonus)",
+      citation: "CDC/NCHS, National Health Interview Survey (2024), Data Brief No. 559, \"Short Sleep Duration and Sleep Difficulties Among Adults: United States, 2024\" — 30.5% of adults average under 7h of sleep a night",
+      url: "https://www.cdc.gov/nchs/products/databriefs/db559.htm",
     },
   ],
 };
@@ -928,7 +940,7 @@ const STRINGS = {
       finishButton: "Перейти в приложение",
       finishButtonRecalc: "Сохранить пересчёт",
       shareButton: "Поделиться результатом",
-      shareText: (days, word) => `Мой стартовый капитал здоровья — ${days} ${word}. Считаю каждый день в «Капитал здоровья»: humanchange.app`,
+      shareText: (days, word) => `Мой стартовый капитал здоровья — ${days} ${word}. Считаю каждый день в «Капитал здоровья»: humanchange.app/app/`,
     },
     common: {
       copied: "Скопировано!",
@@ -1016,6 +1028,8 @@ const STRINGS = {
       socialLabel: "Общение с близкими сегодня",
       socialHint: "Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.",
       weightLabel: "Вес сегодня, кг (необязательно)",
+      bodyFatLabel: "% жира (необязательно)",
+      bodyFatHint: "Точнее отражает состав тела, чем вес сам по себе — особенно полезно, если включена настройка «Профессиональный спорт».",
       purposeLabel: "Чувствовали сегодня смысл в своих делах?",
       cognitiveLabel: "Учились сегодня новому или решали непростую задачу?",
       cognitiveHint: "Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.",
@@ -1042,9 +1056,11 @@ const STRINGS = {
       back: "← Назад",
       referralTitle: "Пригласить друга",
       referralHint: "Скопируйте и отправьте — без ссылок и кодов, просто короткое приглашение.",
-      referralShareText: "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app",
+      referralShareText: "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app/app/",
       copyButton: "Скопировать",
       languageLabel: "Язык",
+      proAthleteLabel: "Профессиональный спорт",
+      proAthleteHint: "Выше 90 минут активности в день прирост капитала будет расти медленнее, а не останавливаться резко. Это временное решение, не основанное на отдельном исследовании для больших объёмов нагрузки — обычная формула откалибрована на любителей.",
       accountTitle: "Аккаунт",
       accountLoggedInHint: (email) => `Вы вошли как ${email}.`,
       signOut: "Выйти",
@@ -1089,6 +1105,7 @@ const STRINGS = {
       proteinGramsPlaceholder: "г",
       waterLabel: "Вода",
       waterHint: "Считается только чистая вода — чай, кофе и другие напитки не считаются.",
+      sugarHint: "Не считается, если было за час до/после интенсивной тренировки или во время неё — в этом случае сахар усваивается иначе.",
       waterAmountPlaceholder: "Количество",
       unitMl: "мл",
       unitL: "л",
@@ -1209,7 +1226,7 @@ const STRINGS = {
       finishButton: "Go to the app",
       finishButtonRecalc: "Save recalculation",
       shareButton: "Share result",
-      shareText: (days, word) => `My starting health capital — ${days} ${word}. Counting every day in Health Capital: humanchange.app`,
+      shareText: (days, word) => `My starting health capital — ${days} ${word}. Counting every day in Health Capital: humanchange.app/app/`,
     },
     common: {
       copied: "Copied!",
@@ -1297,6 +1314,8 @@ const STRINGS = {
       socialLabel: "Time with loved ones today",
       socialHint: "Counts as engaged in-person or call time — a real conversation, time together. Work messaging doesn't count.",
       weightLabel: "Weight today, kg (optional)",
+      bodyFatLabel: "Body fat % (optional)",
+      bodyFatHint: "A more precise picture of body composition than weight alone — especially useful with the \"Professional athlete\" setting enabled.",
       purposeLabel: "Did you feel a sense of purpose in what you did today?",
       cognitiveLabel: "Did you learn something new or tackle a hard problem today?",
       cognitiveHint: "This kind of load builds new neural connections — it works like a workout for the brain.",
@@ -1323,9 +1342,11 @@ const STRINGS = {
       back: "← Back",
       referralTitle: "Invite a friend",
       referralHint: "Copy and send — no links or codes, just a short invitation.",
-      referralShareText: "I track my health days in the Health Capital app — try it: humanchange.app",
+      referralShareText: "I track my health days in the Health Capital app — try it: humanchange.app/app/",
       copyButton: "Copy",
       languageLabel: "Language",
+      proAthleteLabel: "Professional athlete",
+      proAthleteHint: "Above 90 minutes of activity a day, the gain to your capital grows more slowly instead of flat-lining. This is an interim fix, not based on a dedicated study of high training volumes — the regular formula is calibrated for recreational activity levels.",
       accountTitle: "Account",
       accountLoggedInHint: (email) => `Signed in as ${email}.`,
       signOut: "Sign out",
@@ -1370,6 +1391,7 @@ const STRINGS = {
       proteinGramsPlaceholder: "g",
       waterLabel: "Water",
       waterHint: "Only plain water counts — tea, coffee, and other drinks don't count.",
+      sugarHint: "Doesn't count if it was within an hour before/after intense exercise, or during it — sugar is metabolized differently in that window.",
       waterAmountPlaceholder: "Amount",
       unitMl: "ml",
       unitL: "l",
@@ -1610,6 +1632,7 @@ function defaultState() {
     // const is initialized, so referencing it here throws a
     // temporal-dead-zone ReferenceError.
     visibleFactors: ["smoking", "sport", "sleep", "alcohol", "nutrition", "stress", "social", "weight", "purpose", "cognitive"],
+    isProAthlete: false, // 25.08.2026: Settings toggle — reduced-rate (not flat-capped) daily activity gain, see dailyDeltaDays/proAthleteActivityGainHours
   };
 }
 
@@ -1878,11 +1901,36 @@ function computeStartingCapitalDays(ob) {
 // 1:6 (TZ section 3.2, 13.08.2026, Veerman et al. BJSM 2024 accelerometer
 // data — replaces the earlier temporary 1:3 Spiegelhalter estimate),
 // daily cap 90 min / 9 hours.
-function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline) {
+// Reduced-rate (not flat-capped) activity gain for self-reported
+// professional athletes (25.08.2026, user request — see TASKS.md's
+// still-open "90-min cap" item: this doesn't resolve that question with
+// sourced dose-response data, it just stops the formula from flatlining
+// completely for people who train far beyond a recreational volume).
+// Disclosed, not sourced: neither the reduced-rate factor (half) nor the
+// secondary cap are from a citation — same status as the base 90-minute
+// cap itself. If/when I-Min Lee or an equivalent source gives an actual
+// dose-response curve for very high training volumes, this should be
+// replaced, not layered on top of.
+const PRO_ATHLETE_THRESHOLD_MINUTES = 90;
+const PRO_ATHLETE_REDUCED_RATE_FACTOR = 0.5;
+const PRO_ATHLETE_EXTRA_CAP_HOURS = 9;
+
+function proAthleteActivityGainHours(minutes) {
+  const baseMinutes = Math.min(minutes, PRO_ATHLETE_THRESHOLD_MINUTES);
+  const extraMinutes = Math.max(minutes - PRO_ATHLETE_THRESHOLD_MINUTES, 0);
+  const baseHours = (baseMinutes / 60) * 6;
+  const extraHours = Math.min((extraMinutes / 60) * 6 * PRO_ATHLETE_REDUCED_RATE_FACTOR, PRO_ATHLETE_EXTRA_CAP_HOURS);
+  return baseHours + extraHours;
+}
+
+function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline, isProAthlete) {
   const waterline = Number(smokingWaterline) || 0;
   const today = Number(cigarettesToday) || 0;
   const smokingTerm = (waterline - today) * 0.014;
-  const activityGain = Math.min((Number(activityMinutesToday) || 0) / 60 * 6, 9) / 24;
+  const minutes = Number(activityMinutesToday) || 0;
+  const activityGain = isProAthlete
+    ? proAthleteActivityGainHours(minutes) / 24
+    : Math.min((minutes / 60) * 6, 9) / 24;
   return activityGain + smokingTerm;
 }
 
@@ -1922,10 +1970,44 @@ const SLEEP_DEBT_DECAY_K = 0.8;
 const SLEEP_DEBT_UNDER_COEFF = 0.0008;
 const SLEEP_DEBT_OVER_COEFF = SLEEP_DEBT_UNDER_COEFF * (13 / 6);
 
-function sleepDebtPenalty(debt) {
-  if (!debt) return 0;
+// Small positive daily bonus for hitting the sleep target (25.08.2026,
+// user request: "поощрять своевременный отход ко сну и количество сна
+// минимальным приростом капитала" — until now this model only ever
+// penalized, never rewarded; debt=0 was the best a day could score).
+// Same "don't invent a number" principle as the smoking/activity
+// symmetrization earlier this session, but reallocation math doesn't
+// carry over directly — Yin et al. 2017's own RR values treat ~7h as
+// the REFERENCE (RR=1.0), not a category with an extractable protective
+// magnitude below that baseline, so there's no dose-response figure to
+// split. Instead: reuse a real population-prevalence figure (CDC/NCHS
+// NHIS 2024 Data Brief No. 559 — 30.5% of US adults average <7h sleep)
+// as the share of the model's own already-calibrated steady-state
+// undersleep penalty (~0.0138 days/day for a chronic 1h/day shortfall,
+// see SLEEP_DEBT_UNDER_COEFF comment) that a good sleeper "gets back."
+// Deliberately small per the user's own "минимальным" — at 2 decimal
+// places this will often display as 0.00 rather than a visible +figure;
+// flagged as a product/UX judgment call if a more visible number is
+// wanted later (that would no longer be strictly derived from a source).
+// Region-agnostic (unlike RU/US-split smoking/activity) because the rest
+// of this sleep-debt model doesn't vary by region either.
+const SLEEP_SHORT_PREVALENCE_US = 0.305;
+const SLEEP_DEBT_STEADY_STATE_PENALTY_REF = 0.0138;
+const SLEEP_DEBT_GOOD_BONUS = SLEEP_SHORT_PREVALENCE_US * SLEEP_DEBT_STEADY_STATE_PENALTY_REF;
+// "On target" band = the user's own framing, "сон в норме (7-8ч)" —
+// SLEEP_DEBT_NORM_HOURS (7.5h) ± 0.5h.
+const SLEEP_DEBT_GOOD_BAND_HOURS = 0.5;
+
+// hasTodayData guards the bonus specifically (25.08.2026 fix): debt can
+// land at/near 0 just from decay or from a day with NO sleep hours
+// logged at all (deviation defaults to 0 when factHours is undefined —
+// see cascadeRecalcFrom) — that's an absence of data, not evidence of
+// good sleep, and shouldn't be rewarded. Omitting the flag (e.g. direct
+// unit-test calls) falls back to the plain quadratic, matching the
+// original always-penalize-or-zero behavior exactly.
+function sleepDebtPenalty(debt, hasTodayData) {
+  if (hasTodayData && Math.abs(debt) <= SLEEP_DEBT_GOOD_BAND_HOURS) return SLEEP_DEBT_GOOD_BONUS;
   const coeff = debt > 0 ? SLEEP_DEBT_UNDER_COEFF : SLEEP_DEBT_OVER_COEFF;
-  return -(coeff * debt * debt);
+  return -(coeff * debt * debt) || 0; // avoid returning -0 at debt=0
 }
 
 // Whole calendar days between two 'YYYY-MM-DD' dates (b − a), UTC —
@@ -1977,7 +2059,13 @@ function sleepRegularityPenalty(uptoDateStr) {
   const variance = samples.reduce((a, b) => a + (b - mean) ** 2, 0) / samples.length;
   const sd = Math.sqrt(variance);
 
-  if (sd <= SLEEP_REGULARITY_THRESHOLD_MIN) return 0;
+  // Same small-bonus-for-good-behavior fix as sleepDebtPenalty
+  // (25.08.2026): being regular enough used to just avoid a penalty
+  // (return 0); now it earns the same reallocated share of the
+  // penalty pool as the duration bonus (SLEEP_SHORT_PREVALENCE_US ×
+  // this mechanism's own max penalty, not an invented figure) — this
+  // one IS visible at 2dp (~0.006 days, rounds to +0.01).
+  if (sd <= SLEEP_REGULARITY_THRESHOLD_MIN) return SLEEP_SHORT_PREVALENCE_US * SLEEP_REGULARITY_MAX_PENALTY_DAYS;
   const t = Math.min(
     1,
     (sd - SLEEP_REGULARITY_THRESHOLD_MIN) / (SLEEP_REGULARITY_SD_FOR_MAX_MIN - SLEEP_REGULARITY_THRESHOLD_MIN)
@@ -2116,7 +2204,7 @@ function cascadeRecalcFrom(fromDate) {
 
   for (const date of affectedDates) {
     const entry = state.ledger[date];
-    const baseDelta = dailyDeltaDays(entry.cigarettes, entry.activityMinutes, state.smokingWaterline);
+    const baseDelta = dailyDeltaDays(entry.cigarettes, entry.activityMinutes, state.smokingWaterline, state.isProAthlete);
 
     const gapDays = Math.max(daysBetweenDates(runningDebtDate, date), 0);
     const decayed = runningDebt * Math.pow(SLEEP_DEBT_DECAY_K, gapDays);
@@ -2131,7 +2219,8 @@ function cascadeRecalcFrom(fromDate) {
     const deviation = factHours !== undefined && !Number.isNaN(factHours) ? SLEEP_DEBT_NORM_HOURS - factHours : 0;
     const debt = decayed + deviation;
     entry.sleepDebt = debt;
-    entry.sleepDebtDelta = sleepDebtPenalty(debt);
+    const hasTodaySleepData = factHours !== undefined && !Number.isNaN(factHours);
+    entry.sleepDebtDelta = sleepDebtPenalty(debt, hasTodaySleepData);
     entry.sleepRegularityDelta = sleepRegularityPenalty(date);
     entry.sleepDelta = entry.sleepDebtDelta + entry.sleepRegularityDelta;
     runningDebt = debt;
@@ -2682,6 +2771,7 @@ function nutritionRowHtml(idPrefix, entry) {
     <div class="nutrition-tile">
       <div class="field">
         <label>${t("nutrition.sugarLabel")}</label>
+        ${collapsibleHint(t("nutrition.sugarHint"))}
         <div class="checkbox-list">
           ${sugarOptions
             .map(
@@ -2751,6 +2841,11 @@ function weightRowHtml(idPrefix, entry) {
     <div class="field">
       <label>${t("factorFields.weightLabel")}</label>
       <input type="number" step="0.1" id="${idPrefix}_weight" value="${escapeHtml(entry.weightKg ?? "")}">
+    </div>
+    <div class="field">
+      <label>${t("factorFields.bodyFatLabel")}</label>
+      ${collapsibleHint(t("factorFields.bodyFatHint"))}
+      <input type="number" step="0.1" min="0" max="100" id="${idPrefix}_body_fat" value="${escapeHtml(entry.bodyFatPercent ?? "")}">
     </div>
   `;
 }
@@ -3403,6 +3498,10 @@ function renderSettings(screen) {
         <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
       </div>
     </div>
+    <div class="field">
+      <label class="checkbox-row"><input type="checkbox" id="pro-athlete-toggle" ${state.isProAthlete ? "checked" : ""}> ${t("settings.proAthleteLabel")}</label>
+      ${collapsibleHint(t("settings.proAthleteHint"))}
+    </div>
     <div class="settings-list">
       <button class="settings-row" data-view="account">${state.authEmail ? t("settings.accountRowLoggedIn")(state.authEmail) : t("settings.accountRowLoggedOut")}</button>
       <button class="settings-row" data-view="referral">${t("settings.referralRow")}</button>
@@ -3411,6 +3510,12 @@ function renderSettings(screen) {
       <a class="settings-row" href="/product/" target="_blank" rel="noopener">${t("settings.billingRow")}</a>
     </div>
   `;
+  document.getElementById("pro-athlete-toggle").addEventListener("change", (e) => {
+    state.isProAthlete = e.target.checked;
+    saveState();
+    cascadeRecalcFrom(state.createdAt || todayStr());
+    saveState();
+  });
   screen.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       setLang(btn.dataset.lang);
@@ -3594,7 +3699,7 @@ const FACTOR_NEUTRAL_VALUES = {
     nutritionSupplements: {},
   },
   social: { socialQualityToday: "" },
-  weight: { weightKg: "" },
+  weight: { weightKg: "", bodyFatPercent: "" },
   purpose: { purposeToday: "" },
   cognitive: { cognitiveActivityToday: "" },
 };
@@ -3783,7 +3888,10 @@ function readFactorModalFields(idPrefix, key) {
     case "social":
       return { socialQualityToday: document.getElementById(`${idPrefix}_social`).value };
     case "weight":
-      return { weightKg: document.getElementById(`${idPrefix}_weight`).value };
+      return {
+        weightKg: document.getElementById(`${idPrefix}_weight`).value,
+        bodyFatPercent: document.getElementById(`${idPrefix}_body_fat`).value,
+      };
     case "purpose":
       return { purposeToday: document.getElementById(`${idPrefix}_purpose`).value };
     case "cognitive":
@@ -4280,7 +4388,7 @@ function dailyFactorBreakdown(entry) {
   if (Number(entry.activityMinutes) > 0) {
     items.push({ label: t("factorLabels.sport"), amount: Math.min((Number(entry.activityMinutes) / 60) * 6, 9) / 24 });
   }
-  if (entry.weeklyBonusDays) items.push({ label: t("history.weeklySportBonusShortLabel"), amount: entry.weeklyBonusDays });
+  if (entry.weeklyBonusDays) items.push({ label: t("history.weeklySportBonusShortLabel"), amount: entry.weeklyBonusDays, pinned: true });
   if (entry.sleepDebtDelta) items.push({ label: t("history.sleepDebtLabel"), amount: entry.sleepDebtDelta });
   if (entry.sleepRegularityDelta) items.push({ label: t("history.sleepRegularityLabel"), amount: entry.sleepRegularityDelta });
   if (entry.alcoholDelta) items.push({ label: t("factorLabels.alcohol"), amount: entry.alcoholDelta });
@@ -4323,30 +4431,43 @@ function dayDecayChargeItems(date) {
 // makes the line items underneath add up to it on-screen. Working in
 // integer cents avoids float drift; the leftover cent(s) go to the
 // largest-magnitude line, where a ±0.01 nudge is least noticeable.
+// "pinned" items (25.08.2026 fix — user-reported: the weekly sport bonus
+// showed as +0.43 inside "Личные накопления"'s breakdown but +0.44 as its
+// own "Дивиденды" line, same underlying entry.weeklyBonusDays value).
+// Root cause: this function runs independently per breakdown array, and
+// whichever array's slack-redistribution happens to land on the shared
+// line item can round it differently than its OWN standalone array does.
+// Fix: mark a shared item `pinned: true` so it's never chosen to absorb
+// leftover cents — its rounded value is then guaranteed to match
+// formatDays() of its own raw amount everywhere it's displayed. Falls
+// back to picking a pinned item only if literally every item is pinned
+// (never true today, but avoids a silent no-op diff in that edge case).
 function reconcileBreakdownForDisplay(total, items) {
   if (items.length === 0) return items;
   const totalCents = Math.round(total * 100);
   const rounded = items.map((i) => ({ ...i, amount: Math.round(i.amount * 100) }));
   const diff = totalCents - rounded.reduce((sum, i) => sum + i.amount, 0);
   if (diff !== 0) {
-    let idx = 0;
+    const candidates = rounded.some((i) => !i.pinned) ? rounded.filter((i) => !i.pinned) : rounded;
+    let target = candidates[0];
     let maxAbs = -Infinity;
-    rounded.forEach((i, k) => {
+    candidates.forEach((i) => {
       if (Math.abs(i.amount) > maxAbs) {
         maxAbs = Math.abs(i.amount);
-        idx = k;
+        target = i;
       }
     });
-    rounded[idx].amount += diff;
+    target.amount += diff;
   }
   return rounded.map((i) => ({ ...i, amount: i.amount / 100 }));
 }
 
 // Tappable amount (TZ, 12.08.2026 pattern, reused 13.08.2026 outside a
 // table for the "Транзакции за день" popup): the number itself is the
-// <summary> of a <details> block — the breakdown below it is now open
-// by default (23.08.2026, same pattern as .alcohol-details) rather than
-// hidden behind a tap, since users weren't discovering the click target.
+// <summary> of a <details> block. Was briefly open-by-default
+// (23.08.2026, same pattern as .alcohol-details) to help people
+// discover the click target; reverted 25.08.2026 per user feedback —
+// collapsed by default, expand on tap, not the other way round.
 //
 // "No data" (—) is decided purely from whether there ARE any items, not
 // from the rounded amount — a day whose factors happen to net to
@@ -4362,7 +4483,7 @@ function reportClickableAmount(amount, items) {
   const cssClass = roundedCents > 0 ? "amount positive" : roundedCents < 0 ? "amount negative" : "amount";
   const reconciled = reconcileBreakdownForDisplay(amount, items);
   const detail = reconciled.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
-  return `<details class="report-cell" open><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
+  return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
 }
 
 // TZ section 7, 13.08.2026: tapping a date now navigates to a full

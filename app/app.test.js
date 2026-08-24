@@ -354,7 +354,7 @@ test("sleep regularity penalty is inactive with fewer than 7 bedtime samples", (
   assert.strictEqual(sleepRegularityPenalty(daysAgo(1)), 0);
 });
 
-test("sleep regularity penalizes a widely scattered bedtime but not a consistent one", () => {
+test("sleep regularity penalizes a widely scattered bedtime but rewards a consistent one", () => {
   state.createdAt = daysAgo(40);
 
   const consistentTimes = ["22:50", "23:00", "23:05", "22:55", "23:10", "23:00", "22:58"];
@@ -362,7 +362,10 @@ test("sleep regularity penalizes a widely scattered bedtime but not a consistent
   for (let i = 0; i < 7; i++) {
     state.ledger[daysAgo(7 - i)] = { bedtimeToday: consistentTimes[i] };
   }
-  assert.strictEqual(sleepRegularityPenalty(daysAgo(1)), 0);
+  // 25.08.2026: a consistent bedtime now earns a small positive bonus
+  // (same reallocated-prevalence figure as sleepDebtPenalty's good-sleep
+  // bonus) instead of just avoiding a penalty.
+  assert.ok(sleepRegularityPenalty(daysAgo(1)) > 0, "a consistent bedtime schedule should earn a small bonus");
 
   const scatteredTimes = ["21:00", "01:30", "23:00", "03:00", "20:30", "00:15", "22:00"];
   state.ledger = {};
