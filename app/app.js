@@ -264,82 +264,164 @@ function rangeLookup(options, value, field) {
   return opt ? opt[field] : undefined;
 }
 
-const KNOWLEDGE_BASE = [
-  {
-    key: "smoking",
-    name: "Курение",
-    active: true,
-    body: "Мы опираемся на научные исследования о влиянии курения на продолжительность жизни. Статус «курит» учитывается один раз при расчёте стартового капитала. Отдельно от этого число сигарет в день, указанное при онбординге, становится точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
-    source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
-    sourceKeys: ["ucl-smoking", "tsai-aging"],
-  },
-  {
-    key: "sport",
-    name: "Физическая активность",
-    active: true,
-    body: "Мы опираемся на научные исследования о влиянии физической активности на продолжительность жизни, основанные на объективных измерениях (акселерометры), а не на самоотчётах. Положительный эффект не растёт бесконечно — у него есть верхний предел. Отдельно недостаточная активность сама по себе связана с повышенным риском смерти по сравнению с достаточно активными людьми. Считается только активность, где пульс заметно поднимается выше уровня покоя — тест разговором: можете говорить, но не петь — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
-    source: "Источники: Veerman et al., BJSM (2024); D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
-    sourceKeys: ["veerman-bjsm", "webmd-walking", "lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
-  },
-  {
-    key: "sleep",
-    name: "Сон",
-    active: true,
-    body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском, причём нелинейно и несимметрично — пересып несёт больший риск на каждый лишний час, чем недосып на каждый недостающий. Вместо разового дневного штрафа приложение ведёт накопительный «долг сна»: недосып одного дня не компенсируется одной «лишней» ночью сна один к одному, организм восстанавливается постепенно — долг затухает со временем, а штраф в капитал растёт ускоренно (нелинейно) с размером накопленного долга, а не с разовым отклонением. Отдельно и независимо — штраф за нерегулярное время отхода ко сну (если это поле заполняется 7+ дней подряд), даже при нормальном количестве часов. Модель «долг сна + регулярность» — собственная интерпретация проекта, собранная из нескольких независимых исследований (модель гомеостатического давления сна, дозозависимый метаанализ смертности, Sleep Regularity Index UK Biobank), а не прямая цитата единой признанной методологии.",
-    source: "Источники: Yin J. et al., JAHA (2017, дозозависимая связь смертности со сном); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) и Belenky et al. (2003, динамика восстановления после ограничения сна); Sleep Regularity Index, UK Biobank; метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников, фоновая U-образная связь).",
-    sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
-  },
-  {
-    key: "alcohol",
-    name: "Алкоголь",
-    active: true,
-    body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует. Ежедневно: сам факт употребления сегодня (источник не даёт дозозависимых дневных данных) даёт грубую дельту капитала — приблизительная оценка, точная ежедневная методология для алкоголя пока уточняется, в отличие от курения и спорта.",
-    source: "Источники: обзоры WHO и Lancet (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021.",
-    sourceKeys: ["tsai-aging"],
-  },
-  {
-    key: "nutrition",
-    name: "Питание",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора питания в капитал здоровья. Отдельно, только как культурный ориентир (не влияет на расчёт капитала): использование БАДов — массовая, нормализованная практика, не маргинальная — например, в Японии пищевые добавки регулярно принимают около 60% здоровых взрослых, 55–70% взрослых пациентов и 32% студентов, по национальным опросам.",
-    source: "Источник: национальные опросы по Японии.",
-  },
-  {
-    key: "stress",
-    name: "Стресс",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора стресса в капитал здоровья.",
-    source: "Скоро.",
-  },
-  {
-    key: "social",
-    name: "Социальные связи",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора социальных связей в капитал здоровья.",
-    source: "Скоро.",
-  },
-  {
-    key: "weight",
-    name: "Вес",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора веса в капитал здоровья.",
-    source: "Скоро.",
-  },
-  {
-    key: "purpose",
-    name: "Смысл и цель",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора смысла и цели в капитал здоровья.",
-    source: "Скоро.",
-  },
-  {
-    key: "cognitive",
-    name: "Когнитивная активность",
-    active: false,
-    body: "Раздел в разработке — появится вместе с добавлением фактора когнитивной активности в капитал здоровья.",
-    source: "Скоро.",
-  },
-];
+const KNOWLEDGE_BASE = {
+  ru: [
+    {
+      key: "smoking",
+      name: "Курение",
+      active: true,
+      body: "Мы опираемся на научные исследования о влиянии курения на продолжительность жизни. Статус «курит» учитывается один раз при расчёте стартового капитала. Отдельно от этого число сигарет в день, указанное при онбординге, становится точкой отсчёта для ежедневного портфеля: списание или депозит считается от отклонения от неё — курите сегодня меньше обычного, получаете плюс, больше — минус.",
+      source: "Источники: UCL, журнал Addiction (2024/2025); Tsai et al., Aging (Albany NY), 2021 — годы жизни по статусу курения.",
+      sourceKeys: ["ucl-smoking", "tsai-aging"],
+    },
+    {
+      key: "sport",
+      name: "Физическая активность",
+      active: true,
+      body: "Мы опираемся на научные исследования о влиянии физической активности на продолжительность жизни, основанные на объективных измерениях (акселерометры), а не на самоотчётах. Положительный эффект не растёт бесконечно — у него есть верхний предел. Отдельно недостаточная активность сама по себе связана с повышенным риском смерти по сравнению с достаточно активными людьми. Считается только активность, где пульс заметно поднимается выше уровня покоя — тест разговором: можете говорить, но не петь — засчитывается; свободно поёте на ходу — нет. Медленная прогулка не в счёт, быстрая ходьба, физический труд или тренировка — да.",
+      source: "Источники: Veerman et al., BJSM (2024); D. Spiegelhalter, BMJ (2012); WHO (по риску недостаточной активности); Cleveland Clinic (порог интенсивности, тест разговором).",
+      sourceKeys: ["veerman-bjsm", "webmd-walking", "lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
+    },
+    {
+      key: "sleep",
+      name: "Сон",
+      active: true,
+      body: "Наименьший риск смертности связан со сном 7–8 часов в сутки; как более короткий, так и более длинный сон связаны с повышенным риском, причём нелинейно и несимметрично — пересып несёт больший риск на каждый лишний час, чем недосып на каждый недостающий. Вместо разового дневного штрафа приложение ведёт накопительный «долг сна»: недосып одного дня не компенсируется одной «лишней» ночью сна один к одному, организм восстанавливается постепенно — долг затухает со временем, а штраф в капитал растёт ускоренно (нелинейно) с размером накопленного долга, а не с разовым отклонением. Отдельно и независимо — штраф за нерегулярное время отхода ко сну (если это поле заполняется 7+ дней подряд), даже при нормальном количестве часов. Модель «долг сна + регулярность» — собственная интерпретация проекта, собранная из нескольких независимых исследований (модель гомеостатического давления сна, дозозависимый метаанализ смертности, Sleep Regularity Index UK Biobank), а не прямая цитата единой признанной методологии.",
+      source: "Источники: Yin J. et al., JAHA (2017, дозозависимая связь смертности со сном); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) и Belenky et al. (2003, динамика восстановления после ограничения сна); Sleep Regularity Index, UK Biobank; метаанализ Cappuccio и соавт. (~1.3–1.5 млн участников, фоновая U-образная связь).",
+      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
+    },
+    {
+      key: "alcohol",
+      name: "Алкоголь",
+      active: true,
+      body: "Риск, связанный с алкоголем, зависит от дозы и растёт с количеством потребляемого этанола в неделю; безопасного уровня, одинакового для всех, не существует. Ежедневно: сам факт употребления сегодня (источник не даёт дозозависимых дневных данных) даёт грубую дельту капитала — приблизительная оценка, точная ежедневная методология для алкоголя пока уточняется, в отличие от курения и спорта.",
+      source: "Источники: обзоры WHO и Lancet (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021.",
+      sourceKeys: ["tsai-aging"],
+    },
+    {
+      key: "nutrition",
+      name: "Питание",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора питания в капитал здоровья. Отдельно, только как культурный ориентир (не влияет на расчёт капитала): использование БАДов — массовая, нормализованная практика, не маргинальная — например, в Японии пищевые добавки регулярно принимают около 60% здоровых взрослых, 55–70% взрослых пациентов и 32% студентов, по национальным опросам.",
+      source: "Источник: национальные опросы по Японии.",
+    },
+    {
+      key: "stress",
+      name: "Стресс",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора стресса в капитал здоровья.",
+      source: "Скоро.",
+    },
+    {
+      key: "social",
+      name: "Социальные связи",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора социальных связей в капитал здоровья.",
+      source: "Скоро.",
+    },
+    {
+      key: "weight",
+      name: "Вес",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора веса в капитал здоровья.",
+      source: "Скоро.",
+    },
+    {
+      key: "purpose",
+      name: "Смысл и цель",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора смысла и цели в капитал здоровья.",
+      source: "Скоро.",
+    },
+    {
+      key: "cognitive",
+      name: "Когнитивная активность",
+      active: false,
+      body: "Раздел в разработке — появится вместе с добавлением фактора когнитивной активности в капитал здоровья.",
+      source: "Скоро.",
+    },
+  ],
+  en: [
+    {
+      key: "smoking",
+      name: "Smoking",
+      active: true,
+      body: "We rely on published research on how smoking affects life expectancy. Smoking status is factored in once, when your starting capital is calculated. Separately, the number of cigarettes per day you gave during onboarding becomes the baseline for your daily portfolio: each day's charge or deposit is based on how much you deviate from it — smoke less than usual today and you gain, smoke more and you lose.",
+      source: "Sources: UCL, Addiction journal (2024/2025); Tsai et al., Aging (Albany NY), 2021 — years of life lost by smoking status.",
+      sourceKeys: ["ucl-smoking", "tsai-aging"],
+    },
+    {
+      key: "sport",
+      name: "Physical activity",
+      active: true,
+      body: "We rely on published research on how physical activity affects life expectancy, based on objective measurements (accelerometers) rather than self-reports. The benefit doesn't grow indefinitely — it has an upper ceiling. Separately, insufficient activity is itself linked to a higher risk of death compared with sufficiently active people. Only activity where your heart rate is noticeably raised above resting level counts — the talk test: you can talk but not sing = counts; you can sing freely while moving = doesn't. A slow walk doesn't count; brisk walking, physical labor, or a workout does.",
+      source: "Sources: Veerman et al., BJSM (2024); D. Spiegelhalter, BMJ (2012); WHO (on the risk of insufficient activity); Cleveland Clinic (intensity threshold, talk test).",
+      sourceKeys: ["veerman-bjsm", "webmd-walking", "lee-lancet", "spiegelhalter-bmj", "cleveland-clinic", "tsai-aging"],
+    },
+    {
+      key: "sleep",
+      name: "Sleep",
+      active: true,
+      body: "The lowest mortality risk is associated with 7–8 hours of sleep a night; both shorter and longer sleep are linked to higher risk, and the relationship is non-linear and asymmetric — oversleeping carries a bigger risk per extra hour than undersleeping carries per missing hour. Instead of a one-off daily penalty, the app tracks a cumulative 'sleep debt': one night's shortfall isn't offset one-to-one by a single 'extra' night — the body recovers gradually, so the debt decays over time while the charge to your capital grows faster than linearly as the accumulated debt grows, rather than reacting to a single day's deviation. Separately and independently, there's a penalty for an irregular bedtime (once that field has 7+ consecutive days of data), even with a normal number of hours. The 'sleep debt + regularity' model is the project's own synthesis, built from several independent lines of research (the homeostatic sleep-pressure model, a dose-response mortality meta-analysis, and the UK Biobank Sleep Regularity Index) — not a direct quote of one single recognized methodology.",
+      source: "Sources: Yin J. et al., JAHA (2017, dose-response relationship between sleep and mortality); Borbély A.A. (1982/2016, two-process model); Van Dongen et al. (2003) and Belenky et al. (2003, recovery dynamics after sleep restriction); Sleep Regularity Index, UK Biobank; Cappuccio et al. meta-analysis (~1.3–1.5 million participants, background U-shaped relationship).",
+      sourceKeys: ["yin-jaha-sleep", "borbely-two-process", "vandongen-dinges-2003", "belenky-2003", "sri-ukbiobank", "cappuccio-sleep"],
+    },
+    {
+      key: "alcohol",
+      name: "Alcohol",
+      active: true,
+      body: "Alcohol-related risk is dose-dependent and rises with the amount of ethanol consumed per week; there's no safe level that's the same for everyone. Daily: the mere fact of drinking today (the source doesn't provide dose-dependent daily data) produces a rough capital delta — an approximate estimate; unlike smoking and activity, the exact daily methodology for alcohol is still being refined.",
+      source: "Sources: WHO and Lancet reviews (Global Burden of Disease, 2018); Tsai et al., Aging (Albany NY), 2021.",
+      sourceKeys: ["tsai-aging"],
+    },
+    {
+      key: "nutrition",
+      name: "Nutrition",
+      active: false,
+      body: "Section in progress — will appear once the nutrition factor is added to health capital. Separately, purely as cultural context (it doesn't affect the capital calculation): taking supplements is a mainstream, normalized practice, not a fringe one — for example, in Japan roughly 60% of healthy adults, 55–70% of adult patients, and 32% of students regularly take dietary supplements, according to national surveys.",
+      source: "Source: national surveys in Japan.",
+    },
+    {
+      key: "stress",
+      name: "Stress",
+      active: false,
+      body: "Section in progress — will appear once the stress factor is added to health capital.",
+      source: "Coming soon.",
+    },
+    {
+      key: "social",
+      name: "Social connections",
+      active: false,
+      body: "Section in progress — will appear once the social connections factor is added to health capital.",
+      source: "Coming soon.",
+    },
+    {
+      key: "weight",
+      name: "Weight",
+      active: false,
+      body: "Section in progress — will appear once the weight factor is added to health capital.",
+      source: "Coming soon.",
+    },
+    {
+      key: "purpose",
+      name: "Purpose",
+      active: false,
+      body: "Section in progress — will appear once the purpose factor is added to health capital.",
+      source: "Coming soon.",
+    },
+    {
+      key: "cognitive",
+      name: "Cognitive activity",
+      active: false,
+      body: "Section in progress — will appear once the cognitive activity factor is added to health capital.",
+      source: "Coming soon.",
+    },
+  ],
+};
+
+function localizedKnowledgeBase() {
+  return KNOWLEDGE_BASE[getLang()] || KNOWLEDGE_BASE.ru;
+}
 
 // Canonical source list (TZ section 9, 11.08.2026: "обязательная, отдельно
 // видимая страница/подраздел Базы знаний... каждый фактор должен вести на
@@ -347,123 +429,245 @@ const KNOWLEDGE_BASE = [
 // Knowledge Base screen (TZ explicitly allows "страница/подраздел" — a
 // subsection satisfies that), with direct links from this list AND from
 // each KNOWLEDGE_BASE card's sourceKeys.
-const SOURCES = [
-  {
-    key: "ucl-smoking",
-    label: "Курение (20 мин/сигарету)",
-    citation: "Jackson S. et al., UCL, редакционная статья в Addiction (2024/2025)",
-    url: "https://www.rcp.ac.uk/news-and-media/news-and-opinion/rcp-responds-to-ucl-research-showing-a-single-cigarette-can-take-20-minutes-off-life-expectancy/",
-  },
-  {
-    key: "lee-lancet",
-    label: "Физическая активность и продолжительность жизни",
-    citation: "Lee I-M. et al., The Lancet (2012), «Effect of physical inactivity on major non-communicable diseases worldwide»",
-    url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3645500/",
-  },
-  {
-    key: "spiegelhalter-bmj",
-    label: "Microlife — концепция и методология",
-    citation: "Spiegelhalter D., BMJ (2012), «Using speed of ageing and 'microlives'»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/23247978/",
-  },
-  {
-    key: "cappuccio-sleep",
-    label: "Сон и смертность (метаанализ)",
-    citation: "Cappuccio F.P. et al., Sleep (2010); плюс dose-response метаанализ, ~1.5 млн участников (2016)",
-    url: "https://pubmed.ncbi.nlm.nih.gov/20469800/",
-    url2: "https://www.nature.com/articles/srep21480",
-  },
-  {
-    key: "cleveland-clinic",
-    label: "Критерий умеренной физической активности (пульс)",
-    citation: "Cleveland Clinic, «What Does Moderate Exercise Mean, Anyway?»",
-    url: "https://health.clevelandclinic.org/what-does-moderate-exercise-mean-anyway",
-  },
-  {
-    key: "tsai-aging",
-    label: "Перевод hazard ratio в годы жизни (Chiang's life table method) + таблица по 30 факторам риска",
-    citation: "Tsai S.P. et al., Aging (2021), «Converting health risks into loss of life years»",
-    url: "https://www.aging-us.com/article/203491/text",
-  },
-  {
-    key: "veerman-bjsm",
-    label: "Соотношение активность → капитал, 1:6 (основной источник)",
-    citation: "Veerman L. et al., British Journal of Sports Medicine (2024), «Physical activity and life expectancy: a life-table analysis» (Griffith University) — данные акселерометра",
-    url: "https://www.sciencedaily.com/releases/2024/11/241126215133.htm",
-  },
-  {
-    key: "webmd-walking",
-    label: "Дополнительное подтверждение соотношения активности",
-    citation: "WebMD (2024), обзор исследования по ходьбе — аналогичное соотношение ≈1:6",
-    url: "https://www.webmd.com/fitness-exercise/news/20241115/cm/how-walking-more-could-add-11-years-to-your-life",
-  },
-  {
-    key: "yin-jaha-sleep",
-    label: "Дозозависимая связь сна со смертностью (+6%/недосып, +13%/пересып на час)",
-    citation: "Yin J. et al., Journal of the American Heart Association (2017), «Relationship of Sleep Duration With All-Cause Mortality and Cardiovascular Events: A Systematic Review and Dose-Response Meta-Analysis of Prospective Cohort Studies»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/28889101/",
-  },
-  {
-    key: "borbely-two-process",
-    label: "Two-process model сна (гомеостатическое давление)",
-    citation: "Borbély A.A., Human Neurobiology (1982), «A two process model of sleep regulation»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/7185792/",
-    url2: "https://pubmed.ncbi.nlm.nih.gov/26762182/",
-  },
-  {
-    key: "vandongen-dinges-2003",
-    label: "Накопительный эффект хронического ограничения сна",
-    citation: "Van Dongen H.P.A. et al., Sleep (2003), «The Cumulative Cost of Additional Wakefulness»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/12683469/",
-  },
-  {
-    key: "belenky-2003",
-    label: "Динамика восстановления после ограничения сна",
-    citation: "Belenky G. et al., Journal of Sleep Research (2003), «Patterns of performance degradation and restoration during sleep restriction and subsequent recovery»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/12603781/",
-  },
-  {
-    key: "sri-ukbiobank",
-    label: "Sleep Regularity Index — методология регулярности сна",
-    citation: "Windred D.P. et al., UK Biobank (2024), «Sleep regularity and mortality: a prospective analysis in the UK Biobank»",
-    url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
-  },
-];
+const SOURCES = {
+  ru: [
+    {
+      key: "ucl-smoking",
+      label: "Курение (20 мин/сигарету)",
+      citation: "Jackson S. et al., UCL, редакционная статья в Addiction (2024/2025)",
+      url: "https://www.rcp.ac.uk/news-and-media/news-and-opinion/rcp-responds-to-ucl-research-showing-a-single-cigarette-can-take-20-minutes-off-life-expectancy/",
+    },
+    {
+      key: "lee-lancet",
+      label: "Физическая активность и продолжительность жизни",
+      citation: "Lee I-M. et al., The Lancet (2012), «Effect of physical inactivity on major non-communicable diseases worldwide»",
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3645500/",
+    },
+    {
+      key: "spiegelhalter-bmj",
+      label: "Microlife — концепция и методология",
+      citation: "Spiegelhalter D., BMJ (2012), «Using speed of ageing and 'microlives'»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/23247978/",
+    },
+    {
+      key: "cappuccio-sleep",
+      label: "Сон и смертность (метаанализ)",
+      citation: "Cappuccio F.P. et al., Sleep (2010); плюс dose-response метаанализ, ~1.5 млн участников (2016)",
+      url: "https://pubmed.ncbi.nlm.nih.gov/20469800/",
+      url2: "https://www.nature.com/articles/srep21480",
+    },
+    {
+      key: "cleveland-clinic",
+      label: "Критерий умеренной физической активности (пульс)",
+      citation: "Cleveland Clinic, «What Does Moderate Exercise Mean, Anyway?»",
+      url: "https://health.clevelandclinic.org/what-does-moderate-exercise-mean-anyway",
+    },
+    {
+      key: "tsai-aging",
+      label: "Перевод hazard ratio в годы жизни (Chiang's life table method) + таблица по 30 факторам риска",
+      citation: "Tsai S.P. et al., Aging (2021), «Converting health risks into loss of life years»",
+      url: "https://www.aging-us.com/article/203491/text",
+    },
+    {
+      key: "veerman-bjsm",
+      label: "Соотношение активность → капитал, 1:6 (основной источник)",
+      citation: "Veerman L. et al., British Journal of Sports Medicine (2024), «Physical activity and life expectancy: a life-table analysis» (Griffith University) — данные акселерометра",
+      url: "https://www.sciencedaily.com/releases/2024/11/241126215133.htm",
+    },
+    {
+      key: "webmd-walking",
+      label: "Дополнительное подтверждение соотношения активности",
+      citation: "WebMD (2024), обзор исследования по ходьбе — аналогичное соотношение ≈1:6",
+      url: "https://www.webmd.com/fitness-exercise/news/20241115/cm/how-walking-more-could-add-11-years-to-your-life",
+    },
+    {
+      key: "yin-jaha-sleep",
+      label: "Дозозависимая связь сна со смертностью (+6%/недосып, +13%/пересып на час)",
+      citation: "Yin J. et al., Journal of the American Heart Association (2017), «Relationship of Sleep Duration With All-Cause Mortality and Cardiovascular Events: A Systematic Review and Dose-Response Meta-Analysis of Prospective Cohort Studies»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/28889101/",
+    },
+    {
+      key: "borbely-two-process",
+      label: "Two-process model сна (гомеостатическое давление)",
+      citation: "Borbély A.A., Human Neurobiology (1982), «A two process model of sleep regulation»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/7185792/",
+      url2: "https://pubmed.ncbi.nlm.nih.gov/26762182/",
+    },
+    {
+      key: "vandongen-dinges-2003",
+      label: "Накопительный эффект хронического ограничения сна",
+      citation: "Van Dongen H.P.A. et al., Sleep (2003), «The Cumulative Cost of Additional Wakefulness»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/12683469/",
+    },
+    {
+      key: "belenky-2003",
+      label: "Динамика восстановления после ограничения сна",
+      citation: "Belenky G. et al., Journal of Sleep Research (2003), «Patterns of performance degradation and restoration during sleep restriction and subsequent recovery»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/12603781/",
+    },
+    {
+      key: "sri-ukbiobank",
+      label: "Sleep Regularity Index — методология регулярности сна",
+      citation: "Windred D.P. et al., UK Biobank (2024), «Sleep regularity and mortality: a prospective analysis in the UK Biobank»",
+      url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
+    },
+  ],
+  en: [
+    {
+      key: "ucl-smoking",
+      label: "Smoking (20 min per cigarette)",
+      citation: "Jackson S. et al., UCL, editorial in Addiction (2024/2025)",
+      url: "https://www.rcp.ac.uk/news-and-media/news-and-opinion/rcp-responds-to-ucl-research-showing-a-single-cigarette-can-take-20-minutes-off-life-expectancy/",
+    },
+    {
+      key: "lee-lancet",
+      label: "Physical activity and life expectancy",
+      citation: "Lee I-M. et al., The Lancet (2012), \"Effect of physical inactivity on major non-communicable diseases worldwide\"",
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3645500/",
+    },
+    {
+      key: "spiegelhalter-bmj",
+      label: "Microlife — concept and methodology",
+      citation: "Spiegelhalter D., BMJ (2012), \"Using speed of ageing and 'microlives'\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/23247978/",
+    },
+    {
+      key: "cappuccio-sleep",
+      label: "Sleep and mortality (meta-analysis)",
+      citation: "Cappuccio F.P. et al., Sleep (2010); plus a dose-response meta-analysis, ~1.5 million participants (2016)",
+      url: "https://pubmed.ncbi.nlm.nih.gov/20469800/",
+      url2: "https://www.nature.com/articles/srep21480",
+    },
+    {
+      key: "cleveland-clinic",
+      label: "Moderate-intensity activity threshold (heart rate)",
+      citation: "Cleveland Clinic, \"What Does Moderate Exercise Mean, Anyway?\"",
+      url: "https://health.clevelandclinic.org/what-does-moderate-exercise-mean-anyway",
+    },
+    {
+      key: "tsai-aging",
+      label: "Converting hazard ratios into years of life (Chiang's life table method) + a table of 30 risk factors",
+      citation: "Tsai S.P. et al., Aging (2021), \"Converting health risks into loss of life years\"",
+      url: "https://www.aging-us.com/article/203491/text",
+    },
+    {
+      key: "veerman-bjsm",
+      label: "Activity-to-capital ratio, 1:6 (primary source)",
+      citation: "Veerman L. et al., British Journal of Sports Medicine (2024), \"Physical activity and life expectancy: a life-table analysis\" (Griffith University) — accelerometer data",
+      url: "https://www.sciencedaily.com/releases/2024/11/241126215133.htm",
+    },
+    {
+      key: "webmd-walking",
+      label: "Additional confirmation of the activity ratio",
+      citation: "WebMD (2024), coverage of a walking study — a similar ≈1:6 ratio",
+      url: "https://www.webmd.com/fitness-exercise/news/20241115/cm/how-walking-more-could-add-11-years-to-your-life",
+    },
+    {
+      key: "yin-jaha-sleep",
+      label: "Dose-response relationship between sleep and mortality (+6%/hr under, +13%/hr over)",
+      citation: "Yin J. et al., Journal of the American Heart Association (2017), \"Relationship of Sleep Duration With All-Cause Mortality and Cardiovascular Events: A Systematic Review and Dose-Response Meta-Analysis of Prospective Cohort Studies\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/28889101/",
+    },
+    {
+      key: "borbely-two-process",
+      label: "Two-process model of sleep (homeostatic pressure)",
+      citation: "Borbély A.A., Human Neurobiology (1982), \"A two process model of sleep regulation\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/7185792/",
+      url2: "https://pubmed.ncbi.nlm.nih.gov/26762182/",
+    },
+    {
+      key: "vandongen-dinges-2003",
+      label: "Cumulative effect of chronic sleep restriction",
+      citation: "Van Dongen H.P.A. et al., Sleep (2003), \"The Cumulative Cost of Additional Wakefulness\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/12683469/",
+    },
+    {
+      key: "belenky-2003",
+      label: "Recovery dynamics after sleep restriction",
+      citation: "Belenky G. et al., Journal of Sleep Research (2003), \"Patterns of performance degradation and restoration during sleep restriction and subsequent recovery\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/12603781/",
+    },
+    {
+      key: "sri-ukbiobank",
+      label: "Sleep Regularity Index — sleep regularity methodology",
+      citation: "Windred D.P. et al., UK Biobank (2024), \"Sleep regularity and mortality: a prospective analysis in the UK Biobank\"",
+      url: "https://pubmed.ncbi.nlm.nih.gov/37995126/",
+    },
+  ],
+};
+
+function localizedSources() {
+  return SOURCES[getLang()] || SOURCES.ru;
+}
 
 function sourceLinksHtml(keys) {
   return keys
-    .map((k) => SOURCES.find((s) => s.key === k))
+    .map((k) => localizedSources().find((s) => s.key === k))
     .filter(Boolean)
     .map((s) => {
       const links = [`<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`];
-      if (s.url2) links.push(`<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">доп. источник</a>`);
+      if (s.url2) links.push(`<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">${t("knowledge.additionalSource")}</a>`);
       return links.join(" / ");
     })
     .join(", ");
 }
 
-const READING_LIST = [
-  "UCL — Addiction (2024/2025): цена одной сигареты в минутах ожидаемой продолжительности жизни.",
-  "D. Spiegelhalter — BMJ (2012): концепция microlife для оценки риска в повседневных единицах.",
-  "Cappuccio F. P. и соавт. — метаанализ продолжительности сна и смертности (~1.3–1.5 млн участников).",
-  "WHO Global Health Observatory — таблицы дожития для базового расчёта капитала.",
-  "WHO — рекомендации по физической активности: риск недостаточной активности против достаточной.",
-  "Cleveland Clinic — определение умеренной и высокой интенсивности активности, тест разговором.",
-];
+const READING_LIST = {
+  ru: [
+    "UCL — Addiction (2024/2025): цена одной сигареты в минутах ожидаемой продолжительности жизни.",
+    "D. Spiegelhalter — BMJ (2012): концепция microlife для оценки риска в повседневных единицах.",
+    "Cappuccio F. P. и соавт. — метаанализ продолжительности сна и смертности (~1.3–1.5 млн участников).",
+    "WHO Global Health Observatory — таблицы дожития для базового расчёта капитала.",
+    "WHO — рекомендации по физической активности: риск недостаточной активности против достаточной.",
+    "Cleveland Clinic — определение умеренной и высокой интенсивности активности, тест разговором.",
+  ],
+  en: [
+    "UCL — Addiction (2024/2025): the cost of one cigarette in minutes of life expectancy.",
+    "D. Spiegelhalter — BMJ (2012): the microlife concept for measuring risk in everyday units.",
+    "Cappuccio F. P. et al. — meta-analysis of sleep duration and mortality (~1.3–1.5 million participants).",
+    "WHO Global Health Observatory — life tables used for the baseline capital calculation.",
+    "WHO — physical activity guidelines: the risk of insufficient vs. sufficient activity.",
+    "Cleveland Clinic — defining moderate- and vigorous-intensity activity, the talk test.",
+  ],
+};
+
+function localizedReadingList() {
+  return READING_LIST[getLang()] || READING_LIST.ru;
+}
 
 // Team-confirmed upcoming factors (added directly, no voting) vs.
 // illustrative example of user-proposed factors going through the Idea
 // Fund voting threshold. Vote counts here are EXAMPLE data — real
 // aggregation is manual, done by the team (TZ section 10), not live.
-const UPCOMING_FACTORS = [
-  { name: "Питание", status: "team", note: "в разработке" },
-  { name: "Стресс", status: "team", note: "в разработке" },
-];
+const UPCOMING_FACTORS = {
+  ru: [
+    { name: "Питание", status: "team", note: "в разработке" },
+    { name: "Стресс", status: "team", note: "в разработке" },
+  ],
+  en: [
+    { name: "Nutrition", status: "team", note: "in progress" },
+    { name: "Stress", status: "team", note: "in progress" },
+  ],
+};
 
-const UPCOMING_VOTED_EXAMPLE = [
-  { name: "Качество воздуха дома/на работе", votes: 34, threshold: 100 },
-  { name: "Регулярные медосмотры", votes: 61, threshold: 100 },
-];
+function localizedUpcomingFactors() {
+  return UPCOMING_FACTORS[getLang()] || UPCOMING_FACTORS.ru;
+}
+
+const UPCOMING_VOTED_EXAMPLE = {
+  ru: [
+    { name: "Качество воздуха дома/на работе", votes: 34, threshold: 100 },
+    { name: "Регулярные медосмотры", votes: 61, threshold: 100 },
+  ],
+  en: [
+    { name: "Air quality at home/work", votes: 34, threshold: 100 },
+    { name: "Regular medical checkups", votes: 61, threshold: 100 },
+  ],
+};
+
+function localizedUpcomingVotedExample() {
+  return UPCOMING_VOTED_EXAMPLE[getLang()] || UPCOMING_VOTED_EXAMPLE.ru;
+}
 
 const IDEA_CATEGORIES = [
   "Техническое неудобство",
@@ -691,6 +895,17 @@ const STRINGS = {
       copied: "Скопировано!",
       copyFailed: "Не удалось скопировать",
     },
+    knowledge: {
+      title: "База знаний",
+      comingSoon: "скоро",
+      readingListTitle: "Что почитать",
+      sourcesTitle: "Источники",
+      sourcesNote: "Полный список научных источников, на которых основана модель — с прямыми ссылками. Пополняется по мере добавления новых факторов.",
+      additionalLink: "доп. ссылка",
+      additionalSource: "доп. источник",
+      upcomingTitle: "Что впереди",
+      upcomingNote: "Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную.",
+    },
     recoveryPractices: {
       yoga: "Йога",
       breathing: "Дыхательные практики",
@@ -839,6 +1054,17 @@ const STRINGS = {
     common: {
       copied: "Copied!",
       copyFailed: "Couldn't copy",
+    },
+    knowledge: {
+      title: "Knowledge Base",
+      comingSoon: "coming soon",
+      readingListTitle: "Further reading",
+      sourcesTitle: "Sources",
+      sourcesNote: "The full list of scientific sources the model is based on, with direct links. Grows as new factors are added.",
+      additionalLink: "additional link",
+      additionalSource: "additional source",
+      upcomingTitle: "What's ahead",
+      upcomingNote: "The vote counters below are an example visualization; actual suggestion aggregation is done manually by the team.",
     },
     recoveryPractices: {
       yoga: "Yoga",
@@ -3477,8 +3703,8 @@ function renderChartSvg(series, period) {
 
 function renderKnowledge(screen) {
   screen.innerHTML = `
-    <h2 class="screen-title">База знаний</h2>
-    ${KNOWLEDGE_BASE.map(
+    <h2 class="screen-title">${t("knowledge.title")}</h2>
+    ${localizedKnowledgeBase().map(
       (item) => `
       <details class="kb-card ${item.active || item.note ? "" : "disabled"}">
         <summary>
@@ -3487,7 +3713,7 @@ function renderKnowledge(screen) {
               ? ""
               : item.note
               ? ` <span class="optional-badge">${escapeHtml(item.note)}</span>`
-              : ' <span class="optional-badge">скоро</span>'
+              : ` <span class="optional-badge">${t("knowledge.comingSoon")}</span>`
           }
         </summary>
         <div class="kb-card-body">
@@ -3498,27 +3724,27 @@ function renderKnowledge(screen) {
       </details>`
     ).join("")}
 
-    <h2>Что почитать</h2>
+    <h2>${t("knowledge.readingListTitle")}</h2>
     <ul class="reading-list">
-      ${READING_LIST.map((r) => `<li>${r}</li>`).join("")}
+      ${localizedReadingList().map((r) => `<li>${r}</li>`).join("")}
     </ul>
 
-    <h2>Источники</h2>
-    <div class="note">Полный список научных источников, на которых основана модель — с прямыми ссылками. Пополняется по мере добавления новых факторов.</div>
+    <h2>${t("knowledge.sourcesTitle")}</h2>
+    <div class="note">${t("knowledge.sourcesNote")}</div>
     <ul class="reading-list">
-      ${SOURCES.map(
+      ${localizedSources().map(
         (s) => `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a> — ${escapeHtml(s.citation)}${
-          s.url2 ? ` (<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">доп. ссылка</a>)` : ""
+          s.url2 ? ` (<a href="${escapeHtml(s.url2)}" target="_blank" rel="noopener noreferrer">${t("knowledge.additionalLink")}</a>)` : ""
         }</li>`
       ).join("")}
     </ul>
 
-    <h2>Что впереди</h2>
-    <div class="note">Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную (см. «Забота» → «Предложить идею»).</div>
-    ${UPCOMING_FACTORS.map(
+    <h2>${t("knowledge.upcomingTitle")}</h2>
+    <div class="note">${t("knowledge.upcomingNote")}</div>
+    ${localizedUpcomingFactors().map(
       (f) => `<div class="ahead-item"><span>${f.name}</span><span class="optional-badge">${f.note}</span></div>`
     ).join("")}
-    ${UPCOMING_VOTED_EXAMPLE.map(
+    ${localizedUpcomingVotedExample().map(
       (f) => `<div class="ahead-item">
         <span>${f.name}</span>
         <span style="display:flex;align-items:center;">${f.votes}/${f.threshold}
