@@ -622,6 +622,30 @@ const STRINGS = {
       waistExactPlaceholder: "или точное значение, см",
       activityAlert: "Физическая активность обязательна для продолжения.",
       activityGoalAlert: "Пожалуйста, ответьте на вопрос про цель по активности.",
+      recoveryTitle: "Восстановление",
+      sleepHoursLabel: "Среднее количество часов сна",
+      bedtimeLabel: "Обычное время отхода ко сну",
+      recoveryPracticesLabel: "Практики восстановления",
+      otherLabel: "Другое",
+      otherTextPlaceholder: "Что именно?",
+      stressLevelLabel: "Уровень стресса",
+    },
+    recoveryPractices: {
+      yoga: "Йога",
+      breathing: "Дыхательные практики",
+      hardening: "Закаливание",
+      nailBoard: "Гвоздестояние",
+      banya: "Баня",
+      massage: "Массаж",
+    },
+    sleepHoursOptions: {
+      lt5: "менее 5ч", "5to6": "5–6ч", "6to7": "6–7ч", "7to8": "7–8ч", "8to9": "8–9ч", gt9: "более 9ч",
+    },
+    bedtimeOptions: {
+      before22: "до 22:00", "22to24": "22:00–24:00", afterMidnight: "после полуночи", varies: "когда как", custom: "свой вариант",
+    },
+    stressLevelOptions: {
+      "1": "1 — низкий", "2": "2", "3": "3 — средний", "4": "4", "5": "5 — высокий",
     },
     welcome: {
       title: "Добро пожаловать в «Капитал здоровья»",
@@ -678,6 +702,30 @@ const STRINGS = {
       waistExactPlaceholder: "or exact value, cm",
       activityAlert: "Physical activity is required to continue.",
       activityGoalAlert: "Please answer the question about your activity goal.",
+      recoveryTitle: "Recovery",
+      sleepHoursLabel: "Average hours of sleep",
+      bedtimeLabel: "Usual bedtime",
+      recoveryPracticesLabel: "Recovery practices",
+      otherLabel: "Other",
+      otherTextPlaceholder: "What exactly?",
+      stressLevelLabel: "Stress level",
+    },
+    recoveryPractices: {
+      yoga: "Yoga",
+      breathing: "Breathing exercises",
+      hardening: "Cold exposure / hardening",
+      nailBoard: "Nail board (sadhu board)",
+      banya: "Sauna / banya",
+      massage: "Massage",
+    },
+    sleepHoursOptions: {
+      lt5: "less than 5h", "5to6": "5–6h", "6to7": "6–7h", "7to8": "7–8h", "8to9": "8–9h", gt9: "more than 9h",
+    },
+    bedtimeOptions: {
+      before22: "before 10pm", "22to24": "10pm–midnight", afterMidnight: "after midnight", varies: "it varies", custom: "custom",
+    },
+    stressLevelOptions: {
+      "1": "1 — low", "2": "2", "3": "3 — medium", "4": "4", "5": "5 — high",
     },
     welcome: {
       title: "Welcome to Health Capital",
@@ -742,6 +790,25 @@ function localizedActivityRangeOptions() {
 
 function localizedWaistRangeOptions() {
   return WAIST_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`waistOptions.${o.value}`) }));
+}
+
+function localizedSleepHoursRangeOptions() {
+  return SLEEP_HOURS_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`sleepHoursOptions.${o.value}`) }));
+}
+
+function localizedBedtimeRangeOptions() {
+  return BEDTIME_RANGE_OPTIONS.map((o) => ({ value: o.value, label: t(`bedtimeOptions.${o.value}`) }));
+}
+
+function localizedStressLevelOptions() {
+  return STRESS_LEVEL_OPTIONS.map((o) => ({ value: o.value, label: t(`stressLevelOptions.${o.value}`) }));
+}
+
+// RECOVERY_PRACTICES isn't a <select> (rendered as checkboxes), so unlike
+// the helpers above this returns objects with the same "key" property
+// the checkbox-rendering template already reads, not "value".
+function localizedRecoveryPractices() {
+  return RECOVERY_PRACTICES.map((p) => ({ key: p.key, label: t(`recoveryPractices.${p.key}`) }));
 }
 
 /* ---------------------------------------------------------------------
@@ -2060,39 +2127,41 @@ function renderOnboarding() {
   } else if (step === "recovery") {
     body = `
       <div class="onboarding-header">
-        <h1>Восстановление</h1>
+        <h1>${t("onboarding.recoveryTitle")}</h1>
       </div>
       <div class="field">
-        <label>Среднее количество часов сна</label>
+        <label>${t("onboarding.sleepHoursLabel")}</label>
         <select id="f_sleepHoursRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(SLEEP_HOURS_RANGE_OPTIONS, draft.sleepHoursRange)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedSleepHoursRangeOptions(), draft.sleepHoursRange)}
         </select>
       </div>
       <div class="field">
-        <label>Обычное время отхода ко сну</label>
+        <label>${t("onboarding.bedtimeLabel")}</label>
         <select id="f_bedtimeRange">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(BEDTIME_RANGE_OPTIONS, draft.bedtimeRange)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedBedtimeRangeOptions(), draft.bedtimeRange)}
         </select>
         <input type="time" id="f_bedtimeExact" value="${escapeHtml(draft.bedtimeExact ?? "")}" style="margin-top:8px; display:${draft.bedtimeRange === "custom" ? "block" : "none"}">
       </div>
       <div class="field">
-        <label>Практики восстановления</label>
+        <label>${t("onboarding.recoveryPracticesLabel")}</label>
         <div class="checkbox-list">
-          ${RECOVERY_PRACTICES.map(
-            (p) =>
-              `<label class="checkbox-row"><input type="checkbox" id="f_recovery_${p.key}" ${draft.recoveryPractices?.[p.key] ? "checked" : ""}> ${p.label}</label>`
-          ).join("")}
-          <label class="checkbox-row"><input type="checkbox" id="f_recovery_other" ${draft.recoveryPractices?.other ? "checked" : ""}> Другое</label>
-          <input type="text" id="f_recovery_otherText" placeholder="Что именно?" value="${escapeHtml(draft.recoveryPractices?.otherText ?? "")}">
+          ${localizedRecoveryPractices()
+            .map(
+              (p) =>
+                `<label class="checkbox-row"><input type="checkbox" id="f_recovery_${p.key}" ${draft.recoveryPractices?.[p.key] ? "checked" : ""}> ${p.label}</label>`
+            )
+            .join("")}
+          <label class="checkbox-row"><input type="checkbox" id="f_recovery_other" ${draft.recoveryPractices?.other ? "checked" : ""}> ${t("onboarding.otherLabel")}</label>
+          <input type="text" id="f_recovery_otherText" placeholder="${t("onboarding.otherTextPlaceholder")}" value="${escapeHtml(draft.recoveryPractices?.otherText ?? "")}">
         </div>
       </div>
       <div class="field">
-        <label>Уровень стресса</label>
+        <label>${t("onboarding.stressLevelLabel")}</label>
         <select id="f_stressLevel">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, draft.stressLevel)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedStressLevelOptions(), draft.stressLevel)}
         </select>
       </div>
     `;
