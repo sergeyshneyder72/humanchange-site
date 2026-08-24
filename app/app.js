@@ -751,21 +751,49 @@ function localizedResultPhrases(tier) {
   return pool && pool.length ? pool : ONBOARDING_RESULT_PHRASES.ru[tier];
 }
 
-const DAILY_GOOD_PHRASES = [
-  "Депозит принят",
-  "Капитал растёт",
-  "Ещё один кирпичик",
-  "Вклад засчитан",
-  "Вы — из тех, кто не пропускает день",
-  "Так выглядит день человека, который играет вдолгую",
-  "Ещё один голос в пользу будущего себя",
-];
-const DAILY_BAD_PHRASES = [
-  "Не идеально, но это данные, а не приговор",
-  "Списание учтено — здесь никто не считает идеальные дни",
-  "Бывает и так — важно вернуться завтра",
-];
-const DAILY_RECORD_PHRASE = "Лучший результат за всё время";
+const DAILY_GOOD_PHRASES = {
+  ru: [
+    "Депозит принят",
+    "Капитал растёт",
+    "Ещё один кирпичик",
+    "Вклад засчитан",
+    "Вы — из тех, кто не пропускает день",
+    "Так выглядит день человека, который играет вдолгую",
+    "Ещё один голос в пользу будущего себя",
+  ],
+  en: [
+    "Deposit accepted",
+    "Your capital is growing",
+    "Another brick laid",
+    "Contribution recorded",
+    "You're one of the people who doesn't skip a day",
+    "This is what a day looks like for someone playing the long game",
+    "Another vote for your future self",
+  ],
+};
+const DAILY_BAD_PHRASES = {
+  ru: [
+    "Не идеально, но это данные, а не приговор",
+    "Списание учтено — здесь никто не считает идеальные дни",
+    "Бывает и так — важно вернуться завтра",
+  ],
+  en: [
+    "Not perfect, but it's data, not a verdict",
+    "Charge recorded — nobody here expects perfect days",
+    "It happens — what matters is coming back tomorrow",
+  ],
+};
+const DAILY_RECORD_PHRASE = { ru: "Лучший результат за всё время", en: "Best result yet" };
+
+function localizedDailyGoodPhrases() {
+  return DAILY_GOOD_PHRASES[getLang()] || DAILY_GOOD_PHRASES.ru;
+}
+function localizedDailyBadPhrases() {
+  return DAILY_BAD_PHRASES[getLang()] || DAILY_BAD_PHRASES.ru;
+}
+function localizedDailyRecordPhrase() {
+  return DAILY_RECORD_PHRASE[getLang()] || DAILY_RECORD_PHRASE.ru;
+}
 
 function simpleHash(str) {
   let h = 0;
@@ -897,6 +925,38 @@ const STRINGS = {
     common: {
       copied: "Скопировано!",
       copyFailed: "Не удалось скопировать",
+      save: "Сохранить",
+    },
+    dashboard: {
+      title: "Портфель",
+      trendSuffix: "за 7 дней",
+      periodWeek: "Неделя",
+      periodMonth: "Месяц",
+      periodYear: "Год",
+      todaySummaryTitle: "Итог дня",
+      markTodayTitle: "Отметить сегодня",
+      daysAbbrev: "дн.",
+      chartEmpty: "Пока нет данных — отметьте первый день ниже.",
+    },
+    history: {
+      calendarTitle: "История",
+      editingUnavailable: "Редактирование недоступно",
+      transactionsTitle: (date) => `Транзакции за ${date}`,
+      noOperations: "Операций в этот день не было.",
+      editButton: "Изменить",
+      changeDayTitle: "Изменить день",
+      fillDayTitle: "Заполнить день",
+      editWindowNote: "Редактирование доступно только для последних 7 дней и не раньше даты регистрации.",
+      personalSavingsLabel: "Личные накопления",
+      dividendsLabel: "Дивиденды",
+      chargesLabel: "Списания",
+      weeklySportBonusLabel: (weekStart, date) => `Недельная доплата за спорт (неделя ${weekStart}–${date})`,
+      weeklySportBonusShortLabel: "Недельная доплата за спорт",
+      sleepDebtLabel: "Долг сна",
+      sleepRegularityLabel: "Регулярность сна",
+      inactivityChargeLabel: (sphere, days, pct) => `Бездействие (${sphere}): ${days}+ дней, −${pct}% от Дивидендов`,
+      sportSphere: "спорт",
+      activitySphereFallback: "активность",
     },
     knowledge: {
       title: "База знаний",
@@ -908,6 +968,90 @@ const STRINGS = {
       additionalSource: "доп. источник",
       upcomingTitle: "Что впереди",
       upcomingNote: "Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную.",
+    },
+    daily: {
+      summaryLowActivity: "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.",
+      summaryLessThanUsual: "Меньше обычного — засчитано.",
+      summaryMoreThanUsual: "Больше обычного — бывает, завтра продолжим.",
+      summaryGood: "Активность есть — вы уже из тех, кто двигается каждый день, а не разово.",
+    },
+    factorLabels: {
+      sport: "Активность",
+      sleep: "Сон",
+      nutrition: "Питание",
+      smoking: "Курение",
+      alcohol: "Алкоголь",
+      stress: "Стресс",
+      weight: "Вес",
+      social: "Социальные связи",
+      cognitive: "Когнитивная активность",
+      purpose: "Смысл и цель",
+    },
+    factorFields: {
+      smokingLabelToday: "Сигарет сегодня",
+      smokingLabel: "Сигарет",
+      smokingWaterlineHint: (n) => `Ваша обычная норма: ${n} шт. — от неё считается отклонение.`,
+      activityLabelToday: "Минут активности сегодня",
+      activityLabel: "Минут активности",
+      activityHint: "Не считается медленная прогулка — подробнее в Базе знаний.",
+      sleepLabelToday: "Сон прошлой ночью",
+      sleepLabel: "Сон (за прошедшую ночь)",
+      sleepHoursPlaceholder: "Например, 7.5",
+      sleepHoursHint: "В часах, можно дробно.",
+      bedtimeLabelEdit: "Во сколько легли спать накануне",
+      bedtimeLabelToday: "Во сколько легли спать вчера",
+      alcoholLabelToday: "Алкоголь сегодня",
+      alcoholLabel: "Алкоголь",
+      alcoholSpiritsLabel: "Крепкий алкоголь",
+      alcoholWineLabel: "Вино",
+      alcoholBeerLabel: "Пиво/слабоалкогольное",
+      socialLabel: "Общение с близкими сегодня",
+      socialHint: "Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.",
+      weightLabel: "Вес сегодня, кг (необязательно)",
+      purposeLabel: "Чувствовали сегодня смысл в своих делах?",
+      cognitiveLabel: "Учились сегодня новому или решали непростую задачу?",
+      cognitiveHint: "Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.",
+      stressLabelToday: "Уровень стресса сегодня",
+      stressLabel: "Уровень стресса",
+    },
+    socialQualityOptions: {
+      full: "Полноценное общение", some: "Немного", none: "Не было",
+    },
+    purposeOptions: {
+      yes: "Да", somewhat: "Отчасти", no: "Нет",
+    },
+    cognitiveActivityOptions: {
+      full: "Насыщенно", some: "Немного", none: "Не было",
+    },
+    settings: {
+      title: "Настройки",
+      accountRowLoggedIn: (email) => `Аккаунт — ${email}`,
+      accountRowLoggedOut: "Войти / Зарегистрироваться",
+      referralRow: "Пригласить друга",
+      careRow: "Служба заботы и Фонд идей",
+      factorsRow: "Факторы на главном экране",
+      billingRow: "Тарифы и оплата",
+      back: "← Назад",
+      referralTitle: "Пригласить друга",
+      referralHint: "Скопируйте и отправьте — без ссылок и кодов, просто короткое приглашение.",
+      referralShareText: "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app",
+      copyButton: "Скопировать",
+      languageLabel: "Язык",
+      accountTitle: "Аккаунт",
+      accountLoggedInHint: (email) => `Вы вошли как ${email}.`,
+      signOut: "Выйти",
+      accountOptionalHint: "Аккаунт нужен только для оплаты и синхронизации между устройствами — без него приложение продолжает работать как раньше, все данные остаются на этом устройстве.",
+      emailLabel: "Email",
+      passwordLabel: "Пароль",
+      signUp: "Зарегистрироваться",
+      signIn: "Войти",
+      haveAccount: "У меня уже есть аккаунт",
+      needAccount: "Ещё нет аккаунта — зарегистрироваться",
+      fillEmailPassword: "Заполните email и пароль.",
+      genericAuthError: "Не получилось. Проверьте данные и попробуйте снова.",
+      factorsTitle: "Факторы на главном экране",
+      notificationsTitle: "Уведомления",
+      notificationsEmpty: "Уведомлений пока нет.",
     },
     recoveryPractices: {
       yoga: "Йога",
@@ -1060,6 +1204,38 @@ const STRINGS = {
     common: {
       copied: "Copied!",
       copyFailed: "Couldn't copy",
+      save: "Save",
+    },
+    dashboard: {
+      title: "Portfolio",
+      trendSuffix: "over 7 days",
+      periodWeek: "Week",
+      periodMonth: "Month",
+      periodYear: "Year",
+      todaySummaryTitle: "Today's summary",
+      markTodayTitle: "Log today",
+      daysAbbrev: "days",
+      chartEmpty: "No data yet — log your first day below.",
+    },
+    history: {
+      calendarTitle: "History",
+      editingUnavailable: "Editing unavailable",
+      transactionsTitle: (date) => `Transactions for ${date}`,
+      noOperations: "No activity this day.",
+      editButton: "Edit",
+      changeDayTitle: "Edit day",
+      fillDayTitle: "Fill in day",
+      editWindowNote: "Editing is only available for the last 7 days, and not before your signup date.",
+      personalSavingsLabel: "Personal savings",
+      dividendsLabel: "Dividends",
+      chargesLabel: "Charges",
+      weeklySportBonusLabel: (weekStart, date) => `Weekly sport bonus (week ${weekStart}–${date})`,
+      weeklySportBonusShortLabel: "Weekly sport bonus",
+      sleepDebtLabel: "Sleep debt",
+      sleepRegularityLabel: "Sleep regularity",
+      inactivityChargeLabel: (sphere, days, pct) => `Inactivity (${sphere}): ${days}+ days, −${pct}% of dividends`,
+      sportSphere: "sport",
+      activitySphereFallback: "activity",
     },
     knowledge: {
       title: "Knowledge Base",
@@ -1071,6 +1247,90 @@ const STRINGS = {
       additionalSource: "additional source",
       upcomingTitle: "What's ahead",
       upcomingNote: "The vote counters below are an example visualization; actual suggestion aggregation is done manually by the team.",
+    },
+    daily: {
+      summaryLowActivity: "Add 30 minutes of activity today — that's a real boost to your capital.",
+      summaryLessThanUsual: "Less than usual — recorded.",
+      summaryMoreThanUsual: "More than usual — it happens, let's continue tomorrow.",
+      summaryGood: "You're active today — you're already one of the people who move every day, not just occasionally.",
+    },
+    factorLabels: {
+      sport: "Activity",
+      sleep: "Sleep",
+      nutrition: "Nutrition",
+      smoking: "Smoking",
+      alcohol: "Alcohol",
+      stress: "Stress",
+      weight: "Weight",
+      social: "Social connections",
+      cognitive: "Cognitive activity",
+      purpose: "Purpose",
+    },
+    factorFields: {
+      smokingLabelToday: "Cigarettes today",
+      smokingLabel: "Cigarettes",
+      smokingWaterlineHint: (n) => `Your usual baseline: ${n}. The change is measured against it.`,
+      activityLabelToday: "Minutes of activity today",
+      activityLabel: "Minutes of activity",
+      activityHint: "A slow walk doesn't count — see the Knowledge Base for details.",
+      sleepLabelToday: "Sleep last night",
+      sleepLabel: "Sleep (last night)",
+      sleepHoursPlaceholder: "E.g., 7.5",
+      sleepHoursHint: "In hours, decimals allowed.",
+      bedtimeLabelEdit: "What time did you go to sleep the night before",
+      bedtimeLabelToday: "What time did you go to sleep last night",
+      alcoholLabelToday: "Alcohol today",
+      alcoholLabel: "Alcohol",
+      alcoholSpiritsLabel: "Spirits",
+      alcoholWineLabel: "Wine",
+      alcoholBeerLabel: "Beer/low-alcohol",
+      socialLabel: "Time with loved ones today",
+      socialHint: "Counts as engaged in-person or call time — a real conversation, time together. Work messaging doesn't count.",
+      weightLabel: "Weight today, kg (optional)",
+      purposeLabel: "Did you feel a sense of purpose in what you did today?",
+      cognitiveLabel: "Did you learn something new or tackle a hard problem today?",
+      cognitiveHint: "This kind of load builds new neural connections — it works like a workout for the brain.",
+      stressLabelToday: "Stress level today",
+      stressLabel: "Stress level",
+    },
+    socialQualityOptions: {
+      full: "Fully engaged", some: "A little", none: "None",
+    },
+    purposeOptions: {
+      yes: "Yes", somewhat: "Somewhat", no: "No",
+    },
+    cognitiveActivityOptions: {
+      full: "A lot", some: "A little", none: "None",
+    },
+    settings: {
+      title: "Settings",
+      accountRowLoggedIn: (email) => `Account — ${email}`,
+      accountRowLoggedOut: "Sign in / Sign up",
+      referralRow: "Invite a friend",
+      careRow: "Care & Idea Fund",
+      factorsRow: "Home screen factors",
+      billingRow: "Plans & billing",
+      back: "← Back",
+      referralTitle: "Invite a friend",
+      referralHint: "Copy and send — no links or codes, just a short invitation.",
+      referralShareText: "I track my health days in the Health Capital app — try it: humanchange.app",
+      copyButton: "Copy",
+      languageLabel: "Language",
+      accountTitle: "Account",
+      accountLoggedInHint: (email) => `Signed in as ${email}.`,
+      signOut: "Sign out",
+      accountOptionalHint: "An account is only needed for billing and syncing across devices — without one the app keeps working as before, and all data stays on this device.",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      signUp: "Sign up",
+      signIn: "Sign in",
+      haveAccount: "I already have an account",
+      needAccount: "Don't have an account — sign up",
+      fillEmailPassword: "Fill in your email and password.",
+      genericAuthError: "That didn't work. Check your details and try again.",
+      factorsTitle: "Home screen factors",
+      notificationsTitle: "Notifications",
+      notificationsEmpty: "No notifications yet.",
     },
     recoveryPractices: {
       yoga: "Yoga",
@@ -1207,6 +1467,18 @@ function localizedBedtimeRangeOptions() {
 
 function localizedStressLevelOptions() {
   return STRESS_LEVEL_OPTIONS.map((o) => ({ value: o.value, label: t(`stressLevelOptions.${o.value}`) }));
+}
+
+function localizedSocialQualityOptions() {
+  return SOCIAL_QUALITY_OPTIONS.map((o) => ({ value: o.value, label: t(`socialQualityOptions.${o.value}`) }));
+}
+
+function localizedPurposeOptions() {
+  return PURPOSE_OPTIONS.map((o) => ({ value: o.value, label: t(`purposeOptions.${o.value}`) }));
+}
+
+function localizedCognitiveActivityOptions() {
+  return COGNITIVE_ACTIVITY_OPTIONS.map((o) => ({ value: o.value, label: t(`cognitiveActivityOptions.${o.value}`) }));
 }
 
 // RECOVERY_PRACTICES isn't a <select> (rendered as checkboxes), so unlike
@@ -2218,25 +2490,25 @@ function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
       <summary>${summaryLabel}${summary ? ` — ${escapeHtml(summary)}` : ""}</summary>
       <div class="log-row" style="margin-top:10px;">
         <div class="field">
-          <label>Крепкий алкоголь</label>
+          <label>${t("factorFields.alcoholSpiritsLabel")}</label>
           <select id="${idPrefix}_alcohol_spirits">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_SPIRITS_RANGE_OPTIONS, e.alcoholSpirits)}
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
+            ${selectOptionsHtml(localizedAlcoholSpiritsOptions(), e.alcoholSpirits)}
           </select>
         </div>
         <div class="field">
-          <label>Вино</label>
+          <label>${t("factorFields.alcoholWineLabel")}</label>
           <select id="${idPrefix}_alcohol_wine">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(ALCOHOL_WINE_RANGE_OPTIONS, e.alcoholWine)}
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
+            ${selectOptionsHtml(localizedAlcoholWineOptions(), e.alcoholWine)}
           </select>
         </div>
       </div>
       <div class="field">
-        <label>Пиво/слабоалкогольное</label>
+        <label>${t("factorFields.alcoholBeerLabel")}</label>
         <select id="${idPrefix}_alcohol_beer">
-          <option value="">Выбрать...</option>
-          ${selectOptionsHtml(ALCOHOL_BEER_RANGE_OPTIONS, e.alcoholBeer)}
+          <option value="">${t("onboarding.selectPlaceholder")}</option>
+          ${selectOptionsHtml(localizedAlcoholBeerOptions(), e.alcoholBeer)}
         </select>
       </div>
     </details>
@@ -2253,7 +2525,7 @@ function smokingFieldHtml(idPrefix, entry, label) {
     <div class="field">
       <label>${label}</label>
       <input type="number" min="0" id="${idPrefix}_cigarettes" value="${escapeHtml(entry.cigarettes ?? "")}">
-      <div class="hint">Ваша обычная норма: ${state.smokingWaterline ?? 0} шт. — от неё считается отклонение.</div>
+      <div class="hint">${t("factorFields.smokingWaterlineHint")(state.smokingWaterline ?? 0)}</div>
     </div>
   `;
 }
@@ -2264,7 +2536,7 @@ function activityFieldHtml(idPrefix, entry, label, withHint) {
     <div class="field">
       <label>${label}</label>
       <input type="number" min="0" id="${idPrefix}_activity" value="${escapeHtml(entry.activityMinutes ?? "")}">
-      ${withHint ? `<div class="hint">Не считается медленная прогулка — подробнее в Базе знаний.</div>` : ""}
+      ${withHint ? `<div class="hint">${t("factorFields.activityHint")}</div>` : ""}
     </div>
   `;
 }
@@ -2283,13 +2555,13 @@ function smokingActivityRowHtml(idPrefix, entry, smokingLabel, activityLabel, wi
 // saved before this change).
 function sleepRowHtml(idPrefix, entry, sleepLabel) {
   if (!isFactorVisible("sleep")) return "";
-  const bedtimeLabel = idPrefix === "edit" ? "Во сколько легли спать накануне" : "Во сколько легли спать вчера";
+  const bedtimeLabel = idPrefix === "edit" ? t("factorFields.bedtimeLabelEdit") : t("factorFields.bedtimeLabelToday");
   return `
     <div class="log-row">
       <div class="field">
         <label>${sleepLabel}</label>
-        <input type="number" min="0" max="24" step="0.25" placeholder="Например, 7.5" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
-        <div class="hint">В часах, можно дробно.</div>
+        <input type="number" min="0" max="24" step="0.25" placeholder="${t("factorFields.sleepHoursPlaceholder")}" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
+        <div class="hint">${t("factorFields.sleepHoursHint")}</div>
       </div>
       <div class="field">
         <label>${bedtimeLabel}</label>
@@ -2449,11 +2721,11 @@ function socialRowHtml(idPrefix, entry) {
   if (!isFactorVisible("social")) return "";
   return `
     <div class="field">
-      <label>Общение с близкими сегодня</label>
-      ${collapsibleHint("Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.")}
+      <label>${t("factorFields.socialLabel")}</label>
+      ${collapsibleHint(t("factorFields.socialHint"))}
       <select id="${idPrefix}_social">
-        <option value="">Выбрать...</option>
-        ${selectOptionsHtml(SOCIAL_QUALITY_OPTIONS, entry.socialQualityToday)}
+        <option value="">${t("onboarding.selectPlaceholder")}</option>
+        ${selectOptionsHtml(localizedSocialQualityOptions(), entry.socialQualityToday)}
       </select>
     </div>
   `;
@@ -2463,7 +2735,7 @@ function weightRowHtml(idPrefix, entry) {
   if (!isFactorVisible("weight")) return "";
   return `
     <div class="field">
-      <label>Вес сегодня, кг (необязательно)</label>
+      <label>${t("factorFields.weightLabel")}</label>
       <input type="number" step="0.1" id="${idPrefix}_weight" value="${escapeHtml(entry.weightKg ?? "")}">
     </div>
   `;
@@ -2473,10 +2745,10 @@ function purposeRowHtml(idPrefix, entry) {
   if (!isFactorVisible("purpose")) return "";
   return `
     <div class="field">
-      <label>Чувствовали сегодня смысл в своих делах?</label>
+      <label>${t("factorFields.purposeLabel")}</label>
       <select id="${idPrefix}_purpose">
-        <option value="">Выбрать...</option>
-        ${selectOptionsHtml(PURPOSE_OPTIONS, entry.purposeToday)}
+        <option value="">${t("onboarding.selectPlaceholder")}</option>
+        ${selectOptionsHtml(localizedPurposeOptions(), entry.purposeToday)}
       </select>
     </div>
   `;
@@ -2486,11 +2758,11 @@ function cognitiveRowHtml(idPrefix, entry) {
   if (!isFactorVisible("cognitive")) return "";
   return `
     <div class="field">
-      <label>Учились сегодня новому или решали непростую задачу?</label>
-      ${collapsibleHint("Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.")}
+      <label>${t("factorFields.cognitiveLabel")}</label>
+      ${collapsibleHint(t("factorFields.cognitiveHint"))}
       <select id="${idPrefix}_cognitive">
-        <option value="">Выбрать...</option>
-        ${selectOptionsHtml(COGNITIVE_ACTIVITY_OPTIONS, entry.cognitiveActivityToday)}
+        <option value="">${t("onboarding.selectPlaceholder")}</option>
+        ${selectOptionsHtml(localizedCognitiveActivityOptions(), entry.cognitiveActivityToday)}
       </select>
     </div>
   `;
@@ -3109,15 +3381,28 @@ function renderSettings(screen) {
     return;
   }
   screen.innerHTML = `
-    <h2 class="screen-title">Настройки</h2>
+    <h2 class="screen-title">${t("settings.title")}</h2>
+    <div class="field">
+      <label>${t("settings.languageLabel")}</label>
+      <div class="lang-switcher">
+        <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
+        <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
+      </div>
+    </div>
     <div class="settings-list">
-      <button class="settings-row" data-view="account">${state.authEmail ? `Аккаунт — ${state.authEmail}` : "Войти / Зарегистрироваться"}</button>
-      <button class="settings-row" data-view="referral">Пригласить друга</button>
-      <button class="settings-row" data-view="care">Служба заботы и Фонд идей</button>
-      <button class="settings-row" data-view="factors">Факторы на главном экране</button>
-      <a class="settings-row" href="/product/" target="_blank" rel="noopener">Тарифы и оплата</a>
+      <button class="settings-row" data-view="account">${state.authEmail ? t("settings.accountRowLoggedIn")(state.authEmail) : t("settings.accountRowLoggedOut")}</button>
+      <button class="settings-row" data-view="referral">${t("settings.referralRow")}</button>
+      <button class="settings-row" data-view="care">${t("settings.careRow")}</button>
+      <button class="settings-row" data-view="factors">${t("settings.factorsRow")}</button>
+      <a class="settings-row" href="/product/" target="_blank" rel="noopener">${t("settings.billingRow")}</a>
     </div>
   `;
+  screen.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLang(btn.dataset.lang);
+      renderSettings(screen);
+    });
+  });
   screen.querySelectorAll("[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.settingsView = btn.dataset.view;
@@ -3128,7 +3413,7 @@ function renderSettings(screen) {
 }
 
 function settingsBackButtonHtml() {
-  return `<button class="btn secondary" id="settings-back" style="margin-bottom:16px;">← Назад</button>`;
+  return `<button class="btn secondary" id="settings-back" style="margin-bottom:16px;">${t("settings.back")}</button>`;
 }
 
 function wireSettingsBackButton(screen) {
@@ -3143,24 +3428,22 @@ function wireSettingsBackButton(screen) {
 // text to copy and send yourself, no personal links/codes/tracking
 // yet. Deliberately minimal: this is meant to be replaced by a real
 // referral ladder later, not extended in place.
-const REFERRAL_SHARE_TEXT = "Я считаю дни своего здоровья в приложении «Капитал здоровья» — попробуй: humanchange.app";
-
 function renderReferralSettings(screen) {
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
-    <h2 class="screen-title">Пригласить друга</h2>
+    <h2 class="screen-title">${t("settings.referralTitle")}</h2>
     <div class="field">
-      <div class="hint">Скопируйте и отправьте — без ссылок и кодов, просто короткое приглашение.</div>
+      <div class="hint">${t("settings.referralHint")}</div>
     </div>
     <div class="field">
-      <textarea id="referral-text" readonly rows="3">${escapeHtml(REFERRAL_SHARE_TEXT)}</textarea>
+      <textarea id="referral-text" readonly rows="3">${escapeHtml(t("settings.referralShareText"))}</textarea>
     </div>
-    <button class="btn" id="referral-copy" style="width:100%">Скопировать</button>
+    <button class="btn" id="referral-copy" style="width:100%">${t("settings.copyButton")}</button>
   `;
   wireSettingsBackButton(screen);
   const copyBtn = document.getElementById("referral-copy");
   copyBtn.addEventListener("click", () => {
-    copyTextToClipboard(REFERRAL_SHARE_TEXT, copyBtn, "Скопировать");
+    copyTextToClipboard(t("settings.referralShareText"), copyBtn, t("settings.copyButton"));
   });
 }
 
@@ -3176,11 +3459,11 @@ function renderAccountSettings(screen) {
   if (state.authEmail) {
     screen.innerHTML = `
       ${settingsBackButtonHtml()}
-      <h2 class="screen-title">Аккаунт</h2>
+      <h2 class="screen-title">${t("settings.accountTitle")}</h2>
       <div class="field">
-        <div class="hint">Вы вошли как ${escapeHtml(state.authEmail)}.</div>
+        <div class="hint">${t("settings.accountLoggedInHint")(escapeHtml(state.authEmail))}</div>
       </div>
-      <button class="btn secondary" id="account-signout" style="width:100%">Выйти</button>
+      <button class="btn secondary" id="account-signout" style="width:100%">${t("settings.signOut")}</button>
     `;
     wireSettingsBackButton(screen);
     document.getElementById("account-signout").addEventListener("click", async () => {
@@ -3192,19 +3475,19 @@ function renderAccountSettings(screen) {
 
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
-    <h2 class="screen-title">Аккаунт</h2>
-    <div class="hint" style="margin-bottom:16px;">Аккаунт нужен только для оплаты и синхронизации между устройствами — без него приложение продолжает работать как раньше, все данные остаются на этом устройстве.</div>
+    <h2 class="screen-title">${t("settings.accountTitle")}</h2>
+    <div class="hint" style="margin-bottom:16px;">${t("settings.accountOptionalHint")}</div>
     <div class="field">
-      <label>Email</label>
+      <label>${t("settings.emailLabel")}</label>
       <input type="email" id="account-email" autocomplete="email">
     </div>
     <div class="field">
-      <label>Пароль</label>
+      <label>${t("settings.passwordLabel")}</label>
       <input type="password" id="account-password" autocomplete="${accountFormMode === "signup" ? "new-password" : "current-password"}">
     </div>
     <div id="account-error" class="hint" style="color:var(--danger, #c0392b); display:none;"></div>
-    <button class="btn" id="account-submit" style="width:100%">${accountFormMode === "signup" ? "Зарегистрироваться" : "Войти"}</button>
-    <button class="btn secondary" id="account-toggle-mode" style="width:100%; margin-top:12px;">${accountFormMode === "signup" ? "У меня уже есть аккаунт" : "Ещё нет аккаунта — зарегистрироваться"}</button>
+    <button class="btn" id="account-submit" style="width:100%">${accountFormMode === "signup" ? t("settings.signUp") : t("settings.signIn")}</button>
+    <button class="btn secondary" id="account-toggle-mode" style="width:100%; margin-top:12px;">${accountFormMode === "signup" ? t("settings.haveAccount") : t("settings.needAccount")}</button>
   `;
   wireSettingsBackButton(screen);
 
@@ -3219,7 +3502,7 @@ function renderAccountSettings(screen) {
     const errorEl = document.getElementById("account-error");
     errorEl.style.display = "none";
     if (!email || !password) {
-      errorEl.textContent = "Заполните email и пароль.";
+      errorEl.textContent = t("settings.fillEmailPassword");
       errorEl.style.display = "block";
       return;
     }
@@ -3230,7 +3513,7 @@ function renderAccountSettings(screen) {
       : await authSignIn(email, password);
     submitBtn.disabled = false;
     if (error) {
-      errorEl.textContent = error.message || "Не получилось. Проверьте данные и попробуйте снова.";
+      errorEl.textContent = error.message || t("settings.genericAuthError");
       errorEl.style.display = "block";
       return;
     }
@@ -3252,17 +3535,20 @@ function renderAccountSettings(screen) {
 // visually distinguishes formula factors from collection-only ones
 // (no more "скоро" badge/disabled styling), and nothing else in the
 // codebase read this field.
+// label is a live getter (24.08.2026, i18n Settings checkpoint) so every
+// existing `f.label` call site across Settings/Dashboard/History picks up
+// the current language automatically — no call site needed to change.
 const ALL_FACTORS = [
-  { key: "sport", label: "Активность" },
-  { key: "sleep", label: "Сон" },
-  { key: "nutrition", label: "Питание" },
-  { key: "smoking", label: "Курение" },
-  { key: "alcohol", label: "Алкоголь" },
-  { key: "stress", label: "Стресс" },
-  { key: "weight", label: "Вес" },
-  { key: "social", label: "Социальные связи" },
-  { key: "cognitive", label: "Когнитивная активность" },
-  { key: "purpose", label: "Смысл и цель" },
+  { key: "sport", get label() { return t("factorLabels.sport"); } },
+  { key: "sleep", get label() { return t("factorLabels.sleep"); } },
+  { key: "nutrition", get label() { return t("factorLabels.nutrition"); } },
+  { key: "smoking", get label() { return t("factorLabels.smoking"); } },
+  { key: "alcohol", get label() { return t("factorLabels.alcohol"); } },
+  { key: "stress", get label() { return t("factorLabels.stress"); } },
+  { key: "weight", get label() { return t("factorLabels.weight"); } },
+  { key: "social", get label() { return t("factorLabels.social"); } },
+  { key: "cognitive", get label() { return t("factorLabels.cognitive"); } },
+  { key: "purpose", get label() { return t("factorLabels.purpose"); } },
 ];
 
 function isFactorVisible(key) {
@@ -3329,7 +3615,7 @@ function resolvedFactorFields(factorKey, existingEntry, readFromDom) {
 function renderFactorSettings(screen) {
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
-    <h2 class="screen-title">Факторы на главном экране</h2>
+    <h2 class="screen-title">${t("settings.factorsTitle")}</h2>
     <div class="checkbox-list">
       ${ALL_FACTORS.map(
         (f) =>
@@ -3350,7 +3636,7 @@ function renderFactorSettings(screen) {
 }
 
 function renderNotifications(screen) {
-  screen.innerHTML = `<h2 class="screen-title">Уведомления</h2><div class="empty-state">Уведомлений пока нет.</div>`;
+  screen.innerHTML = `<h2 class="screen-title">${t("settings.notificationsTitle")}</h2><div class="empty-state">${t("settings.notificationsEmpty")}</div>`;
 }
 
 /* ---- Dashboard ---- */
@@ -3374,7 +3660,7 @@ function dailyEngagementPhrase(today, todayEntry) {
     .filter(([date]) => date !== today)
     .reduce((max, [, e]) => Math.max(max, e.deltaDays), -Infinity);
   if (priorMax !== -Infinity && todayEntry.deltaDays > priorMax) {
-    return { text: DAILY_RECORD_PHRASE, positive: true };
+    return { text: localizedDailyRecordPhrase(), positive: true };
   }
   // Rounded, not the raw value (20.08.2026 fix): decaying sleep debt
   // asymptotically approaches but never exactly hits 0, so a run of
@@ -3383,7 +3669,7 @@ function dailyEngagementPhrase(today, todayEntry) {
   // that displays as 0.00 is never scored as "negative" for phrase
   // selection either — see formatDays for the matching display fix.
   const positive = Math.round(todayEntry.deltaDays * 100) / 100 >= 0;
-  const pool = positive ? DAILY_GOOD_PHRASES : DAILY_BAD_PHRASES;
+  const pool = positive ? localizedDailyGoodPhrases() : localizedDailyBadPhrases();
   return { text: pickPhrase(pool, `${today}:${positive ? "g" : "b"}`), positive };
 }
 
@@ -3405,13 +3691,13 @@ function factorModalFieldsHtml(idPrefix, key, entry) {
   const todayFlavor = idPrefix === "modal";
   switch (key) {
     case "smoking":
-      return smokingFieldHtml(idPrefix, entry, todayFlavor ? "Сигарет сегодня" : "Сигарет");
+      return smokingFieldHtml(idPrefix, entry, todayFlavor ? t("factorFields.smokingLabelToday") : t("factorFields.smokingLabel"));
     case "sport":
-      return activityFieldHtml(idPrefix, entry, todayFlavor ? "Минут активности сегодня" : "Минут активности", todayFlavor);
+      return activityFieldHtml(idPrefix, entry, todayFlavor ? t("factorFields.activityLabelToday") : t("factorFields.activityLabel"), todayFlavor);
     case "sleep":
-      return sleepRowHtml(idPrefix, entry, todayFlavor ? "Сон прошлой ночью" : "Сон (за прошедшую ночь)");
+      return sleepRowHtml(idPrefix, entry, todayFlavor ? t("factorFields.sleepLabelToday") : t("factorFields.sleepLabel"));
     case "alcohol":
-      return alcoholFieldsHtml(idPrefix, entry, todayFlavor ? "Алкоголь сегодня" : "Алкоголь");
+      return alcoholFieldsHtml(idPrefix, entry, todayFlavor ? t("factorFields.alcoholLabelToday") : t("factorFields.alcoholLabel"));
     case "nutrition":
       return nutritionRowHtml(idPrefix, entry);
     case "social":
@@ -3426,10 +3712,10 @@ function factorModalFieldsHtml(idPrefix, key, entry) {
       if (!isFactorVisible("stress")) return "";
       return `
         <div class="field">
-          <label>${todayFlavor ? "Уровень стресса сегодня" : "Уровень стресса"}</label>
+          <label>${todayFlavor ? t("factorFields.stressLabelToday") : t("factorFields.stressLabel")}</label>
           <select id="${idPrefix}_stress">
-            <option value="">Выбрать...</option>
-            ${selectOptionsHtml(STRESS_LEVEL_OPTIONS, entry.stressLevel)}
+            <option value="">${t("onboarding.selectPlaceholder")}</option>
+            ${selectOptionsHtml(localizedStressLevelOptions(), entry.stressLevel)}
           </select>
         </div>`;
     default:
@@ -3516,7 +3802,7 @@ function renderFactorEditScreen(screen, key) {
     <h2 class="screen-title">${factor ? escapeHtml(factor.label) : ""}</h2>
     <div class="${wrapperClass}">
       ${factorModalFieldsHtml("modal", key, entry)}
-      <button class="btn factor-edit-save" id="factor-edit-save" type="button">Сохранить</button>
+      <button class="btn factor-edit-save" id="factor-edit-save" type="button">${t("common.save")}</button>
     </div>
   `;
 
@@ -3565,10 +3851,10 @@ function renderDashboard(screen) {
 
   screen.innerHTML = `
     <div class="dashboard-sticky-top">
-      <h2 class="screen-title">Портфель</h2>
+      <h2 class="screen-title">${t("dashboard.title")}</h2>
       <div class="capital-header">
         <div class="capital-value ${capitalValueRounded >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
-        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} за 7 дней</div>
+        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} ${t("dashboard.trendSuffix")}</div>
       </div>
     </div>
 
@@ -3577,7 +3863,7 @@ function renderDashboard(screen) {
         .map(
           (p) =>
             `<button data-period="${p}" class="${period === p ? "active" : ""}">${
-              p === "week" ? "Неделя" : p === "month" ? "Месяц" : "Год"
+              p === "week" ? t("dashboard.periodWeek") : p === "month" ? t("dashboard.periodMonth") : t("dashboard.periodYear")
             }</button>`
         )
         .join("")}
@@ -3586,7 +3872,7 @@ function renderDashboard(screen) {
     <div class="chart-card">${renderChartSvg(series, period)}</div>
 
     <div class="next-step-card">
-      <div class="kicker">Итог дня</div>
+      <div class="kicker">${t("dashboard.todaySummaryTitle")}</div>
       <div>${todaySummary(todayEntry)}</div>
     </div>
 
@@ -3596,7 +3882,7 @@ function renderDashboard(screen) {
         : ""
     }
 
-    <h3>Отметить сегодня</h3>
+    <h3>${t("dashboard.markTodayTitle")}</h3>
     <div class="factor-grid">
       ${ALL_FACTORS.filter((f) => state.visibleFactors.includes(f.key))
         .map(
@@ -3633,9 +3919,9 @@ function renderDashboard(screen) {
 // phrase-selection fix). Real values still round normally.
 function formatDays(value) {
   const rounded = Math.round(Math.abs(value) * 100) / 100;
-  if (rounded === 0) return "0.00 дн.";
+  if (rounded === 0) return `0.00 ${t("dashboard.daysAbbrev")}`;
   const sign = value > 0 ? "+" : "−";
-  return `${sign}${rounded.toFixed(2)} дн.`;
+  return `${sign}${rounded.toFixed(2)} ${t("dashboard.daysAbbrev")}`;
 }
 
 // "Итог дня" (renamed from "Следующий шаг", TZ section 8, 11.08.2026):
@@ -3652,15 +3938,15 @@ function todaySummary(todayEntry) {
   const cigarettes = Number(todayEntry.cigarettes) || 0;
   const waterline = Number(state.smokingWaterline) || 0;
   if (activity < 30) {
-    return "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.";
+    return t("daily.summaryLowActivity");
   }
   if (cigarettes < waterline) {
-    return "Меньше обычного — засчитано.";
+    return t("daily.summaryLessThanUsual");
   }
   if (cigarettes > waterline) {
-    return "Больше обычного — бывает, завтра продолжим.";
+    return t("daily.summaryMoreThanUsual");
   }
-  return "Активность есть — вы уже из тех, кто двигается каждый день, а не разово.";
+  return t("daily.summaryGood");
 }
 
 function periodCutoffDate(period) {
@@ -3674,7 +3960,7 @@ function periodCutoffDate(period) {
 
 function renderChartSvg(series, period) {
   if (series.length === 0) {
-    return `<div class="empty-state">Пока нет данных — отметьте первый день ниже.</div>`;
+    return `<div class="empty-state">${t("dashboard.chartEmpty")}</div>`;
   }
   const cutoff = periodCutoffDate(period);
   const visible = series.filter((p) => p.date >= cutoff);
@@ -3976,14 +4262,14 @@ function dailyFactorBreakdown(entry) {
   const waterline = Number(state.smokingWaterline) || 0;
   const smokingTerm = (waterline - (Number(entry.cigarettes) || 0)) * 0.014;
   const items = [];
-  if (smokingTerm) items.push({ label: "Курение", amount: smokingTerm });
+  if (smokingTerm) items.push({ label: t("factorLabels.smoking"), amount: smokingTerm });
   if (Number(entry.activityMinutes) > 0) {
-    items.push({ label: "Активность", amount: Math.min((Number(entry.activityMinutes) / 60) * 6, 9) / 24 });
+    items.push({ label: t("factorLabels.sport"), amount: Math.min((Number(entry.activityMinutes) / 60) * 6, 9) / 24 });
   }
-  if (entry.weeklyBonusDays) items.push({ label: "Недельная доплата за спорт", amount: entry.weeklyBonusDays });
-  if (entry.sleepDebtDelta) items.push({ label: "Долг сна", amount: entry.sleepDebtDelta });
-  if (entry.sleepRegularityDelta) items.push({ label: "Регулярность сна", amount: entry.sleepRegularityDelta });
-  if (entry.alcoholDelta) items.push({ label: "Алкоголь", amount: entry.alcoholDelta });
+  if (entry.weeklyBonusDays) items.push({ label: t("history.weeklySportBonusShortLabel"), amount: entry.weeklyBonusDays });
+  if (entry.sleepDebtDelta) items.push({ label: t("history.sleepDebtLabel"), amount: entry.sleepDebtDelta });
+  if (entry.sleepRegularityDelta) items.push({ label: t("history.sleepRegularityLabel"), amount: entry.sleepRegularityDelta });
+  if (entry.alcoholDelta) items.push({ label: t("factorLabels.alcohol"), amount: entry.alcoholDelta });
   return items;
 }
 
@@ -3991,12 +4277,12 @@ function dailyFactorBreakdown(entry) {
 // mapping with a generic fallback, not a raw c.sphere passthrough, so
 // adding a new sphere later can't leak its internal identifier straight
 // into user-facing text before someone remembers to add a label for it.
-const SPHERE_LABELS = {
-  sport: "спорт",
+const SPHERE_LABEL_KEYS = {
+  sport: "sportSphere",
 };
 
 function sphereLabel(sphere) {
-  return SPHERE_LABELS[sphere] || "активность";
+  return t(`history.${SPHERE_LABEL_KEYS[sphere] || "activitySphereFallback"}`);
 }
 
 // Inactivity-decay events recorded on this specific date (TZ section 7,
@@ -4007,7 +4293,7 @@ function dayDecayChargeItems(date) {
   return state.decayCharges
     .filter((c) => c.date === date)
     .map((c) => ({
-      label: `Бездействие (${sphereLabel(c.sphere)}): ${c.days}+ дней, −${c.marginalPct}% от Дивидендов`,
+      label: t("history.inactivityChargeLabel")(sphereLabel(c.sphere), c.days, c.marginalPct),
       amount: -c.amountDays,
     }));
 }
@@ -4072,7 +4358,7 @@ function reportClickableAmount(amount, items) {
 function dayTransactionsHtml(date) {
   const entry = state.ledger[date];
   if (!entry) {
-    return `<div class="empty-state">Операций в этот день не было.</div>`;
+    return `<div class="empty-state">${t("history.noOperations")}</div>`;
   }
   const savings = entry.deltaDays || 0;
   const dividends = entry.weeklyBonusDays || 0;
@@ -4080,20 +4366,20 @@ function dayTransactionsHtml(date) {
   const chargeItems = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
   const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
   const dividendItems = dividends
-    ? [{ label: `Недельная доплата за спорт (неделя ${mondayOfWeek(date)}–${date})`, amount: dividends }]
+    ? [{ label: t("history.weeklySportBonusLabel")(mondayOfWeek(date), date), amount: dividends }]
     : [];
 
   return `
     <div class="modal-row">
-      <span>Личные накопления</span>
+      <span>${t("history.personalSavingsLabel")}</span>
       ${reportClickableAmount(savings, breakdown)}
     </div>
     <div class="modal-row">
-      <span>Дивиденды</span>
+      <span>${t("history.dividendsLabel")}</span>
       ${reportClickableAmount(dividends, dividendItems)}
     </div>
     <div class="modal-row">
-      <span>Списания</span>
+      <span>${t("history.chargesLabel")}</span>
       ${reportClickableAmount(charges, chargeItems)}
     </div>
   `;
@@ -4117,11 +4403,11 @@ function dayEditFormHtml(date, entry) {
     .join("");
   return `
     <div class="log-card">
-      <h3>${entry ? "Изменить день" : "Заполнить день"}</h3>
+      <h3>${entry ? t("history.changeDayTitle") : t("history.fillDayTitle")}</h3>
       ${otherFieldsHtml}
     </div>
     ${nutritionVisible ? factorModalFieldsHtml("edit", "nutrition", e) : ""}
-    <button class="btn" id="day-edit-save" style="width:100%">Сохранить</button>
+    <button class="btn" id="day-edit-save" style="width:100%">${t("common.save")}</button>
   `;
 }
 
@@ -4142,17 +4428,17 @@ function renderHistoryDay(screen) {
 
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
-    <h2 class="screen-title">Транзакции за ${escapeHtml(date || "")}</h2>
-    ${entry ? dayTransactionsHtml(date) : `<div class="empty-state">Операций в этот день не было.</div>`}
+    <h2 class="screen-title">${t("history.transactionsTitle")(escapeHtml(date || ""))}</h2>
+    ${entry ? dayTransactionsHtml(date) : `<div class="empty-state">${t("history.noOperations")}</div>`}
     ${
       editable && entry && !showForm
-        ? `<button class="btn secondary" id="day-edit-toggle" style="width:100%; margin-top:12px;">Изменить</button>`
+        ? `<button class="btn secondary" id="day-edit-toggle" style="width:100%; margin-top:12px;">${t("history.editButton")}</button>`
         : ""
     }
     ${showForm ? dayEditFormHtml(date, entry) : ""}
     ${
       !editable && !entry
-        ? `<div class="note">Редактирование доступно только для последних 7 дней и не раньше даты регистрации.</div>`
+        ? `<div class="note">${t("history.editWindowNote")}</div>`
         : ""
     }
   `;
@@ -4190,11 +4476,20 @@ function renderHistoryDay(screen) {
   }
 }
 
-const RU_MONTH_NAMES = [
-  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
-];
-const RU_WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const MONTH_NAMES = {
+  ru: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+};
+const WEEKDAY_LABELS = {
+  ru: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+};
+function localizedMonthNames() {
+  return MONTH_NAMES[getLang()] || MONTH_NAMES.ru;
+}
+function localizedWeekdayLabels() {
+  return WEEKDAY_LABELS[getLang()] || WEEKDAY_LABELS.ru;
+}
 
 // TZ section 7, 13.08.2026: "История" — calendar grid. Legend is
 // binary (replaces the earlier 4-tier intensity idea): green = day's
@@ -4229,7 +4524,7 @@ function renderHistory(screen) {
     // per TZ (не скрывать день, а заблокировать тап на редактирование).
     const locked = !editable ? " locked" : "";
     const disabled = !editable && !entry ? "disabled" : "";
-    cells.push(`<button class="day-cell ${cls}${locked}" data-date="${dateStr}" ${disabled} title="${editable ? "" : "Редактирование недоступно"}">${d}</button>`);
+    cells.push(`<button class="day-cell ${cls}${locked}" data-date="${dateStr}" ${disabled} title="${editable ? "" : t("history.editingUnavailable")}">${d}</button>`);
   }
   const trailingPad = (7 - (cells.length % 7)) % 7;
   for (let i = 0; i < trailingPad; i++) cells.push(`<div class="day-cell pad"></div>`);
@@ -4237,14 +4532,14 @@ function renderHistory(screen) {
   const isCurrentMonth = monthStr === todayStr().slice(0, 7);
 
   screen.innerHTML = `
-    <h2 class="screen-title">История</h2>
+    <h2 class="screen-title">${t("history.calendarTitle")}</h2>
     <div class="history-nav">
       <button class="btn secondary" id="month-prev">‹</button>
-      <div class="month-label">${RU_MONTH_NAMES[mon - 1]} ${year}</div>
+      <div class="month-label">${localizedMonthNames()[mon - 1]} ${year}</div>
       <button class="btn secondary" id="month-next" ${isCurrentMonth ? "disabled" : ""}>›</button>
     </div>
     <div class="history-grid history-weekdays">
-      ${RU_WEEKDAY_LABELS.map((w) => `<div class="weekday-label">${w}</div>`).join("")}
+      ${localizedWeekdayLabels().map((w) => `<div class="weekday-label">${w}</div>`).join("")}
     </div>
     <div class="history-grid">${cells.join("")}</div>
   `;
