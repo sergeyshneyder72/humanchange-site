@@ -274,6 +274,65 @@ test("cascadeRecalcFrom leaves decay charges recorded before fromDate untouched"
   assert.deepStrictEqual(chargeAfter, chargeBefore);
 });
 
+/* ---- aggregateBreakdown (26.08.2026, "Сводка вложений" summary screen) ---- */
+
+test("aggregateBreakdown reconciles totals with the underlying per-day ledger entries", () => {
+  state.createdAt = daysAgo(40);
+  state.onboarding = { gender: "male" };
+  state.smokingWaterline = 10;
+  state.ledger = {};
+  state.decayCharges = [];
+
+  const day1 = daysAgo(2);
+  const day2 = daysAgo(1);
+  // day1: below waterline (investment); day2: above waterline (charge).
+  state.ledger[day1] = { cigarettes: 5, activityMinutes: 0, sleepHoursRange: "7to8", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day1);
+  state.ledger[day2] = { cigarettes: 15, activityMinutes: 0, sleepHoursRange: "7to8", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day2);
+
+  const expectedSavings = state.ledger[day1].deltaDays + state.ledger[day2].deltaDays;
+  const { savingsTotal, investItems, chargeItems, dividendsTotal } = aggregateBreakdown();
+
+  assert.ok(Math.abs(savingsTotal - expectedSavings) < 1e-9);
+  assert.strictEqual(dividendsTotal, 0, "no weekly bonus logged in this scenario");
+
+  const investSum = investItems.reduce((s, i) => s + i.amount, 0);
+  const chargeSum = chargeItems.reduce((s, i) => s + i.amount, 0);
+  // No weekly bonus and no inactivity-decay charges here, so savings is
+  // exactly the sum of the positive and negative per-factor days.
+  assert.ok(Math.abs(savingsTotal - (investSum + chargeSum)) < 1e-9);
+});
+
+test("aggregateBreakdown separates weekly dividends and inactivity charges from daily factors", () => {
+  state.createdAt = daysAgo(40);
+  state.onboarding = { gender: "male" };
+  state.smokingWaterline = 0;
+  state.ledger = {};
+  state.decayCharges = [];
+
+  const monday = mondayOfWeek(daysAgo(10));
+  const week = weekDatesFrom(monday);
+  for (const date of week) {
+    state.ledger[date] = { cigarettes: 0, activityMinutes: 0, sleepHoursRange: "", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+    cascadeRecalcFrom(date);
+  }
+  // Monday gets a big activity day -> weekly top-up lands on Sunday.
+  state.ledger[week[0]].activityMinutes = 300;
+  cascadeRecalcFrom(week[0]);
+  const expectedDividend = state.ledger[week[6]].weeklyBonusDays;
+  assert.ok(expectedDividend > 0, "sanity check: the scenario actually produced a weekly bonus");
+
+  state.decayCharges.push({ date: week[6], sphere: "sport", days: 7, marginalPct: 10, amountDays: 0.05 });
+
+  const { dividendsTotal, dividendItems, chargeItems } = aggregateBreakdown();
+  assert.ok(Math.abs(dividendsTotal - expectedDividend) < 1e-9);
+  assert.strictEqual(dividendItems.length, 1);
+
+  const inactivityItem = chargeItems.find((i) => i.amount < 0 && Math.abs(i.amount + 0.05) < 1e-9);
+  assert.ok(inactivityItem, "the manually recorded decay charge should show up as a negative charge item");
+});
+
 /* ---- Sleep debt + regularity (TZ 3.3.1, 16.08.2026) ---- */
 
 test("sleepDebtPenalty is zero at zero debt", () => {
@@ -343,6 +402,69 @@ test("retroactive edit to an earlier day's sleep cascades into a later day's acc
   const expectedDay2Debt = 3 * SLEEP_DEBT_DECAY_K; // day1's fresh debt of 3, one day of decay, no new deviation
   assert.ok(Math.abs(state.ledger[day2].sleepDebt - expectedDay2Debt) < 1e-9);
   assert.ok(state.ledger[day2].sleepDebtDelta < 0, "day2's capital delta should now carry a sleep-debt penalty it didn't have before");
+});
+
+/* ---- Sleep recovery exception (26.08.2026, user request) ---- */
+
+test("oversleep is not penalized when it follows a sharp recent sleep debt", () => {
+  state.createdAt = daysAgo(40);
+  state.onboarding = { gender: "male" };
+  state.smokingWaterline = 0;
+  state.ledger = {};
+  state.decayCharges = [];
+
+  const day1 = daysAgo(2);
+  const day2 = daysAgo(1);
+  state.ledger[day1] = { cigarettes: 0, activityMinutes: 0, sleepHoursRange: "lt5", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day1);
+  assert.strictEqual(state.ledger[day1].sleepDebt, 3);
+
+  state.ledger[day2] = { cigarettes: 0, activityMinutes: 0, sleepHoursExact: 11, alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day2);
+
+  assert.ok(state.ledger[day2].sleepDebt < 0, "sanity check: day2 nets out as oversleep");
+  assert.strictEqual(state.ledger[day2].sleepDebtDelta, 0, "compensatory oversleep after a sharp debt should not be penalized");
+});
+
+test("oversleep is not penalized when it follows extreme exertion (e.g. an ultramarathon)", () => {
+  state.createdAt = daysAgo(40);
+  state.onboarding = { gender: "male" };
+  state.smokingWaterline = 0;
+  state.ledger = {};
+  state.decayCharges = [];
+
+  const day1 = daysAgo(2);
+  const day2 = daysAgo(1);
+  // Normal sleep, but an extreme one-off activity day (well past the
+  // 90-min normal gain cap) — no sleep debt is carried into day2 at all.
+  state.ledger[day1] = { cigarettes: 0, activityMinutes: 300, sleepHoursRange: "7to8", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day1);
+  assert.strictEqual(state.ledger[day1].sleepDebt, 0);
+
+  state.ledger[day2] = { cigarettes: 0, activityMinutes: 0, sleepHoursExact: 11, alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day2);
+
+  assert.ok(state.ledger[day2].sleepDebt < 0, "sanity check: day2 nets out as oversleep");
+  assert.strictEqual(state.ledger[day2].sleepDebtDelta, 0, "compensatory oversleep after extreme exertion should not be penalized");
+});
+
+test("ordinary oversleep with no recent debt or extreme exertion is still penalized", () => {
+  state.createdAt = daysAgo(40);
+  state.onboarding = { gender: "male" };
+  state.smokingWaterline = 0;
+  state.ledger = {};
+  state.decayCharges = [];
+
+  const day1 = daysAgo(2);
+  const day2 = daysAgo(1);
+  state.ledger[day1] = { cigarettes: 0, activityMinutes: 0, sleepHoursRange: "7to8", alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day1);
+
+  state.ledger[day2] = { cigarettes: 0, activityMinutes: 0, sleepHoursExact: 11, alcoholSpirits: "", alcoholWine: "", alcoholBeer: "" };
+  cascadeRecalcFrom(day2);
+
+  assert.ok(state.ledger[day2].sleepDebt < 0, "sanity check: day2 nets out as oversleep");
+  assert.ok(state.ledger[day2].sleepDebtDelta < 0, "regression: ordinary oversleep with no recovery context should still be penalized");
 });
 
 test("sleep regularity penalty is inactive with fewer than 7 bedtime samples", () => {
@@ -420,6 +542,40 @@ test("resolvedFactorFields treats an empty-string select value as 'never answere
     throw new Error("must not read from the form");
   });
   assert.deepStrictEqual(result, { sleepHoursExact: 7.5, bedtimeToday: "" });
+});
+
+/* ---- Onboarding reveal: comparison to age/sex/region average (26.08.2026) ---- */
+
+test("averageBaselineDaysForPeer matches the US baseline table with no region discount", () => {
+  const days = averageBaselineDaysForPeer({ gender: "male", age: 40, region: "us" });
+  assert.strictEqual(days, Math.round(38.1 * 365.25));
+});
+
+test("averageBaselineDaysForPeer applies the non-US region discount", () => {
+  const days = averageBaselineDaysForPeer({ gender: "male", age: 40, region: "ru" });
+  assert.strictEqual(days, Math.round(38.1 * 365.25 * (1 + REGION_GLOBAL_FALLBACK_PCT)));
+});
+
+test("onboardingComparisonHtml shows an 'above average' sentence when comfortably above the peer baseline", () => {
+  const ob = { gender: "male", age: 40, region: "us" };
+  const average = averageBaselineDaysForPeer(ob);
+  const html = onboardingComparisonHtml(ob, Math.round(average * 1.2));
+  assert.ok(html.includes("больше среднего"), html);
+});
+
+test("onboardingComparisonHtml shows a supportive 'below average' sentence, not a shaming one, when below the peer baseline", () => {
+  const ob = { gender: "male", age: 40, region: "us" };
+  const average = averageBaselineDaysForPeer(ob);
+  const html = onboardingComparisonHtml(ob, Math.round(average * 0.7));
+  assert.ok(html.includes("меньше среднего"), html);
+  assert.ok(html.includes("не приговор") || html.includes("расти"), "below-average copy must stay encouraging: " + html);
+});
+
+test("onboardingComparisonHtml treats a small difference as 'about average', not above/below", () => {
+  const ob = { gender: "male", age: 40, region: "us" };
+  const average = averageBaselineDaysForPeer(ob);
+  const html = onboardingComparisonHtml(ob, average + 1); // ~0% difference
+  assert.ok(html.includes("на уровне среднего"), html);
 });
 `;
 

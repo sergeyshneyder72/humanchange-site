@@ -901,7 +901,6 @@ const STRINGS = {
       activityHint:
         "Считается только активность, поднимающая пульс минимум на 50% выше уровня покоя — тест разговором: можете говорить, но не петь — считается, свободно поёте — нет. Медленная прогулка не в счёт.",
       activityGoalLabel: "Хотите начать регулярно двигаться?",
-      proAthleteQuestionLabel: "Профессиональный спортсмен",
       goalYes: "Да, хочу",
       goalNo: "Не сейчас",
       weightLabel: "Вес, кг",
@@ -941,6 +940,9 @@ const STRINGS = {
       finishButtonRecalc: "Сохранить пересчёт",
       shareButton: "Поделиться результатом",
       shareText: (days, word) => `Мой стартовый капитал здоровья — ${days} ${word}. Считаю каждый день в «Капитал здоровья»: humanchange.app/app/`,
+      averageComparisonAbove: (pct) => `Это на ${pct}% больше среднего для вашего возраста, пола и региона.`,
+      averageComparisonNear: "Это примерно на уровне среднего для вашего возраста, пола и региона — и это только отправная точка.",
+      averageComparisonBelow: (pct) => `Это на ${pct}% меньше среднего для вашего возраста, пола и региона. Не приговор — отправная точка, с которой можно расти уже сегодня.`,
     },
     common: {
       copied: "Скопировано!",
@@ -977,6 +979,12 @@ const STRINGS = {
       inactivityChargeLabel: (sphere, days, pct) => `Бездействие (${sphere}): ${days}+ дней, −${pct}% от Дивидендов`,
       sportSphere: "спорт",
       activitySphereFallback: "активность",
+      summaryCardTitle: "Вложения и дивиденды",
+      summaryCardHint: "Разбивка капитала по источникам за всё время",
+      summaryTitle: "Сводка вложений",
+      summaryEmpty: "Пока нет данных — отметьте хотя бы один день.",
+      summaryDividendsAggregateLabel: (weeks) => `Недельные доплаты за активность (${weeks} нед.)`,
+      summaryInactivityAggregateLabel: (sphere) => `Бездействие (${sphere}), всего`,
     },
     knowledge: {
       title: "База знаний",
@@ -1029,7 +1037,7 @@ const STRINGS = {
       socialHint: "Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.",
       weightLabel: "Вес сегодня, кг (необязательно)",
       bodyFatLabel: "% жира (необязательно)",
-      bodyFatHint: "Точнее отражает состав тела, чем вес сам по себе — особенно полезно, если включена настройка «Профессиональный спорт».",
+      bodyFatHint: "Точнее отражает состав тела, чем вес сам по себе.",
       purposeLabel: "Чувствовали сегодня смысл в своих делах?",
       cognitiveLabel: "Учились сегодня новому или решали непростую задачу?",
       cognitiveHint: "Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.",
@@ -1053,6 +1061,13 @@ const STRINGS = {
       careRow: "Служба заботы и Фонд идей",
       factorsRow: "Факторы на главном экране",
       billingRow: "Тарифы и оплата",
+      billingTitle: "Тарифы и оплата",
+      billingIntro: "Новым пользователям доступен бесплатный пробный период. После пробного периода: 990–1490 ₽ в месяц. Founding member — 9 900 ₽/год (около 825 ₽/мес), закреплено навсегда, пока подписка активна.",
+      billingNoAutopayHint: "Автоматической оплаты в приложении пока нет — платёжные системы ещё не подключены. Нажмите кнопку ниже, мы откроем письмо с запросом, отправьте его — и мы вручную вышлем вам ссылку на оплату.",
+      billingRequestButton: "Запросить ссылку на оплату",
+      billingRequestedHint: (date) => `Запрос отправлен ${date}. Если письмо не открылось само — напишите нам напрямую: `,
+      billingEmailSubject: "Запрос ссылки на оплату — Капитал здоровья",
+      billingEmailBody: (email) => `Здравствуйте!\n\nПрошу выслать ссылку на оплату подписки «Капитал здоровья».\n${email ? `Мой email в приложении: ${email}\n` : ""}\nСпасибо!`,
       back: "← Назад",
       referralTitle: "Пригласить друга",
       referralHint: "Скопируйте и отправьте — без ссылок и кодов, просто короткое приглашение.",
@@ -1060,8 +1075,6 @@ const STRINGS = {
       copyButton: "Скопировать",
       languageLabel: "Язык",
       fitnessTrackersRow: "Обмен данными с фитнес-трекерами",
-      proAthleteLabel: "Профессиональный спорт",
-      proAthleteHint: "Выше 90 минут активности в день прирост капитала будет расти медленнее, а не останавливаться резко. Это временное решение, не основанное на отдельном исследовании для больших объёмов нагрузки — обычная формула откалибрована на любителей.",
       accountTitle: "Аккаунт",
       accountLoggedInHint: (email) => `Вы вошли как ${email}.`,
       signOut: "Выйти",
@@ -1188,7 +1201,6 @@ const STRINGS = {
       activityHint:
         "Only activity that raises your heart rate at least 50% above resting counts — talk test: you can talk but not sing along = counts, can sing freely = doesn't. A slow walk doesn't count.",
       activityGoalLabel: "Want to start moving regularly?",
-      proAthleteQuestionLabel: "Professional athlete",
       goalYes: "Yes, I want to",
       goalNo: "Not right now",
       weightLabel: "Weight, kg",
@@ -1228,6 +1240,9 @@ const STRINGS = {
       finishButtonRecalc: "Save recalculation",
       shareButton: "Share result",
       shareText: (days, word) => `My starting health capital — ${days} ${word}. Counting every day in Health Capital: humanchange.app/app/`,
+      averageComparisonAbove: (pct) => `That's ${pct}% above the average for your age, sex, and region.`,
+      averageComparisonNear: "That's about average for your age, sex, and region — and this is just the starting point.",
+      averageComparisonBelow: (pct) => `That's ${pct}% below the average for your age, sex, and region. Not a verdict — a starting point you can grow from today.`,
     },
     common: {
       copied: "Copied!",
@@ -1264,6 +1279,12 @@ const STRINGS = {
       inactivityChargeLabel: (sphere, days, pct) => `Inactivity (${sphere}): ${days}+ days, −${pct}% of dividends`,
       sportSphere: "sport",
       activitySphereFallback: "activity",
+      summaryCardTitle: "Investments & dividends",
+      summaryCardHint: "Your capital broken down by source, all-time",
+      summaryTitle: "Investment summary",
+      summaryEmpty: "No data yet — log at least one day.",
+      summaryDividendsAggregateLabel: (weeks) => `Weekly activity top-ups (${weeks} wk.)`,
+      summaryInactivityAggregateLabel: (sphere) => `Inactivity (${sphere}), total`,
     },
     knowledge: {
       title: "Knowledge Base",
@@ -1316,7 +1337,7 @@ const STRINGS = {
       socialHint: "Counts as engaged in-person or call time — a real conversation, time together. Work messaging doesn't count.",
       weightLabel: "Weight today, kg (optional)",
       bodyFatLabel: "Body fat % (optional)",
-      bodyFatHint: "A more precise picture of body composition than weight alone — especially useful with the \"Professional athlete\" setting enabled.",
+      bodyFatHint: "A more precise picture of body composition than weight alone.",
       purposeLabel: "Did you feel a sense of purpose in what you did today?",
       cognitiveLabel: "Did you learn something new or tackle a hard problem today?",
       cognitiveHint: "This kind of load builds new neural connections — it works like a workout for the brain.",
@@ -1340,6 +1361,13 @@ const STRINGS = {
       careRow: "Care & Idea Fund",
       factorsRow: "Home screen factors",
       billingRow: "Plans & billing",
+      billingTitle: "Plans & billing",
+      billingIntro: "New users get a free trial period. After the trial: 990–1490 RUB/month (Russian card/bank payment). Founding member: 9,900 RUB/year (about 825 RUB/month), locked in for as long as the subscription stays active.",
+      billingNoAutopayHint: "There's no automatic in-app payment yet — payment processing isn't connected. Tap the button below to open a pre-filled email; send it and we'll manually send you a payment link.",
+      billingRequestButton: "Request a payment link",
+      billingRequestedHint: (date) => `Request sent ${date}. If the email didn't open automatically, write to us directly: `,
+      billingEmailSubject: "Payment link request — Health Capital",
+      billingEmailBody: (email) => `Hello!\n\nPlease send me a payment link for the Health Capital subscription.\n${email ? `My email in the app: ${email}\n` : ""}\nThank you!`,
       back: "← Back",
       referralTitle: "Invite a friend",
       referralHint: "Copy and send — no links or codes, just a short invitation.",
@@ -1347,8 +1375,6 @@ const STRINGS = {
       copyButton: "Copy",
       languageLabel: "Language",
       fitnessTrackersRow: "Fitness tracker sync",
-      proAthleteLabel: "Professional athlete",
-      proAthleteHint: "Above 90 minutes of activity a day, the gain to your capital grows more slowly instead of flat-lining. This is an interim fix, not based on a dedicated study of high training volumes — the regular formula is calibrated for recreational activity levels.",
       accountTitle: "Account",
       accountLoggedInHint: (email) => `Signed in as ${email}.`,
       signOut: "Sign out",
@@ -1634,7 +1660,6 @@ function defaultState() {
     // const is initialized, so referencing it here throws a
     // temporal-dead-zone ReferenceError.
     visibleFactors: ["smoking", "sport", "sleep", "alcohol", "nutrition", "stress", "social", "weight", "purpose", "cognitive"],
-    isProAthlete: false, // 25.08.2026: Settings toggle — reduced-rate (not flat-capped) daily activity gain, see dailyDeltaDays/proAthleteActivityGainHours
   };
 }
 
@@ -1650,6 +1675,23 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Lightweight funnel tracking (26.08.2026, switched from Plausible SaaS to
+// self-hosted Umami same day — less privacy-policy overhead: no
+// third-party processor to disclose/DPA, since it runs on infrastructure
+// already ours, see TASKS.md). Loaded via a script tag in app/index.html
+// pointed at our own Umami instance. Guarded because window.umami won't
+// exist: in app.test.js's sandbox (no such global at all), before the
+// deferred script has finished loading, or for any real visitor running an
+// ad blocker — common for exactly this audience (privacy-conscious
+// health-app users). That undercount is a disclosed, accepted limitation
+// of using a client-side script for analytics, not something this guard
+// can fix; it only prevents a hard crash when the function is missing.
+function trackEvent(name) {
+  if (typeof window !== "undefined" && window.umami && typeof window.umami.track === "function") {
+    window.umami.track(name);
+  }
 }
 
 let state = loadState();
@@ -1889,6 +1931,51 @@ function computeStartingCapitalDays(ob) {
   return Math.max(Math.round(days), 0);
 }
 
+// "Средний капитал" для человека такого же возраста/пола/региона —
+// добавлено 26.08.2026 по прямому запросу пользователя ("сравнивать надо
+// со средним значением в этом регионе с таким возрастом и полом, то что у
+// нас уже есть"). Намеренно НЕ процентиль/ранг ("топ X%") — для этого
+// нужно было бы распределение по популяции, которого у нас нет; это
+// сравнение с одной реальной опорной точкой. Использует ровно те же
+// baselineYears/regionPct, что и computeStartingCapitalDays выше, но БЕЗ
+// личных факторов человека (yearsLost, illnessPct) — иначе это было бы
+// сравнение не со средним, а с самим собой.
+function averageBaselineDaysForPeer(ob) {
+  const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
+  const regionPct = regionAdjustmentPct(ob.region);
+  return Math.max(Math.round(baselineYears * 365.25 * (1 + regionPct)), 0);
+}
+
+// Band around 0% treated as "about average" rather than forcing every
+// tiny rounding difference into an "above"/"below" sentence. Own
+// judgment call, not sourced — no methodology requires a specific
+// threshold here.
+const AVERAGE_COMPARISON_NEAR_BAND_PCT = 5;
+
+// Reveal-screen comparison line (added 26.08.2026 per user request:
+// "сравнивать надо со средним значением в этом регионе с таким возрастом
+// и полом, то что у нас уже есть"). Deliberately factual/neutral, not
+// praise or blame — same wellbeing principle already applied to
+// onboardingResultTier's region exclusion above, just for a different
+// (informational, not effort-framed) line. Never hides an unflattering
+// number — that would contradict the app's own "open formula" stance —
+// but pairs a below-average result with a non-shaming, forward-looking
+// sentence instead of omitting it.
+function onboardingComparisonHtml(ob, revealDays) {
+  const averageDays = averageBaselineDaysForPeer(ob);
+  if (averageDays <= 0) return "";
+  const diffPct = Math.round(((revealDays - averageDays) / averageDays) * 100);
+  let text;
+  if (diffPct > AVERAGE_COMPARISON_NEAR_BAND_PCT) {
+    text = t("onboarding.averageComparisonAbove")(diffPct);
+  } else if (diffPct < -AVERAGE_COMPARISON_NEAR_BAND_PCT) {
+    text = t("onboarding.averageComparisonBelow")(Math.abs(diffPct));
+  } else {
+    text = t("onboarding.averageComparisonNear");
+  }
+  return `<div class="reveal-comparison">${escapeHtml(text)}</div>`;
+}
+
 // Daily active-factor delta for the "Портфель здоровья" ledger — TZ
 // section 4, updated formula. Smoking is no longer an absolute cost:
 // the onboarding cigarettes/day figure is a personal "waterline"
@@ -1903,36 +1990,12 @@ function computeStartingCapitalDays(ob) {
 // 1:6 (TZ section 3.2, 13.08.2026, Veerman et al. BJSM 2024 accelerometer
 // data — replaces the earlier temporary 1:3 Spiegelhalter estimate),
 // daily cap 90 min / 9 hours.
-// Reduced-rate (not flat-capped) activity gain for self-reported
-// professional athletes (25.08.2026, user request — see TASKS.md's
-// still-open "90-min cap" item: this doesn't resolve that question with
-// sourced dose-response data, it just stops the formula from flatlining
-// completely for people who train far beyond a recreational volume).
-// Disclosed, not sourced: neither the reduced-rate factor (half) nor the
-// secondary cap are from a citation — same status as the base 90-minute
-// cap itself. If/when I-Min Lee or an equivalent source gives an actual
-// dose-response curve for very high training volumes, this should be
-// replaced, not layered on top of.
-const PRO_ATHLETE_THRESHOLD_MINUTES = 90;
-const PRO_ATHLETE_REDUCED_RATE_FACTOR = 0.5;
-const PRO_ATHLETE_EXTRA_CAP_HOURS = 9;
-
-function proAthleteActivityGainHours(minutes) {
-  const baseMinutes = Math.min(minutes, PRO_ATHLETE_THRESHOLD_MINUTES);
-  const extraMinutes = Math.max(minutes - PRO_ATHLETE_THRESHOLD_MINUTES, 0);
-  const baseHours = (baseMinutes / 60) * 6;
-  const extraHours = Math.min((extraMinutes / 60) * 6 * PRO_ATHLETE_REDUCED_RATE_FACTOR, PRO_ATHLETE_EXTRA_CAP_HOURS);
-  return baseHours + extraHours;
-}
-
-function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline, isProAthlete) {
+function dailyDeltaDays(cigarettesToday, activityMinutesToday, smokingWaterline) {
   const waterline = Number(smokingWaterline) || 0;
   const today = Number(cigarettesToday) || 0;
   const smokingTerm = (waterline - today) * 0.014;
   const minutes = Number(activityMinutesToday) || 0;
-  const activityGain = isProAthlete
-    ? proAthleteActivityGainHours(minutes) / 24
-    : Math.min((minutes / 60) * 6, 9) / 24;
+  const activityGain = Math.min((minutes / 60) * 6, 9) / 24;
   return activityGain + smokingTerm;
 }
 
@@ -1999,6 +2062,40 @@ const SLEEP_DEBT_GOOD_BONUS = SLEEP_SHORT_PREVALENCE_US * SLEEP_DEBT_STEADY_STAT
 // SLEEP_DEBT_NORM_HOURS (7.5h) ± 0.5h.
 const SLEEP_DEBT_GOOD_BAND_HOURS = 0.5;
 
+// 26.08.2026, user request: oversleep that's compensating for a recent
+// sharp sleep debt, or for an extreme one-off exertion event (example
+// given: an ultramarathon or Ironman), is recovery — not the same thing
+// as ordinary oversleep — and shouldn't carry the (steeper) oversleep
+// penalty. JUDGMENT CALL, not sourced: the thresholds below are the
+// author's own choice of "how much counts as sharp/extreme", same
+// category as SLEEP_DEBT_DECAY_K's midpoint choice above.
+const SLEEP_RECOVERY_LOOKBACK_DAYS = 3; // user's own wording: "накануне (1-3 дня назад)"
+// Debt carried INTO today (i.e. `decayed` in cascadeRecalcFrom, before
+// today's own deviation is added) at/above this counts as "sharp recent
+// insomnia" — roughly one clearly short night (~2-3h under norm) still
+// weighing on today after one day of decay.
+const SLEEP_RECOVERY_DEBT_THRESHOLD_HOURS = 2;
+// No dedicated "extreme event" flag exists in the data model, so this
+// uses the existing activityMinutes field as a proxy: normal daily
+// activity gain already caps at 90 min (see dailyDeltaDays), so a
+// logged value at/above this is well outside ordinary training and
+// stands in for "ultramarathon/Ironman/etc.-scale" effort.
+const SLEEP_RECOVERY_ACTIVITY_THRESHOLD_MIN = 240;
+
+// Checks the SLEEP_RECOVERY_LOOKBACK_DAYS calendar days strictly BEFORE
+// dateStr (not including dateStr itself — "накануне") for any single day
+// at/above the extreme-exertion proxy threshold.
+function hadRecentExtremeExertion(dateStr) {
+  for (let back = 1; back <= SLEEP_RECOVERY_LOOKBACK_DAYS; back++) {
+    const d = new Date(dateStr + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - back);
+    const key = d.toISOString().slice(0, 10);
+    const entry = state.ledger[key];
+    if (entry && Number(entry.activityMinutes) >= SLEEP_RECOVERY_ACTIVITY_THRESHOLD_MIN) return true;
+  }
+  return false;
+}
+
 // hasTodayData guards the bonus specifically (25.08.2026 fix): debt can
 // land at/near 0 just from decay or from a day with NO sleep hours
 // logged at all (deviation defaults to 0 when factHours is undefined —
@@ -2006,8 +2103,14 @@ const SLEEP_DEBT_GOOD_BAND_HOURS = 0.5;
 // good sleep, and shouldn't be rewarded. Omitting the flag (e.g. direct
 // unit-test calls) falls back to the plain quadratic, matching the
 // original always-penalize-or-zero behavior exactly.
-function sleepDebtPenalty(debt, hasTodayData) {
+// isRecoveryContext (26.08.2026): when the day nets out as oversleep
+// (debt < 0) AND recent sharp sleep debt or extreme exertion was
+// detected, the oversleep penalty is suppressed (returns 0 — neutral,
+// not bonused) rather than charged at the steeper SLEEP_DEBT_OVER_COEFF
+// rate. Doesn't affect the undersleep side at all.
+function sleepDebtPenalty(debt, hasTodayData, isRecoveryContext) {
   if (hasTodayData && Math.abs(debt) <= SLEEP_DEBT_GOOD_BAND_HOURS) return SLEEP_DEBT_GOOD_BONUS;
+  if (debt < 0 && isRecoveryContext) return 0;
   const coeff = debt > 0 ? SLEEP_DEBT_UNDER_COEFF : SLEEP_DEBT_OVER_COEFF;
   return -(coeff * debt * debt) || 0; // avoid returning -0 at debt=0
 }
@@ -2206,7 +2309,7 @@ function cascadeRecalcFrom(fromDate) {
 
   for (const date of affectedDates) {
     const entry = state.ledger[date];
-    const baseDelta = dailyDeltaDays(entry.cigarettes, entry.activityMinutes, state.smokingWaterline, state.isProAthlete);
+    const baseDelta = dailyDeltaDays(entry.cigarettes, entry.activityMinutes, state.smokingWaterline);
 
     const gapDays = Math.max(daysBetweenDates(runningDebtDate, date), 0);
     const decayed = runningDebt * Math.pow(SLEEP_DEBT_DECAY_K, gapDays);
@@ -2222,7 +2325,8 @@ function cascadeRecalcFrom(fromDate) {
     const debt = decayed + deviation;
     entry.sleepDebt = debt;
     const hasTodaySleepData = factHours !== undefined && !Number.isNaN(factHours);
-    entry.sleepDebtDelta = sleepDebtPenalty(debt, hasTodaySleepData);
+    const isRecoveryContext = decayed >= SLEEP_RECOVERY_DEBT_THRESHOLD_HOURS || hadRecentExtremeExertion(date);
+    entry.sleepDebtDelta = sleepDebtPenalty(debt, hasTodaySleepData, isRecoveryContext);
     entry.sleepRegularityDelta = sleepRegularityPenalty(date);
     entry.sleepDelta = entry.sleepDebtDelta + entry.sleepRegularityDelta;
     runningDebt = debt;
@@ -2937,13 +3041,6 @@ function renderOnboarding() {
         </div>
       </div>
       <div class="field">
-        <label>${t("onboarding.proAthleteQuestionLabel")}</label>
-        <div class="radio-row">
-          <label><input type="radio" name="f_proAthlete" value="yes" ${draft.isProAthlete === true ? "checked" : ""}> ${t("onboarding.yesLabel")}</label>
-          <label><input type="radio" name="f_proAthlete" value="no" ${draft.isProAthlete === false ? "checked" : ""}> ${t("onboarding.noLabel")}</label>
-        </div>
-      </div>
-      <div class="field">
         <label>${t("onboarding.weightLabel")}</label>
         <input type="number" id="f_weight" value="${escapeHtml(draft.weight ?? "")}">
       </div>
@@ -3085,8 +3182,14 @@ function renderOnboarding() {
     `;
   } else if (step === "reveal") {
     revealDays = computeStartingCapitalDays(draft);
+    // Funnel metric: "of everyone who reaches onboarding, how many get as
+    // far as seeing their calculated capital" — recalcMode excluded, that's
+    // an existing engaged user editing their profile, not new-user
+    // acquisition funnel progress.
+    if (!state.recalcMode) trackEvent("onboarding_reveal_reached");
     const tier = onboardingResultTier(draft);
     const resultPhrase = pickPhrase(localizedResultPhrases(tier), JSON.stringify(draft));
+    const comparisonHtml = onboardingComparisonHtml(draft, revealDays);
     body = `
       <div class="onboarding-header">
         <h1 class="screen-title">${t("onboarding.revealTitle")}</h1>
@@ -3095,6 +3198,7 @@ function renderOnboarding() {
         <div class="value"><span id="reveal-value">0</span> <span id="reveal-day-word">${localizedDayWord(revealDays)}</span></div>
         <div class="disclaimer">${t("welcome.disclaimer")}</div>
         <div class="reveal-phrase">${escapeHtml(resultPhrase)}</div>
+        ${comparisonHtml}
       </div>
       <div class="step-nav">
         <button class="btn secondary" id="ob-back">${t("onboarding.back")}</button>
@@ -3152,10 +3256,10 @@ function renderOnboarding() {
     animateRevealNumber(revealDays);
     document.getElementById("finish-onboarding").addEventListener("click", () => {
       const wasRecalc = state.recalcMode;
+      if (!wasRecalc) trackEvent("onboarding_completed");
       state.onboarding = draft;
       state.startingCapitalDays = revealDays;
       state.smokingWaterline = Number(draft.cigarettesPerDay) || 0;
-      state.isProAthlete = draft.isProAthlete === true;
       state.createdAt = state.createdAt || todayStr();
       state.onboardingStep = null;
       state.onboardingDraft = null;
@@ -3271,8 +3375,6 @@ function collectStepFields(step, draft) {
     } else {
       draft.activityGoalConfirmed = undefined;
     }
-    const proAthleteChecked = checkedRadio("f_proAthlete");
-    draft.isProAthlete = proAthleteChecked ? proAthleteChecked.value === "yes" : draft.isProAthlete;
   } else if (step === "recovery") {
     draft.sleepHoursRange = val("f_sleepHoursRange") || "";
     draft.bedtimeRange = val("f_bedtimeRange") || "";
@@ -3459,6 +3561,7 @@ function renderApp() {
   if (nav === "dashboard") renderDashboard(screen);
   else if (nav === "history") renderHistory(screen);
   else if (nav === "history-day") renderHistoryDay(screen);
+  else if (nav === "history-summary") renderHistorySummary(screen);
   else if (nav === "knowledge") renderKnowledge(screen);
   else if (nav === "chat") renderChat(screen);
   else if (nav === "settings") renderSettings(screen);
@@ -3499,6 +3602,10 @@ function renderSettings(screen) {
     renderReferralSettings(screen);
     return;
   }
+  if (view === "billing") {
+    renderBillingSettings(screen);
+    return;
+  }
   screen.innerHTML = `
     <h2 class="screen-title">${t("settings.title")}</h2>
     <div class="field">
@@ -3508,25 +3615,15 @@ function renderSettings(screen) {
         <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
       </div>
     </div>
-    <div class="field">
-      <label class="checkbox-row"><input type="checkbox" id="pro-athlete-toggle" ${state.isProAthlete ? "checked" : ""}> ${t("settings.proAthleteLabel")}</label>
-      ${collapsibleHint(t("settings.proAthleteHint"))}
-    </div>
     <div class="settings-list">
       <button class="settings-row" data-view="account">${state.authEmail ? t("settings.accountRowLoggedIn")(state.authEmail) : t("settings.accountRowLoggedOut")}</button>
       <button class="settings-row" data-view="referral">${t("settings.referralRow")}</button>
       <button class="settings-row" data-view="care">${t("settings.careRow")}</button>
       <button class="settings-row" data-view="factors">${t("settings.factorsRow")}</button>
       <div class="settings-row settings-row-disabled">${t("settings.fitnessTrackersRow")} <span class="optional-badge">${t("knowledge.comingSoon")}</span></div>
-      <a class="settings-row" href="/product/" target="_blank" rel="noopener">${t("settings.billingRow")}</a>
+      <button class="settings-row" data-view="billing">${t("settings.billingRow")}</button>
     </div>
   `;
-  document.getElementById("pro-athlete-toggle").addEventListener("change", (e) => {
-    state.isProAthlete = e.target.checked;
-    saveState();
-    cascadeRecalcFrom(state.createdAt || todayStr());
-    saveState();
-  });
   screen.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       setLang(btn.dataset.lang);
@@ -3574,6 +3671,51 @@ function renderReferralSettings(screen) {
   const copyBtn = document.getElementById("referral-copy");
   copyBtn.addEventListener("click", () => {
     copyTextToClipboard(t("settings.referralShareText"), copyBtn, t("settings.copyButton"));
+  });
+}
+
+// Payment link request (26.08.2026) — stand-in for real checkout: no
+// payment processor is wired up yet (Stripe blocked pending a US LLC;
+// RU side goes through a manual Т-Банк invoice link), so there's nothing
+// for an in-app "Subscribe" button to actually call. A mailto: link is
+// used instead of local-only storage on purpose — the existing
+// state.careRequests pattern (see renderCareSupport above) only ever
+// writes to this device's localStorage with a standing TODO to wire it
+// to a real backend, which means a request logged that way would never
+// actually reach the team. mailto guarantees the ask leaves the device
+// (opens the user's own mail client addressed to support@humanchange.app)
+// instead of silently vanishing the same way. state.paymentLinkRequestedAt
+// is purely a local "you already asked" confirmation for the user, not
+// the notification mechanism itself.
+function renderBillingSettings(screen) {
+  const requestedAt = state.paymentLinkRequestedAt;
+  const email = state.authEmail || "";
+  const mailBody = t("settings.billingEmailBody")(email);
+  const mailtoHref = `mailto:support@humanchange.app?subject=${encodeURIComponent(t("settings.billingEmailSubject"))}&body=${encodeURIComponent(mailBody)}`;
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">${t("settings.billingTitle")}</h2>
+    <div class="field">
+      <div class="hint">${t("settings.billingIntro")}</div>
+    </div>
+    <div class="field">
+      <div class="hint">${t("settings.billingNoAutopayHint")}</div>
+    </div>
+    <a class="btn" id="billing-request-link" href="${mailtoHref}" style="width:100%; display:block; text-align:center; box-sizing:border-box;">${t("settings.billingRequestButton")}</a>
+    ${
+      requestedAt
+        ? `<div class="hint" style="margin-top:12px;">${t("settings.billingRequestedHint")(escapeHtml(requestedAt))}<a href="mailto:support@humanchange.app">support@humanchange.app</a></div>`
+        : ""
+    }
+  `;
+  wireSettingsBackButton(screen);
+  document.getElementById("billing-request-link").addEventListener("click", () => {
+    // Best-effort receipt: fires whether or not the user's device actually
+    // has a configured mail client, since we can't detect that — the
+    // mailto link itself is still the real notification path.
+    state.paymentLinkRequestedAt = todayStr();
+    saveState();
+    trackEvent("payment_link_requested");
   });
 }
 
@@ -4531,6 +4673,92 @@ function dayTransactionsHtml(date) {
   `;
 }
 
+// "Сводка вложений" (26.08.2026, user request — an investment-statement
+// style summary: same three buckets as the per-day "Транзакции"
+// screen (Личные накопления / Дивиденды / Списания), but totalled
+// across every logged day instead of drilling into one date at a time.
+// Reuses dailyFactorBreakdown/state.decayCharges — the same numbers
+// each day already shows — rather than a parallel calculation, so the
+// aggregate is guaranteed to reconcile with what the calendar/day view
+// already displays. v1 scope: whole history, no period picker (see
+// TASKS.md if a month/year filter is wanted later).
+function aggregateBreakdown() {
+  const dates = sortedLedgerDates();
+  const investBuckets = new Map(); // label -> summed positive, non-dividend days
+  const chargeBuckets = new Map(); // label -> summed negative factor days
+  const inactivityBuckets = new Map(); // sphere -> summed decay-charge days
+  let savingsTotal = 0;
+  let dividendsTotal = 0;
+  let dividendWeeks = 0;
+
+  for (const date of dates) {
+    const entry = state.ledger[date];
+    if (!entry) continue;
+    savingsTotal += entry.deltaDays || 0;
+    if (entry.weeklyBonusDays) {
+      dividendsTotal += entry.weeklyBonusDays;
+      dividendWeeks += 1;
+    }
+    for (const item of dailyFactorBreakdown(entry)) {
+      if (item.pinned) continue; // weekly bonus — already folded into dividendsTotal above
+      const bucket = item.amount >= 0 ? investBuckets : chargeBuckets;
+      bucket.set(item.label, (bucket.get(item.label) || 0) + item.amount);
+    }
+  }
+  for (const charge of state.decayCharges) {
+    const label = sphereLabel(charge.sphere);
+    inactivityBuckets.set(label, (inactivityBuckets.get(label) || 0) - charge.amountDays);
+  }
+
+  const investItems = [...investBuckets.entries()].map(([label, amount]) => ({ label, amount }));
+  const dividendItems = dividendsTotal
+    ? [{ label: t("history.summaryDividendsAggregateLabel")(dividendWeeks), amount: dividendsTotal }]
+    : [];
+  const chargeItems = [
+    ...[...chargeBuckets.entries()].map(([label, amount]) => ({ label, amount })),
+    ...[...inactivityBuckets.entries()].map(([label, amount]) => ({ label, amount })),
+  ];
+  const chargesTotal = chargeItems.reduce((sum, i) => sum + i.amount, 0);
+
+  return { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems };
+}
+
+// Reached via state.nav="history-summary" from the card at the bottom of
+// the calendar screen. Same .modal-row / reportClickableAmount visual
+// language as the per-day screen for consistency.
+function renderHistorySummary(screen) {
+  const hasAnyData = sortedLedgerDates().some((d) => state.ledger[d]);
+  const { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems } = aggregateBreakdown();
+
+  screen.innerHTML = `
+    ${settingsBackButtonHtml()}
+    <h2 class="screen-title">${t("history.summaryTitle")}</h2>
+    ${
+      hasAnyData
+        ? `
+      <div class="modal-row">
+        <span>${t("history.personalSavingsLabel")}</span>
+        ${reportClickableAmount(savingsTotal, investItems)}
+      </div>
+      <div class="modal-row">
+        <span>${t("history.dividendsLabel")}</span>
+        ${reportClickableAmount(dividendsTotal, dividendItems)}
+      </div>
+      <div class="modal-row">
+        <span>${t("history.chargesLabel")}</span>
+        ${reportClickableAmount(chargesTotal, chargeItems)}
+      </div>
+    `
+        : `<div class="empty-state">${t("history.summaryEmpty")}</div>`
+    }
+  `;
+  document.getElementById("settings-back").addEventListener("click", () => {
+    state.nav = "history";
+    saveState();
+    render();
+  });
+}
+
 // Retroactive fill/edit form (23.08.2026 — was hardcoded to the 4
 // formula factors, courение/спорт/сон/алкоголь; now covers every
 // factor currently visible on the dashboard, same
@@ -4688,8 +4916,17 @@ function renderHistory(screen) {
       ${localizedWeekdayLabels().map((w) => `<div class="weekday-label">${w}</div>`).join("")}
     </div>
     <div class="history-grid">${cells.join("")}</div>
+    <button type="button" class="factor-card clickable" id="history-summary-card" style="margin-top:20px;">
+      <div class="name">${t("history.summaryCardTitle")}</div>
+      <div class="hint">${t("history.summaryCardHint")}</div>
+    </button>
   `;
 
+  document.getElementById("history-summary-card").addEventListener("click", () => {
+    state.nav = "history-summary";
+    saveState();
+    render();
+  });
   document.getElementById("month-prev").addEventListener("click", () => {
     const prev = new Date(Date.UTC(year, mon - 2, 1));
     state.historyMonth = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, "0")}`;

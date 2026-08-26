@@ -403,6 +403,12 @@ button {
   color: var(--accent);
 }
 
+.reveal-number .reveal-comparison {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 /* Nav (TZ section 7, 13.08.2026: icon-only bottom nav + minimal top bar).
    Both bars are now plain flex items of the #app column (see the
    app-shell layout above) — neither needs sticky/fixed positioning
@@ -696,6 +702,12 @@ button {
 }
 
 .factor-card .name { font-weight: 600; font-size: 15px; }
+
+/* "Вложения и дивиденды" summary card at the bottom of История
+   (26.08.2026) reuses .factor-card.clickable but adds a muted subtitle
+   line below the name — same visual language as .field .hint, scoped
+   here since this card sits outside any .field. */
+.factor-card .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 .feed-list {
   list-style: none;
