@@ -936,7 +936,7 @@ const STRINGS = {
       illnessHasLabel: "Есть ли серьёзные заболевания?",
       illnessDetailLabel: "Уточнение",
       revealTitle: "Это уже ваш капитал:",
-      finishButton: "Перейти в приложение",
+      finishButton: "Отметить первый день",
       finishButtonRecalc: "Сохранить пересчёт",
       shareButton: "Поделиться результатом",
       shareText: (days, word) => `Мой стартовый капитал здоровья — ${days} ${word}. Считаю каждый день в «Капитал здоровья»: humanchange.app/app/`,
@@ -1236,7 +1236,7 @@ const STRINGS = {
       illnessHasLabel: "Do you have any serious medical conditions?",
       illnessDetailLabel: "Details",
       revealTitle: "This is already your capital:",
-      finishButton: "Go to the app",
+      finishButton: "Log your first day",
       finishButtonRecalc: "Save recalculation",
       shareButton: "Share result",
       shareText: (days, word) => `My starting health capital — ${days} ${word}. Counting every day in Health Capital: humanchange.app/app/`,
@@ -3258,6 +3258,23 @@ function renderOnboarding() {
     document.getElementById("finish-onboarding").addEventListener("click", () => {
       const wasRecalc = state.recalcMode;
       if (!wasRecalc) trackEvent("onboarding_completed");
+      // Auto-hide the smoking/alcohol tiles for someone whose own
+      // onboarding answers say the factor doesn't apply to them (0
+      // cigarettes/day, no drinking in any of the three beverage
+      // buckets) — pilot feedback (Katya, 25.08.2026): confusing to see
+      // a "по нулям" input every day for something that isn't part of
+      // your life. First-time finish only (!wasRecalc) — a recalc is an
+      // already-engaged user revisiting onboarding, and shouldn't silently
+      // override visibility they may have already customized in
+      // Настройки. Still fully reversible there either way.
+      if (!wasRecalc) {
+        if (!(Number(draft.cigarettesPerDay) > 0)) {
+          state.visibleFactors = state.visibleFactors.filter((k) => k !== "smoking");
+        }
+        if (!isRegularDrinkerApprox(draft)) {
+          state.visibleFactors = state.visibleFactors.filter((k) => k !== "alcohol");
+        }
+      }
       state.onboarding = draft;
       state.startingCapitalDays = revealDays;
       state.smokingWaterline = Number(draft.cigarettesPerDay) || 0;
