@@ -979,12 +979,13 @@ const STRINGS = {
       inactivityChargeLabel: (sphere, days, pct) => `Бездействие (${sphere}): ${days}+ дней, −${pct}% от Дивидендов`,
       sportSphere: "спорт",
       activitySphereFallback: "активность",
-      summaryCardTitle: "Вложения и дивиденды",
-      summaryCardHint: "Разбивка капитала по источникам за всё время",
-      summaryTitle: "Сводка вложений",
+      summaryCardTitle: "Полная история",
+      summaryCardHint: "Общая сводка капитала и история по каждому дню",
+      summaryTitle: "Полная история",
       summaryEmpty: "Пока нет данных — отметьте хотя бы один день.",
       summaryDividendsAggregateLabel: (weeks) => `Недельные доплаты за активность (${weeks} нед.)`,
       summaryInactivityAggregateLabel: (sphere) => `Бездействие (${sphere}), всего`,
+      summaryByDateTitle: "История по дням",
     },
     knowledge: {
       title: "База знаний",
@@ -1062,10 +1063,9 @@ const STRINGS = {
       factorsRow: "Факторы на главном экране",
       billingRow: "Тарифы и оплата",
       billingTitle: "Тарифы и оплата",
-      billingIntro: "Новым пользователям доступен бесплатный пробный период. После пробного периода: 990–1490 ₽ в месяц. Founding member — 9 900 ₽/год (около 825 ₽/мес), закреплено навсегда, пока подписка активна.",
+      billingIntro: "Новым пользователям доступен бесплатный пробный период. После пробного периода: 990 ₽/мес, 9 900 ₽/год, 14 900 ₽ — пожизненный доступ.",
       billingNoAutopayHint: "Автоматической оплаты в приложении пока нет — платёжные системы ещё не подключены. Нажмите кнопку ниже, мы откроем письмо с запросом, отправьте его — и мы вручную вышлем вам ссылку на оплату.",
       billingRequestButton: "Запросить ссылку на оплату",
-      billingRequestedHint: (date) => `Запрос отправлен ${date}. Если письмо не открылось само — напишите нам напрямую: `,
       billingEmailSubject: "Запрос ссылки на оплату — Капитал здоровья",
       billingEmailBody: (email) => `Здравствуйте!\n\nПрошу выслать ссылку на оплату подписки «Капитал здоровья».\n${email ? `Мой email в приложении: ${email}\n` : ""}\nСпасибо!`,
       back: "← Назад",
@@ -1279,12 +1279,13 @@ const STRINGS = {
       inactivityChargeLabel: (sphere, days, pct) => `Inactivity (${sphere}): ${days}+ days, −${pct}% of dividends`,
       sportSphere: "sport",
       activitySphereFallback: "activity",
-      summaryCardTitle: "Investments & dividends",
-      summaryCardHint: "Your capital broken down by source, all-time",
-      summaryTitle: "Investment summary",
+      summaryCardTitle: "Full history",
+      summaryCardHint: "Overall capital summary and day-by-day history",
+      summaryTitle: "Full history",
       summaryEmpty: "No data yet — log at least one day.",
       summaryDividendsAggregateLabel: (weeks) => `Weekly activity top-ups (${weeks} wk.)`,
       summaryInactivityAggregateLabel: (sphere) => `Inactivity (${sphere}), total`,
+      summaryByDateTitle: "History by date",
     },
     knowledge: {
       title: "Knowledge Base",
@@ -1362,10 +1363,9 @@ const STRINGS = {
       factorsRow: "Home screen factors",
       billingRow: "Plans & billing",
       billingTitle: "Plans & billing",
-      billingIntro: "New users get a free trial period. After the trial: 990–1490 RUB/month (Russian card/bank payment). Founding member: 9,900 RUB/year (about 825 RUB/month), locked in for as long as the subscription stays active.",
+      billingIntro: "New users get a free trial period. After the trial: 990 RUB/month, 9,900 RUB/year, 14,900 RUB — lifetime access.",
       billingNoAutopayHint: "There's no automatic in-app payment yet — payment processing isn't connected. Tap the button below to open a pre-filled email; send it and we'll manually send you a payment link.",
       billingRequestButton: "Request a payment link",
-      billingRequestedHint: (date) => `Request sent ${date}. If the email didn't open automatically, write to us directly: `,
       billingEmailSubject: "Payment link request — Health Capital",
       billingEmailBody: (email) => `Hello!\n\nPlease send me a payment link for the Health Capital subscription.\n${email ? `My email in the app: ${email}\n` : ""}\nThank you!`,
       back: "← Back",
@@ -1648,6 +1648,7 @@ function defaultState() {
     historyMonth: null, // "YYYY-MM" currently viewed in the История calendar, defaults to the current month when unset
     historyDetailDate: null, // date shown on the full-screen "Транзакции за день" view, TZ section 7, 13.08.2026
     historyDayEditMode: false, // whether that screen's fill/edit form is expanded, TZ section 7, 17.08.2026
+    historyDayEditFactor: null, // which factor tile is open in renderFactorEditScreen for historyDetailDate, 29.08.2026
     settingsView: "root", // "root" | "care" | "factors" | "account" — sub-screen open within Настройки, TZ section 7, 13.08.2026
     authEmail: null, // email of the logged-in Supabase account, or null if using the app locally without one (22.08.2026)
     dashboardEditFactor: null, // factor key whose full-screen entry page is open, or null for the normal dashboard, 20.08.2026
@@ -3683,15 +3684,15 @@ function renderReferralSettings(screen) {
 // writes to this device's localStorage with a standing TODO to wire it
 // to a real backend, which means a request logged that way would never
 // actually reach the team. mailto guarantees the ask leaves the device
-// (opens the user's own mail client addressed to support@humanchange.app)
-// instead of silently vanishing the same way. state.paymentLinkRequestedAt
-// is purely a local "you already asked" confirmation for the user, not
-// the notification mechanism itself.
+// (opens the user's own mail client addressed to billing@humanchange.app —
+// switched from support@ on 29.08.2026 once billing@ existed as a real
+// Workspace alias). state.paymentLinkRequestedAt is still recorded on
+// click for potential future use, but is no longer shown on-screen
+// (29.08.2026, user request to simplify the screen).
 function renderBillingSettings(screen) {
-  const requestedAt = state.paymentLinkRequestedAt;
   const email = state.authEmail || "";
   const mailBody = t("settings.billingEmailBody")(email);
-  const mailtoHref = `mailto:support@humanchange.app?subject=${encodeURIComponent(t("settings.billingEmailSubject"))}&body=${encodeURIComponent(mailBody)}`;
+  const mailtoHref = `mailto:billing@humanchange.app?subject=${encodeURIComponent(t("settings.billingEmailSubject"))}&body=${encodeURIComponent(mailBody)}`;
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
     <h2 class="screen-title">${t("settings.billingTitle")}</h2>
@@ -3702,11 +3703,6 @@ function renderBillingSettings(screen) {
       <div class="hint">${t("settings.billingNoAutopayHint")}</div>
     </div>
     <a class="btn" id="billing-request-link" href="${mailtoHref}" style="width:100%; display:block; text-align:center; box-sizing:border-box;">${t("settings.billingRequestButton")}</a>
-    ${
-      requestedAt
-        ? `<div class="hint" style="margin-top:12px;">${t("settings.billingRequestedHint")(escapeHtml(requestedAt))}<a href="mailto:support@humanchange.app">support@humanchange.app</a></div>`
-        : ""
-    }
   `;
   wireSettingsBackButton(screen);
   document.getElementById("billing-request-link").addEventListener("click", () => {
@@ -4061,9 +4057,15 @@ function readFactorModalFields(idPrefix, key) {
 // a plain screen reached via state.dashboardEditFactor, with a visible
 // "← Назад" button and a full-width "Сохранить" button as normal page
 // content, so there's no overlay/z-index/keyboard interaction to break.
-function renderFactorEditScreen(screen, key) {
-  const today = todayStr();
-  const entry = state.ledger[today] || { cigarettes: "", activityMinutes: "" };
+// dateOverride (29.08.2026): originally hardcoded to today, for the
+// dashboard's "Отметить сегодня" tiles only. Now also reused by
+// renderHistoryDay for retroactive edits of a past date — same popup,
+// same save path, just targeting a different ledger date and returning
+// to the history-day screen instead of the dashboard when a date was
+// passed in.
+function renderFactorEditScreen(screen, key, dateOverride) {
+  const targetDate = dateOverride || todayStr();
+  const entry = state.ledger[targetDate] || { cigarettes: "", activityMinutes: "" };
   const factor = ALL_FACTORS.find((f) => f.key === key);
 
   // Nutrition renders as 6 separate .nutrition-tile cards (see
@@ -4083,23 +4085,29 @@ function renderFactorEditScreen(screen, key) {
 
   if (key === "nutrition") wireNutritionExclusiveCheckboxes("modal");
 
-  document.getElementById("settings-back").addEventListener("click", () => {
-    state.dashboardEditFactor = null;
-    saveState();
-    renderDashboard(screen);
-  });
+  const goBack = () => {
+    if (dateOverride) {
+      state.historyDayEditFactor = null;
+      saveState();
+      renderHistoryDay(screen);
+    } else {
+      state.dashboardEditFactor = null;
+      saveState();
+      renderDashboard(screen);
+    }
+  };
+
+  document.getElementById("settings-back").addEventListener("click", goBack);
 
   document.getElementById("factor-edit-save").addEventListener("click", () => {
-    const existing = state.ledger[today];
+    const existing = state.ledger[targetDate];
     const fields = readFactorModalFields("modal", key);
-    state.ledger[today] = { ...(existing || {}), ...fields };
+    state.ledger[targetDate] = { ...(existing || {}), ...fields };
     // Same cascade a retroactive edit uses (see cascadeRecalcFrom) — for
     // today alone this is equivalent to the old single-day computation,
     // it just goes through the shared path now.
-    cascadeRecalcFrom(today);
-    state.dashboardEditFactor = null;
-    saveState();
-    renderDashboard(screen);
+    cascadeRecalcFrom(targetDate);
+    goBack();
   });
 }
 
@@ -4723,12 +4731,52 @@ function aggregateBreakdown() {
   return { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems };
 }
 
+// Net day total (savings + dividends + charges), used only for the
+// one-line header of each date's accordion in the by-date list below —
+// same three numbers dayTransactionsHtml already breaks out, just
+// summed for a single at-a-glance figure per day.
+function dayNetTotal(date) {
+  const entry = state.ledger[date];
+  if (!entry) return 0;
+  const savings = entry.deltaDays || 0;
+  const dividends = entry.weeklyBonusDays || 0;
+  const breakdown = dailyFactorBreakdown(entry);
+  const chargeItems = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
+  const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
+  return savings + dividends + charges;
+}
+
 // Reached via state.nav="history-summary" from the card at the bottom of
 // the calendar screen. Same .modal-row / reportClickableAmount visual
-// language as the per-day screen for consistency.
+// language as the per-day screen for consistency. Renamed from
+// "Вложения и дивиденды" to "Полная история" (29.08.2026, user
+// request — the screen isn't just about investments) and extended with
+// a full day-by-day list below the existing all-time aggregate: each
+// date is a .kb-card accordion (same collapsed-by-default pattern as
+// the Knowledge Base cards) that expands into dayTransactionsHtml, the
+// exact same per-day breakdown the calendar's "Транзакции за [дата]"
+// screen already shows — reused rather than recomputed, so the two
+// stay in sync automatically. Most recent day first.
 function renderHistorySummary(screen) {
-  const hasAnyData = sortedLedgerDates().some((d) => state.ledger[d]);
+  const dates = sortedLedgerDates().filter((d) => state.ledger[d]);
+  const hasAnyData = dates.length > 0;
   const { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems } = aggregateBreakdown();
+
+  const byDateHtml = dates
+    .slice()
+    .reverse()
+    .map((date) => {
+      const net = dayNetTotal(date);
+      const roundedCents = Math.round(net * 100);
+      const cls = roundedCents > 0 ? "amount positive" : roundedCents < 0 ? "amount negative" : "amount";
+      return `
+        <details class="kb-card">
+          <summary class="name">${escapeHtml(date)} — <span class="${cls}">${formatDays(net)}</span></summary>
+          <div class="kb-card-body">${dayTransactionsHtml(date)}</div>
+        </details>
+      `;
+    })
+    .join("");
 
   screen.innerHTML = `
     ${settingsBackButtonHtml()}
@@ -4748,6 +4796,8 @@ function renderHistorySummary(screen) {
         <span>${t("history.chargesLabel")}</span>
         ${reportClickableAmount(chargesTotal, chargeItems)}
       </div>
+      <h3 style="margin-top:24px;">${t("history.summaryByDateTitle")}</h3>
+      ${byDateHtml}
     `
         : `<div class="empty-state">${t("history.summaryEmpty")}</div>`
     }
@@ -4759,32 +4809,6 @@ function renderHistorySummary(screen) {
   });
 }
 
-// Retroactive fill/edit form (23.08.2026 — was hardcoded to the 4
-// formula factors, courение/спорт/сон/алкоголь; now covers every
-// factor currently visible on the dashboard, same
-// ALL_FACTORS.filter(isFactorVisible) list renderDashboard's
-// factor-grid uses, via the same idPrefix-generic dispatcher the
-// per-factor modal uses — see factorModalFieldsHtml). Nutrition renders
-// as its own tiles outside the .log-card, matching
-// renderFactorEditScreen's treatment of it.
-function dayEditFormHtml(date, entry) {
-  const e = entry || {};
-  const visibleKeys = ALL_FACTORS.filter((f) => isFactorVisible(f.key)).map((f) => f.key);
-  const nutritionVisible = visibleKeys.includes("nutrition");
-  const otherFieldsHtml = visibleKeys
-    .filter((key) => key !== "nutrition")
-    .map((key) => factorModalFieldsHtml("edit", key, e))
-    .join("");
-  return `
-    <div class="log-card">
-      <h3>${entry ? t("history.changeDayTitle") : t("history.fillDayTitle")}</h3>
-      ${otherFieldsHtml}
-    </div>
-    ${nutritionVisible ? factorModalFieldsHtml("edit", "nutrition", e) : ""}
-    <button class="btn" id="day-edit-save" style="width:100%">${t("common.save")}</button>
-  `;
-}
-
 // TZ, 17.08.2026: view/edit split (п.7-7.1) — a day that already has
 // data opens in read-only summary by default; "Изменить" reveals the
 // form on demand instead of it always sitting expanded underneath. A
@@ -4794,8 +4818,21 @@ function dayEditFormHtml(date, entry) {
 // to false whenever a new date is opened from the calendar (see the
 // day-cell click handler in renderHistory) so re-entering a day always
 // starts back in view mode.
+//
+// Tile grid instead of one long stacked form (29.08.2026, user request:
+// editing a past day should show "those same (selected) tiles as on the
+// main screen" — was previously a single form listing every visible
+// factor's fields at once via idPrefix "edit", a different interaction
+// pattern from "Отметить сегодня"'s one-tile-at-a-time popup. Now reuses
+// the exact same .factor-grid markup and the same renderFactorEditScreen
+// popup (idPrefix "modal") as the dashboard, just parameterized with this
+// date instead of defaulting to today — see renderFactorEditScreen.
 function renderHistoryDay(screen) {
   const date = state.historyDetailDate;
+  if (state.historyDayEditFactor) {
+    renderFactorEditScreen(screen, state.historyDayEditFactor, date);
+    return;
+  }
   const entry = state.ledger[date];
   const editable = isDateEditable(date);
   const showForm = editable && (!entry || state.historyDayEditMode);
@@ -4809,7 +4846,22 @@ function renderHistoryDay(screen) {
         ? `<button class="btn secondary" id="day-edit-toggle" style="width:100%; margin-top:12px;">${t("history.editButton")}</button>`
         : ""
     }
-    ${showForm ? dayEditFormHtml(date, entry) : ""}
+    ${
+      showForm
+        ? `
+      <h3 style="margin-top:20px;">${entry ? t("history.changeDayTitle") : t("history.fillDayTitle")}</h3>
+      <div class="factor-grid">
+        ${ALL_FACTORS.filter((f) => isFactorVisible(f.key))
+          .map(
+            (f) => `
+              <button type="button" class="factor-card clickable" data-factor-key="${f.key}">
+                <div class="name">${f.label}</div>
+              </button>`
+          )
+          .join("")}
+      </div>`
+        : ""
+    }
     ${
       !editable && !entry
         ? `<div class="note">${t("history.editWindowNote")}</div>`
@@ -4831,21 +4883,12 @@ function renderHistoryDay(screen) {
     });
   }
   if (showForm) {
-    if (isFactorVisible("nutrition")) wireNutritionExclusiveCheckboxes("edit");
-    document.getElementById("day-edit-save").addEventListener("click", () => {
-      const existing = state.ledger[date];
-      let fields = {};
-      for (const factor of ALL_FACTORS) {
-        fields = {
-          ...fields,
-          ...resolvedFactorFields(factor.key, existing, () => readFactorModalFields("edit", factor.key)),
-        };
-      }
-      state.ledger[date] = { ...(existing || {}), ...fields };
-      cascadeRecalcFrom(date);
-      state.historyDayEditMode = false;
-      saveState();
-      renderHistoryDay(screen);
+    screen.querySelectorAll("[data-factor-key]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.historyDayEditFactor = btn.dataset.factorKey;
+        saveState();
+        renderHistoryDay(screen);
+      });
     });
   }
 }
@@ -4944,6 +4987,7 @@ function renderHistory(screen) {
     btn.addEventListener("click", () => {
       state.historyDetailDate = btn.dataset.date;
       state.historyDayEditMode = false;
+      state.historyDayEditFactor = null;
       state.nav = "history-day";
       saveState();
       render();

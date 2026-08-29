@@ -703,10 +703,11 @@ button {
 
 .factor-card .name { font-weight: 600; font-size: 15px; }
 
-/* "Вложения и дивиденды" summary card at the bottom of История
-   (26.08.2026) reuses .factor-card.clickable but adds a muted subtitle
-   line below the name — same visual language as .field .hint, scoped
-   here since this card sits outside any .field. */
+/* "Полная история" summary card at the bottom of История (26.08.2026,
+   renamed from "Вложения и дивиденды" 29.08.2026) reuses
+   .factor-card.clickable but adds a muted subtitle line below the
+   name — same visual language as .field .hint, scoped here since this
+   card sits outside any .field. */
 .factor-card .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 .feed-list {
