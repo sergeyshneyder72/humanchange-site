@@ -838,26 +838,6 @@ button {
   font-size: 15px;
 }
 
-.ahead-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
-}
-
-.vote-bar {
-  width: 100px;
-  height: 6px;
-  background: var(--line);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-left: 12px;
-}
-
-.vote-bar .fill { height: 100%; background: var(--accent); }
-
 .note {
   font-size: 13px;
   color: var(--muted);

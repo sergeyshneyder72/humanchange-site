@@ -657,40 +657,6 @@ function localizedReadingList() {
   return READING_LIST[getLang()] || READING_LIST.ru;
 }
 
-// Team-confirmed upcoming factors (added directly, no voting) vs.
-// illustrative example of user-proposed factors going through the Idea
-// Fund voting threshold. Vote counts here are EXAMPLE data — real
-// aggregation is manual, done by the team (TZ section 10), not live.
-const UPCOMING_FACTORS = {
-  ru: [
-    { name: "Питание", status: "team", note: "в разработке" },
-    { name: "Стресс", status: "team", note: "в разработке" },
-  ],
-  en: [
-    { name: "Nutrition", status: "team", note: "in progress" },
-    { name: "Stress", status: "team", note: "in progress" },
-  ],
-};
-
-function localizedUpcomingFactors() {
-  return UPCOMING_FACTORS[getLang()] || UPCOMING_FACTORS.ru;
-}
-
-const UPCOMING_VOTED_EXAMPLE = {
-  ru: [
-    { name: "Качество воздуха дома/на работе", votes: 34, threshold: 100 },
-    { name: "Регулярные медосмотры", votes: 61, threshold: 100 },
-  ],
-  en: [
-    { name: "Air quality at home/work", votes: 34, threshold: 100 },
-    { name: "Regular medical checkups", votes: 61, threshold: 100 },
-  ],
-};
-
-function localizedUpcomingVotedExample() {
-  return UPCOMING_VOTED_EXAMPLE[getLang()] || UPCOMING_VOTED_EXAMPLE.ru;
-}
-
 const IDEA_CATEGORIES = [
   "Техническое неудобство",
   "Идея нового фактора",
@@ -1003,8 +969,6 @@ const STRINGS = {
       sourcesNote: "Полный список научных источников, на которых основана модель — с прямыми ссылками. Пополняется по мере добавления новых факторов.",
       additionalLink: "доп. ссылка",
       additionalSource: "доп. источник",
-      upcomingTitle: "Что впереди",
-      upcomingNote: "Счётчики голосов ниже — пример визуализации; реальная агрегация предложений ведётся командой вручную.",
     },
     daily: {
       summaryLowActivity: "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.",
@@ -1303,8 +1267,6 @@ const STRINGS = {
       sourcesNote: "The full list of scientific sources the model is based on, with direct links. Grows as new factors are added.",
       additionalLink: "additional link",
       additionalSource: "additional source",
-      upcomingTitle: "What's ahead",
-      upcomingNote: "The vote counters below are an example visualization; actual suggestion aggregation is done manually by the team.",
     },
     daily: {
       summaryLowActivity: "Add 30 minutes of activity today — that's a real boost to your capital.",
@@ -4350,20 +4312,6 @@ function renderKnowledge(screen) {
         }</li>`
       ).join("")}
     </ul>
-
-    <h2>${t("knowledge.upcomingTitle")}</h2>
-    <div class="note">${t("knowledge.upcomingNote")}</div>
-    ${localizedUpcomingFactors().map(
-      (f) => `<div class="ahead-item"><span>${f.name}</span><span class="optional-badge">${f.note}</span></div>`
-    ).join("")}
-    ${localizedUpcomingVotedExample().map(
-      (f) => `<div class="ahead-item">
-        <span>${f.name}</span>
-        <span style="display:flex;align-items:center;">${f.votes}/${f.threshold}
-          <span class="vote-bar"><span class="fill" style="width:${Math.min(100, (f.votes / f.threshold) * 100)}%"></span></span>
-        </span>
-      </div>`
-    ).join("")}
   `;
 }
 
