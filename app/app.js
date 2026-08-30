@@ -880,6 +880,14 @@ if (new URLSearchParams(location.search).get("reset") === "true") {
 
 const LANG_STORAGE_KEY = "hc_lang";
 
+// Language list for the switcher (30.08.2026): a single array so adding
+// a third/fourth language later is just one more entry here plus a
+// matching STRINGS block — not a UI redesign. See languageSwitcherHtml.
+const SUPPORTED_LANGUAGES = [
+  { code: "ru", label: "Русский" },
+  { code: "en", label: "English" },
+];
+
 const STRINGS = {
   ru: {
     onboarding: {
@@ -1485,11 +1493,55 @@ const STRINGS = {
 
 function getLang() {
   const saved = localStorage.getItem(LANG_STORAGE_KEY);
-  return saved === "en" ? "en" : "ru"; // ru is the default for anything else, including unset
+  if (saved === "en" || saved === "ru") return saved;
+  // No explicit choice saved yet (30.08.2026, user request): default to
+  // the visitor's browser language instead of always Russian, so a
+  // US visitor lands in English without touching the switcher. Guarded
+  // like the window.supabase/window.umami checks elsewhere — `navigator`
+  // doesn't exist in the app.test.js vm sandbox, which keeps defaulting
+  // to "ru" there, matching every existing test's assumption.
+  if (typeof navigator === "undefined" || !navigator.language) return "ru";
+  return navigator.language.toLowerCase().startsWith("ru") ? "ru" : "en";
 }
 
 function setLang(lang) {
   localStorage.setItem(LANG_STORAGE_KEY, lang === "en" ? "en" : "ru");
+}
+
+// Single-button language switcher (30.08.2026, user request): was two
+// always-visible RU/EN buttons side by side; replaced with one <details>
+// disclosure showing just the current language's code, opening a
+// dropdown of every SUPPORTED_LANGUAGES entry on tap. <details> is the
+// same "tap to reveal" idiom already used for .alcohol-details/.kb-card
+// elsewhere — closing on selection is free, since picking an option
+// triggers setLang()+re-render, and the freshly rendered markup starts
+// as a new, closed <details> by construction (no outside-click JS
+// needed). Reused identically on the welcome screen, every onboarding
+// step, and Settings.
+function languageSwitcherHtml() {
+  const current = getLang();
+  return `
+    <details class="lang-switcher">
+      <summary class="lang-current">${escapeHtml(current.toUpperCase())}</summary>
+      <div class="lang-menu">
+        ${SUPPORTED_LANGUAGES.map(
+          (l) =>
+            `<button type="button" class="lang-option ${l.code === current ? "active" : ""}" data-lang="${l.code}" ${
+              l.code === current ? "disabled" : ""
+            }>${escapeHtml(l.label)}</button>`
+        ).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function wireLanguageSwitcher(container, onChange) {
+  container.querySelectorAll(".lang-option").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLang(btn.dataset.lang);
+      onChange();
+    });
+  });
 }
 
 // t("onboarding.next") -> STRINGS[currentLang].onboarding.next, falling
@@ -2528,13 +2580,9 @@ function renderWelcomeScreen() {
   // shipped without it here). Same switcher markup/behavior as
   // renderOnboarding's, just re-rendering renderWelcomeScreen() instead
   // of the step flow on click.
-  const langSwitcherHtml = `<div class="lang-switcher">
-    <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
-    <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
-  </div>`;
   root.innerHTML = `
     <div class="wrap">
-      ${langSwitcherHtml}
+      ${languageSwitcherHtml()}
       <div class="onboarding-header">
         <h1>${t("welcome.title")}</h1>
         <p>${t("welcome.intro")}</p>
@@ -2547,12 +2595,7 @@ function renderWelcomeScreen() {
       <button class="btn" id="welcome-start" style="width:100%" disabled>${t("welcome.start")}</button>
     </div>
   `;
-  root.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setLang(btn.dataset.lang);
-      render();
-    });
-  });
+  wireLanguageSwitcher(root, () => render());
   const checkbox = document.getElementById("welcome-consent");
   const startBtn = document.getElementById("welcome-start");
   checkbox.addEventListener("change", () => {
@@ -3219,14 +3262,9 @@ function renderOnboarding() {
   // full RU/EN translation shipped 24.08.2026, so the reveal screen now
   // gets the switcher too (30.08.2026, user report: missing on "Это уже
   // ваш капитал" screen).
-  const langSwitcherHtml = `<div class="lang-switcher">
-          <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
-          <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
-        </div>`;
-
   root.innerHTML = `
     <div class="wrap">
-      ${langSwitcherHtml}
+      ${languageSwitcherHtml()}
       <div class="progress-dots">${dots}</div>
       ${step !== "reveal" ? `<div class="onboarding-step-counter">${t("onboarding.stepCounter")(stepIndex + 1)}</div>` : ""}
       ${body}
@@ -3241,12 +3279,7 @@ function renderOnboarding() {
     </div>
   `;
 
-  root.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setLang(btn.dataset.lang);
-      render();
-    });
-  });
+  wireLanguageSwitcher(root, () => render());
 
   if (step === "reveal") {
     animateRevealNumber(revealDays);
@@ -3623,10 +3656,7 @@ function renderSettings(screen) {
     <h2 class="screen-title">${t("settings.title")}</h2>
     <div class="field">
       <label>${t("settings.languageLabel")}</label>
-      <div class="lang-switcher">
-        <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
-        <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
-      </div>
+      ${languageSwitcherHtml()}
     </div>
     <div class="settings-list">
       <button class="settings-row" data-view="account">${state.authEmail ? t("settings.accountRowLoggedIn")(state.authEmail) : t("settings.accountRowLoggedOut")}</button>
@@ -3637,12 +3667,7 @@ function renderSettings(screen) {
       <button class="settings-row" data-view="billing">${t("settings.billingRow")}</button>
     </div>
   `;
-  screen.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      setLang(btn.dataset.lang);
-      renderSettings(screen);
-    });
-  });
+  wireLanguageSwitcher(screen, () => renderSettings(screen));
   screen.querySelectorAll("[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.settingsView = btn.dataset.view;

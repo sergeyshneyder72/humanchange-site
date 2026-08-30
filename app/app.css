@@ -315,14 +315,21 @@ button {
 }
 
 /* Onboarding */
+/* Single-button language switcher (30.08.2026): was two always-visible
+   RU/EN buttons; now a <details> disclosure — .lang-current is the
+   <summary> showing just the active language's code, .lang-menu is the
+   dropdown body with one .lang-option button per SUPPORTED_LANGUAGES
+   entry. Positioned relatively so the dropdown can sit absolutely under
+   it without shifting layout. */
 .lang-switcher {
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
   margin-bottom: 12px;
+  position: relative;
 }
 
-.lang-btn {
+.lang-current {
+  display: inline-block;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--muted);
@@ -331,12 +338,47 @@ button {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  list-style: none;
 }
 
-.lang-btn.active {
+.lang-current::-webkit-details-marker { display: none; }
+.lang-current::marker { content: ""; }
+
+.lang-switcher[open] .lang-current {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lang-option {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.lang-option.active {
+  font-weight: 700;
+  color: var(--accent);
   cursor: default;
 }
 
