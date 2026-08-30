@@ -3214,18 +3214,15 @@ function renderOnboarding() {
   }
 
   // Language switcher (24.08.2026, checkpoint 1): shown on every
-  // onboarding step per the agreed placement — after onboarding,
-  // language only changes via Settings (not implemented yet, tracked in
-  // TASKS.md). Only "basics" is actually translated so far; switching on
-  // other steps will visibly still show Russian content — expected for
-  // this checkpoint, not a bug.
-  const langSwitcherHtml =
-    step !== "reveal"
-      ? `<div class="lang-switcher">
+  // onboarding step per the agreed placement. Originally hidden on
+  // "reveal" because only "basics" was translated at that checkpoint;
+  // full RU/EN translation shipped 24.08.2026, so the reveal screen now
+  // gets the switcher too (30.08.2026, user report: missing on "Это уже
+  // ваш капитал" screen).
+  const langSwitcherHtml = `<div class="lang-switcher">
           <button class="lang-btn ${getLang() === "ru" ? "active" : ""}" data-lang="ru" ${getLang() === "ru" ? "disabled" : ""}>RU</button>
           <button class="lang-btn ${getLang() === "en" ? "active" : ""}" data-lang="en" ${getLang() === "en" ? "disabled" : ""}>EN</button>
-        </div>`
-      : "";
+        </div>`;
 
   root.innerHTML = `
     <div class="wrap">
@@ -3244,14 +3241,12 @@ function renderOnboarding() {
     </div>
   `;
 
-  if (step !== "reveal") {
-    root.querySelectorAll(".lang-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        setLang(btn.dataset.lang);
-        render();
-      });
+  root.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLang(btn.dataset.lang);
+      render();
     });
-  }
+  });
 
   if (step === "reveal") {
     animateRevealNumber(revealDays);
