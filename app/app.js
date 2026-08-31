@@ -4556,17 +4556,24 @@ function renderCareSupport(container) {
         <label>Текст</label>
         <textarea id="care_text" placeholder="Опишите проблему или вопрос..."></textarea>
       </div>
-      <div class="hint" style="margin-bottom:16px;">Обращение видите только Вы и команда.</div>
+      <div class="hint" style="margin-bottom:16px;">Откроется ваша почта с письмом на support@humanchange.app — так оно гарантированно дойдёт до команды.</div>
       <button class="btn" id="care-submit" style="width:100%">Отправить</button>
     `;
     document.getElementById("care-submit").addEventListener("click", () => {
       const text = document.getElementById("care_text").value.trim();
       if (!text) return;
       const category = document.getElementById("care_category").value;
-      // TODO(backend): submit to a real endpoint instead of local-only storage,
-      // so the team can actually see and respond to submissions across users.
+      // 31.08.2026: this used to ONLY push to local-only storage (see the
+      // removed TODO below) — a request logged that way never actually
+      // reached the team. Kept careRequests as the user's own on-device
+      // receipt/history (shown under "Ваши обращения"), but delivery now
+      // happens the same way billing requests do: a mailto: link, which
+      // guarantees the ask leaves the device via the user's own mail client.
+      const mailBody = `Категория: ${category}\n\n${text}`;
+      const mailtoHref = `mailto:support@humanchange.app?subject=${encodeURIComponent("Обращение из приложения — Капитал здоровья")}&body=${encodeURIComponent(mailBody)}`;
       state.careRequests.push({ id: Date.now(), date: todayStr(), category, text });
       saveState();
+      window.location.href = mailtoHref;
       state.careTab = "mine";
       saveState();
       renderCareSupport(container);
