@@ -919,6 +919,21 @@ button {
 .report-cell summary::-webkit-details-marker { display: none; }
 .report-cell summary::marker { content: ""; }
 
+/* 31.08.2026, user request: same down-closed/up-open convention as
+   .kb-card (see that rule for why the `>` child combinator matters —
+   .report-cell can itself sit nested inside a .kb-card-body, on the
+   "История по дням" per-date cards, so scoping to each element's own
+   direct summary avoids the same open/closed leak bug fixed there). */
+.report-cell > summary::after {
+  content: " ▾";
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.report-cell[open] > summary::after {
+  content: " ▴";
+}
+
 .report-cell[open] {
   white-space: normal;
 }

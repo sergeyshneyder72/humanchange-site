@@ -4926,6 +4926,46 @@ function dayNetTotal(date) {
   return savings + dividends + charges;
 }
 
+// 31.08.2026, user request: the three aggregate rows at the top of
+// "Полная история" used to expand into a breakdown BY CATEGORY across
+// the whole history ("Курение: +12.3 дней") via aggregateBreakdown()'s
+// investItems/dividendItems/chargeItems — which hides exactly what was
+// asked for here: on which DATE a given bonus or charge happened. These
+// three builders produce per-date items instead (most recent first,
+// matching "История по дням" below), reusing the same daily numbers
+// dayTransactionsHtml/dayNetTotal already compute rather than a
+// parallel calculation, so the two views can't drift apart. Zero-amount
+// days are dropped (nothing to show), which never changes the total —
+// they contributed nothing to it either.
+function savingsByDateItems(dates) {
+  return dates
+    .slice()
+    .reverse()
+    .map((date) => ({ label: date, amount: state.ledger[date].deltaDays || 0 }))
+    .filter((i) => Math.round(i.amount * 100) !== 0);
+}
+
+function dividendsByDateItems(dates) {
+  return dates
+    .slice()
+    .reverse()
+    .filter((date) => state.ledger[date].weeklyBonusDays)
+    .map((date) => ({ label: date, amount: state.ledger[date].weeklyBonusDays, pinned: true }));
+}
+
+function chargesByDateItems(dates) {
+  return dates
+    .slice()
+    .reverse()
+    .map((date) => {
+      const entry = state.ledger[date];
+      const breakdown = dailyFactorBreakdown(entry);
+      const items = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
+      return { label: date, amount: items.reduce((sum, i) => sum + i.amount, 0) };
+    })
+    .filter((i) => Math.round(i.amount * 100) !== 0);
+}
+
 // Reached via state.nav="history-summary" from the card at the bottom of
 // the calendar screen. Same .modal-row / reportClickableAmount visual
 // language as the per-day screen for consistency. Renamed from
@@ -4940,7 +4980,10 @@ function dayNetTotal(date) {
 function renderHistorySummary(screen) {
   const dates = sortedLedgerDates().filter((d) => state.ledger[d]);
   const hasAnyData = dates.length > 0;
-  const { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems } = aggregateBreakdown();
+  const { savingsTotal, dividendsTotal, chargesTotal } = aggregateBreakdown();
+  const savingsItems = savingsByDateItems(dates);
+  const dividendItems = dividendsByDateItems(dates);
+  const chargeItems = chargesByDateItems(dates);
 
   const byDateHtml = dates
     .slice()
@@ -4966,7 +5009,7 @@ function renderHistorySummary(screen) {
         ? `
       <div class="modal-row">
         <span>${t("history.personalSavingsLabel")}</span>
-        ${reportClickableAmount(savingsTotal, investItems)}
+        ${reportClickableAmount(savingsTotal, savingsItems)}
       </div>
       <div class="modal-row">
         <span>${t("history.dividendsLabel")}</span>
