@@ -4488,17 +4488,25 @@ function renderCareIdeas(container) {
         <label>Текст</label>
         <textarea id="idea_text" placeholder="Опишите идею или проблему..."></textarea>
       </div>
-      <div class="hint" style="margin-bottom:16px;">Идею видите только Вы и команда. Авторство не раскрывается другим пользователям.</div>
+      <div class="hint" style="margin-bottom:16px;">Откроется ваша почта с письмом на support@humanchange.app — так идея гарантированно дойдёт до команды. Авторство не раскрывается другим пользователям.</div>
       <button class="btn" id="idea-submit" style="width:100%">Отправить</button>
     `;
     document.getElementById("idea-submit").addEventListener("click", () => {
       const text = document.getElementById("idea_text").value.trim();
       if (!text) return;
       const category = document.getElementById("idea_category").value;
-      // TODO(backend): submit to a real endpoint instead of local-only storage,
-      // so the team can actually see and aggregate submissions across users.
+      // 31.08.2026: same fix as renderCareSupport above, applied here too —
+      // this used to ONLY push to local-only storage (see the removed
+      // TODO below), so an idea never actually reached the team despite the
+      // on-screen claim that it did. state.ideas stays as the user's own
+      // on-device receipt/history ("Ваши идеи"); real delivery is now the
+      // same mailto: pattern, with its own subject so support@ mail is
+      // distinguishable from a "Вопрос в поддержку" submission.
+      const mailBody = `Категория: ${category}\n\n${text}`;
+      const mailtoHref = `mailto:support@humanchange.app?subject=${encodeURIComponent("Идея из приложения — Капитал здоровья")}&body=${encodeURIComponent(mailBody)}`;
       state.ideas.push({ id: Date.now(), date: todayStr(), category, text });
       saveState();
+      window.location.href = mailtoHref;
       state.ideasTab = "mine";
       saveState();
       renderCareIdeas(container);
