@@ -3796,7 +3796,15 @@ function renderReferralSettings(screen) {
       <div class="hint">${t("settings.referralHint")}</div>
     </div>
     <div class="field">
-      <textarea id="referral-text" readonly rows="3">${escapeHtml(t("settings.referralShareText"))}</textarea>
+      <!-- 31.08.2026: was a <textarea readonly rows="3"> — the copy handler
+           below already reads straight from t("settings.referralShareText"),
+           never from this element's value, so it was purely decorative and
+           a fixed row count was just a future overflow bug waiting to
+           happen (and did, once the 1.5x font-size pass landed — the text
+           no longer fit in 3 rows). A plain div with the same field-input
+           look grows with its content instead, so no text length/font
+           size/translation can ever clip it again. -->
+      <div class="referral-text-box">${escapeHtml(t("settings.referralShareText"))}</div>
     </div>
     <button class="btn" id="referral-copy" style="width:100%">${t("settings.copyButton")}</button>
   `;

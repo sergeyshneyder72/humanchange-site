@@ -145,6 +145,22 @@ button {
 
 .field textarea { resize: vertical; min-height: 90px; }
 
+/* Referral share text (31.08.2026) — same look as .field textarea above,
+   but a plain block instead of a form control, so it grows with its
+   content and can't clip like a fixed rows="N" textarea can. See
+   renderReferralSettings in app.js for why a real textarea isn't
+   needed here. */
+.referral-text-box {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Bedtime picker (TZ, 17.08.2026) — two selects side by side instead of
    a native <input type="time">, see timePickerHtml in app.js. */
 .time-picker-row {
