@@ -4823,7 +4823,20 @@ function reportClickableAmount(amount, items) {
   const roundedCents = Math.round(amount * 100);
   const cssClass = roundedCents > 0 ? "amount positive" : roundedCents < 0 ? "amount negative" : "amount";
   const reconciled = reconcileBreakdownForDisplay(amount, items);
-  const detail = reconciled.map((i) => `<div class="decay-detail-row">${escapeHtml(i.label)}: ${formatDays(i.amount)}</div>`).join("");
+  // 31.08.2026, user request: the label (date, or factor name elsewhere
+  // this is reused) stays its normal muted color — only the number+unit
+  // gets colored, by ITS OWN sign (not a fixed color per section), same
+  // .amount.positive/.amount.negative convention used everywhere else
+  // in the app. This also means a rare off-pattern day (e.g. a negative
+  // "Личные накопления" entry) still reads as red on its own merits
+  // instead of being forced green just because of which section it's in.
+  const detail = reconciled
+    .map((i) => {
+      const itemCents = Math.round(i.amount * 100);
+      const itemCls = itemCents > 0 ? "amount positive" : itemCents < 0 ? "amount negative" : "amount";
+      return `<div class="decay-detail-row">${escapeHtml(i.label)}: <span class="${itemCls}">${formatDays(i.amount)}</span></div>`;
+    })
+    .join("");
   return `<details class="report-cell"><summary class="${cssClass}">${formatDays(amount)}</summary>${detail}</details>`;
 }
 
