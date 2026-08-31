@@ -36,6 +36,11 @@ body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
+  /* 31.08.2026: base size ×1.5 (was implicit browser default 16px) so
+     everything without its own explicit font-size — h1-h3, plain text
+     inside kb-card-body, etc. — scales along with the explicit px
+     values below, which were each also multiplied by 1.5. */
+  font-size: 24px;
 }
 
 #app {
@@ -94,7 +99,7 @@ button {
   border: none;
   border-radius: 8px;
   padding: 12px 20px;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 600;
   background: var(--accent);
   color: #fff;
@@ -117,7 +122,7 @@ button {
 
 .field label {
   display: block;
-  font-size: 14px;
+  font-size: 21px;
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 6px;
@@ -133,7 +138,7 @@ button {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 24px;
   background: var(--surface);
   color: var(--text);
 }
@@ -153,7 +158,7 @@ button {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 24px;
   background: var(--surface);
   color: var(--text);
 }
@@ -164,7 +169,7 @@ button {
 }
 
 .field .hint {
-  font-size: 13px;
+  font-size: 19.5px;
   color: var(--muted);
   margin-top: 4px;
 }
@@ -176,7 +181,7 @@ button {
 .hint-details summary {
   cursor: pointer;
   display: inline-block;
-  font-size: 16px;
+  font-size: 24px;
   color: var(--muted);
   list-style: none;
 }
@@ -212,7 +217,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 15px;
+  font-size: 22.5px;
   font-weight: 600;
   color: var(--text);
 }
@@ -241,14 +246,14 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: 22.5px;
   font-weight: 400;
   color: var(--text);
 }
 
 .optional-badge {
   display: inline-block;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--muted);
   background: var(--accent-soft);
@@ -272,7 +277,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 22.5px;
   font-weight: 400;
   color: var(--text);
 }
@@ -282,7 +287,7 @@ button {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 24px;
   background: var(--surface);
   color: var(--text);
 }
@@ -303,7 +308,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px 16px;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
@@ -335,7 +340,7 @@ button {
   color: var(--muted);
   border-radius: 6px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   list-style: none;
@@ -371,7 +376,7 @@ button {
   text-align: left;
   padding: 6px 8px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--text);
   cursor: pointer;
 }
@@ -383,7 +388,7 @@ button {
 }
 
 .onboarding-step-counter {
-  font-size: 13px;
+  font-size: 19.5px;
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 6px;
@@ -427,7 +432,7 @@ button {
 }
 
 .reveal-number .value {
-  font-size: 48px;
+  font-size: 72px;
   font-weight: 700;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
@@ -440,14 +445,14 @@ button {
 
 .reveal-number .reveal-phrase {
   margin-top: 14px;
-  font-size: 17px;
+  font-size: 25.5px;
   font-weight: 600;
   color: var(--accent);
 }
 
 .reveal-number .reveal-comparison {
   margin-top: 8px;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--muted);
 }
 
@@ -545,7 +550,7 @@ button {
 }
 
 .capital-header .capital-value {
-  font-size: 40px;
+  font-size: 60px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -554,7 +559,7 @@ button {
 .capital-header .capital-value.negative { color: var(--danger); }
 
 .capital-trend {
-  font-size: 15px;
+  font-size: 22.5px;
   color: var(--muted);
   margin-top: 6px;
 }
@@ -564,13 +569,13 @@ button {
 
 .starting-ref {
   text-align: center;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--muted);
   margin-bottom: 16px;
 }
 
 .disclaimer {
-  font-size: 13px;
+  font-size: 19.5px;
   color: var(--muted);
   text-align: center;
   border-top: 1px solid var(--line);
@@ -591,7 +596,7 @@ button {
   background: var(--surface);
   border-radius: 999px;
   padding: 6px 16px;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--muted);
 }
 
@@ -641,7 +646,7 @@ button {
 }
 
 .nutrition-tile h3 {
-  font-size: 16px;
+  font-size: 24px;
   margin-bottom: 12px;
 }
 
@@ -664,7 +669,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--text);
   margin: 4px 0 16px;
 }
@@ -677,7 +682,7 @@ button {
 }
 
 .next-step-card .kicker {
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -688,7 +693,7 @@ button {
 .engagement-card {
   text-align: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 24px;
   border-radius: var(--radius);
   padding: 12px 18px;
   margin-bottom: 20px;
@@ -743,14 +748,14 @@ button {
   margin-top: 8px;
 }
 
-.factor-card .name { font-weight: 600; font-size: 15px; }
+.factor-card .name { font-weight: 600; font-size: 22.5px; }
 
 /* "Полная история" summary card at the bottom of История (26.08.2026,
    renamed from "Вложения и дивиденды" 29.08.2026) reuses
    .factor-card.clickable but adds a muted subtitle line below the
    name — same visual language as .field .hint, scoped here since this
    card sits outside any .field. */
-.factor-card .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.factor-card .hint { font-size: 19.5px; color: var(--muted); margin-top: 4px; }
 
 .feed-list {
   list-style: none;
@@ -764,7 +769,7 @@ button {
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  font-size: 22.5px;
 }
 
 .feed-item .badge {
@@ -780,7 +785,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 19.5px;
   font-weight: 700;
   color: #fff;
 }
@@ -793,7 +798,7 @@ button {
 .feed-item .amount.positive { color: var(--accent); font-weight: 600; }
 .feed-item .amount.negative { color: var(--danger); font-weight: 600; }
 
-.feed-item .date { color: var(--muted); font-size: 13px; }
+.feed-item .date { color: var(--muted); font-size: 19.5px; }
 
 /* Knowledge — cards are <details> accordions (20.08.2026: was one long
    wall of text per card, now collapsed by default; tap the name to
@@ -829,7 +834,7 @@ button {
 }
 
 .kb-card .name { font-weight: 700; }
-.kb-card .source { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.kb-card .source { font-size: 19.5px; color: var(--muted); margin-top: 8px; }
 .kb-card.disabled { opacity: 0.7; }
 
 /* Norm tables inside kb-card-body (31.08.2026: "8 маркеров долголетия"
@@ -837,7 +842,7 @@ button {
 .kb-card-body table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 21px;
   margin: 4px 0;
 }
 .kb-card-body th,
@@ -851,11 +856,11 @@ button {
 .reading-list {
   padding-left: 18px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 22.5px;
 }
 
 .note {
-  font-size: 13px;
+  font-size: 19.5px;
   color: var(--muted);
   margin-top: -6px;
   margin-bottom: 16px;
@@ -882,7 +887,7 @@ button {
 }
 
 .decay-detail-row {
-  font-size: 14px;
+  font-size: 21px;
   color: var(--muted);
   padding: 4px 0;
   white-space: nowrap;
@@ -902,7 +907,7 @@ button {
 
 .month-label {
   font-weight: 600;
-  font-size: 16px;
+  font-size: 24px;
 }
 
 .history-grid {
@@ -918,7 +923,7 @@ button {
 
 .weekday-label {
   text-align: center;
-  font-size: 12px;
+  font-size: 18px;
   color: var(--muted);
   font-weight: 600;
 }
@@ -927,7 +932,7 @@ button {
   aspect-ratio: 1;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 19.5px;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   padding: 0;
@@ -972,7 +977,7 @@ button {
   justify-content: space-between;
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  font-size: 22.5px;
 }
 
 .modal-row:last-child {
@@ -990,7 +995,7 @@ button {
 
 .idea-item .cat {
   display: inline-block;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--accent);
@@ -1000,13 +1005,13 @@ button {
   margin-bottom: 6px;
 }
 
-.idea-item .date { font-size: 13px; color: var(--muted); float: right; }
+.idea-item .date { font-size: 19.5px; color: var(--muted); float: right; }
 
 .empty-state {
   text-align: center;
   color: var(--muted);
   padding: 40px 0;
-  font-size: 15px;
+  font-size: 22.5px;
 }
 
 .section-tabs {
@@ -1020,7 +1025,7 @@ button {
   background: var(--surface);
   border-radius: 999px;
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: 21px;
   color: var(--muted);
 }
 
