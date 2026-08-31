@@ -4416,6 +4416,23 @@ function renderKnowledge(screen) {
       </details>`
     ).join("")}
 
+    <details class="kb-card">
+      <summary><span class="name">${t("knowledge.markersTitle")}</span></summary>
+      <div class="kb-card-body">
+        <div class="note">${t("knowledge.markersNote")}</div>
+        ${localizedLongevityMarkers().map(
+          (item) => `
+          <details class="kb-card">
+            <summary><span class="name">${item.name}</span></summary>
+            <div class="kb-card-body">
+              <div>${item.body}</div>
+              <div class="source">${item.source}</div>
+            </div>
+          </details>`
+        ).join("")}
+      </div>
+    </details>
+
     <h2>${t("knowledge.readingListTitle")}</h2>
     <ul class="reading-list">
       ${localizedReadingList().map((r) => `<li>${r}</li>`).join("")}
@@ -4430,19 +4447,6 @@ function renderKnowledge(screen) {
         }</li>`
       ).join("")}
     </ul>
-
-    <h2>${t("knowledge.markersTitle")}</h2>
-    <div class="note">${t("knowledge.markersNote")}</div>
-    ${localizedLongevityMarkers().map(
-      (item) => `
-      <details class="kb-card">
-        <summary><span class="name">${item.name}</span></summary>
-        <div class="kb-card-body">
-          <div>${item.body}</div>
-          <div class="source">${item.source}</div>
-        </div>
-      </details>`
-    ).join("")}
   `;
 }
 
