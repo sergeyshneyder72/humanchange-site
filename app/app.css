@@ -832,6 +832,22 @@ button {
 .kb-card .source { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .kb-card.disabled { opacity: 0.7; }
 
+/* Norm tables inside kb-card-body (31.08.2026: "8 маркеров долголетия"
+   section — the only place in the Knowledge Base that renders <table>). */
+.kb-card-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 4px 0;
+}
+.kb-card-body th,
+.kb-card-body td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.kb-card-body th { color: var(--muted); font-weight: 600; }
+
 .reading-list {
   padding-left: 18px;
   color: var(--muted);

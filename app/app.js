@@ -433,6 +433,120 @@ function localizedKnowledgeBase() {
   return KNOWLEDGE_BASE[getLang()] || KNOWLEDGE_BASE.ru;
 }
 
+// "8 тренируемых маркеров долголетия" (31.08.2026) — a separate section in
+// the Knowledge Base, deliberately NOT mixed into KNOWLEDGE_BASE above:
+// those cards map 1:1 to actual formula factors (active or planned), while
+// these 8 markers are free, equipment-free self-tests with their own
+// published mortality associations that are NOT part of the capital
+// calculation. Keeping them visually/structurally separate avoids implying
+// a promise ("this is coming to the formula") that isn't being made.
+const LONGEVITY_MARKERS = {
+  ru: [
+    {
+      key: "vo2max",
+      name: "VO2 Max",
+      body: `Максимальный объём кислорода, который тело может использовать во время нагрузки — один из главных предикторов долголетия. У мужчин каждая дополнительная единица VO2 Max связана с +45 днями жизни; повышение формы на 1 MET снижает риск смерти на 13–15%, независимо от возраста, пола и ИМТ (анализ 750 000+ ветеранов, JACC, 2022).<br><br><strong>Как проверить:</strong> тест Купера — после разминки пробегите на стадионе максимальную дистанцию за 12 минут.<br><br><table><tr><th>Возраст</th><th>М: средне</th><th>Ж: средне</th></tr><tr><td>20–29</td><td>2200–2399 м</td><td>1800–2199 м</td></tr><tr><td>30–39</td><td>1900–2299 м</td><td>1700–1999 м</td></tr><tr><td>40–49</td><td>1700–2099 м</td><td>1500–1899 м</td></tr><tr><td>50+</td><td>1600–1999 м</td><td>1400–1699 м</td></tr></table><br><strong>Как улучшать:</strong> 150 мин/нед аэробной нагрузки в «зоне 2» (темп, при котором можете говорить полными предложениями, но еле-еле) плюс интервалы у порога максимума.`,
+      source: "Источники: Cooper K.H., JAMA (1968); Mandsager K. et al., JAMA Network Open (2018); Kokkinos P. et al., JACC (2022).",
+    },
+    {
+      key: "gripStrength",
+      name: "Сила хвата",
+      body: `Простой заменитель общей мышечной массы и силы всего тела (если вы не скалолаз и не армрестлер). У людей со слабым хватом (12 000 человек 50+) риск смерти был на 45% выше; в метаанализе почти 2 млн человек из 38 исследований самая сильная группа имела на 31% ниже риск смерти от всех причин. Исследование 2026 года (5472 женщины 63–99 лет) показало, что сила хвата защищает даже у тех, кто не выполняет нормы кардиоактивности.<br><br><strong>Как проверить:</strong> ручной динамометр (~2000–3000₽), сидя, локоть под 90°.<br><br><table><tr><th>Возраст</th><th>Мужчины: норма</th><th>Женщины: норма</th></tr><tr><td>20–29</td><td>37–58 кг</td><td>22–41 кг</td></tr><tr><td>30–39</td><td>36–56 кг</td><td>20–35 кг</td></tr><tr><td>40–49</td><td>35–55 кг</td><td>19–33 кг</td></tr><tr><td>50+</td><td>21–51 кг</td><td>15–32 кг</td></tr></table><br><strong>Как улучшать:</strong> силовые упражнения с нагрузкой на хват (подтягивания, тяги, фермерская проходка) с постепенной прогрессией по весу/повторениям.`,
+      source: "Источники: метаанализ 38 исследований, ~2 млн чел., Archives of Physical Medicine and Rehabilitation (2018); JAMA Network Open (2026); The Lancet (2015).",
+    },
+    {
+      key: "workingMemory",
+      name: "Рабочая память",
+      body: `Способность удерживать информацию «здесь и сейчас» и оперировать ею — начинает снижаться уже в раннем взрослом возрасте. Восьмилетнее наблюдение за 3000+ пожилыми людьми показало: низкий результат теста на скорость обработки информации предсказывал более высокую смертность даже с поправкой на возраст и болезни сердца; в сочетании с медленной походкой риск смерти был почти в 4 раза выше.<br><br><strong>Как проверить:</strong> тест на объём цифровой памяти (digit span) — повторить последовательность цифр вперёд, затем в обратном порядке.<br><br><table><tr><th>Направление</th><th>Норма</th></tr><tr><td>Вперёд</td><td>5–6 цифр</td></tr><tr><td>Обратно</td><td>3–4 цифры</td></tr></table><br><strong>Как улучшать:</strong> аэробные и силовые тренировки (доказанный эффект даже независимо от исходного уровня) плюс прямая тренировка памяти — n-back, тот же digit span.`,
+      source: "Источники: Cardiovascular Health Study, 2008; метаанализ 36 РКИ (2018); метаанализ 27 РКИ (2019).",
+    },
+    {
+      key: "balance",
+      name: "Баланс",
+      body: `Статическое равновесие — способность стоять на месте, не теряя устойчивости. Кто не может простоять на одной ноге 10 секунд, у того на 84% выше риск смерти за следующие 7–11 лет (1700 человек, BJSM 2022) — причина не в самом падении, а в потере подвижности после него (перелом шейки бедра даёт ~50% риска смерти за 5 лет). Баланс на одной ноге ухудшается быстрее, чем сила хвата или колена.<br><br><strong>Как проверить:</strong> встаньте на одну ногу, закройте глаза, засеките время.<br><br><table><tr><th>Возраст</th><th>Мужчины</th><th>Женщины</th></tr><tr><td>20–39</td><td>21 сек</td><td>17 сек</td></tr><tr><td>40–59</td><td>18 сек</td><td>15 сек</td></tr><tr><td>60–80</td><td>9 сек</td><td>7,5 сек</td></tr></table><br><strong>Как улучшать:</strong> практика в течение дня (стоя на одной ноге во время звонка) плюс выпады, особенно на нестабильной поверхности.`,
+      source: "Источники: Araujo C.G. et al., BJSM (2022); исследование клиники Майо, PLOS ONE (2024).",
+    },
+    {
+      key: "agility",
+      name: "Ловкость",
+      body: `Способность сохранять контроль над телом в движении — устоять, если споткнулись, быстро среагировать. Скорость ходьбы напрямую связана со смертностью: каждое увеличение на 0,1 м/с снижает риск смерти примерно на 12% (объединённый анализ 34 485 пожилых людей, JAMA 2011).<br><br><strong>Как проверить:</strong> тест «встать-сесть» — сколько раз за 30 секунд встанете со стула и сядете без помощи рук.<br><br><table><tr><th>Возраст</th><th>Мужчины</th><th>Женщины</th></tr><tr><td>60–64</td><td>14</td><td>12</td></tr><tr><td>70–74</td><td>12</td><td>10</td></tr><tr><td>80–84</td><td>10</td><td>9</td></tr><tr><td>90–94</td><td>7</td><td>4</td></tr></table><br><strong>Как улучшать:</strong> марш с высоким подниманием колен, ходьба с грузом со сменой направления, контролируемые подъёмы с пола.`,
+      source: "Источники: объединённый анализ 34 485 чел., JAMA (2011); данные CDC STEADI.",
+    },
+    {
+      key: "relationalCapacity",
+      name: "Реляционный капитал",
+      body: `Способность строить и поддерживать доверительные отношения. Люди с крепкими связями имеют на 19% ниже риск инсульта и на 24% ниже риск ранней смерти; метаанализ 3,4 млн человек показал, что одиночество повышает риск смерти на 26%, изоляция — на 29%, жизнь в одиночестве — на 32% (больше эффекта ожирения).<br><br><strong>Как проверить:</strong> опросник из 7 утверждений (шкала Ryff), каждое от 1 до 6 баллов — например «я знаю, что могу доверять своим друзьям, и они знают, что могут доверять мне».<br><br><table><tr><th>Сумма</th><th>Что это значит</th></tr><tr><td>35–42</td><td>Сильный результат</td></tr><tr><td>25–34</td><td>Хорошо, есть куда углублять</td></tr><tr><td>17–24</td><td>Стоит обратить внимание</td></tr><tr><td>7–16</td><td>Область для первоочередных инвестиций</td></tr></table><br><strong>Как улучшать:</strong> регулярный контакт с близкими (даже минимальный), осознанные разговоры с незнакомыми людьми, более глубокие вопросы друг другу.`,
+      source: "Источники: Holt-Lunstad J. et al., Perspectives on Psychological Science (2015); PNAS.",
+    },
+    {
+      key: "functionalStrength",
+      name: "Функциональная сила",
+      body: `Не абсолютная сила мышц, а способность применять её в бытовых движениях: лестница, подъём с пола, сумка с продуктами. Тест «сесть-встать с пола» (Sitting-Rising Test) независимо предсказывал смертность в проспективном исследовании 4282 человек 46–75 лет за 12 лет наблюдения.<br><br><strong>Как проверить:</strong> из положения стоя сядьте на пол по-турецки и встаньте обратно. Старт — 10 баллов (5 за посадку, 5 за подъём), минус 1 балл за каждую опору рукой/коленом, минус 0,5 за потерю равновесия.<br><br><table><tr><th>Баллы (из 10)</th><th>Что это значит</th></tr><tr><td>8–10</td><td>Хорошее сочетание силы, гибкости, баланса</td></tr><tr><td>4–7</td><td>Средне, есть что тренировать</td></tr><tr><td>0–3</td><td>В 5–6 раз выше риск смерти, чем у группы 8–10</td></tr></table><br><strong>Как улучшать:</strong> силовые тренировки плюс «взрывные» виды спорта вроде ракеточных.`,
+      source: "Источник: Araújo C.G. et al., European Journal of Preventive Cardiology (2014, 2025).",
+    },
+    {
+      key: "enduranceUnderLoad",
+      name: "Выносливость под нагрузкой",
+      body: `Способность долго двигаться, неся вес — в том числе вес собственного тела. Исследование 33 560 взрослых в Великобритании показало: те, кто набирал шаги отрезками от 15 минут, имели примерно в 5 раз ниже смертность за 9,5 лет, чем те, чьи самые длинные отрезки ходьбы были короче 5 минут.<br><br><strong>Как проверить:</strong> маршируйте на месте с гантелями или в утяжелённом жилете, засеките время до заметного учащения пульса и до полного отказа — это ваши ориентиры для отслеживания прогресса.<br><br><strong>Как улучшать:</strong> ходьба с отягощением — сжигает на 30–45% больше калорий, чем обычная, и травмирует меньше, чем бег.`,
+      source: "Источник: Annals of Internal Medicine (2025), 33 560 взрослых, Великобритания.",
+    },
+  ],
+  en: [
+    {
+      key: "vo2max",
+      name: "VO2 Max",
+      body: `The maximum volume of oxygen your body can use during exertion — one of the strongest predictors of longevity. In men, each extra unit of VO2 Max is linked to +45 days of life; a 1-MET improvement in fitness lowers mortality risk by 13–15%, regardless of age, sex, or BMI (750,000+ veterans, JACC, 2022).<br><br><strong>How to test:</strong> the Cooper Test — after warming up, run the farthest distance you can on a track in 12 minutes.<br><br><table><tr><th>Age</th><th>Men: average</th><th>Women: average</th></tr><tr><td>20–29</td><td>2200–2399 m</td><td>1800–2199 m</td></tr><tr><td>30–39</td><td>1900–2299 m</td><td>1700–1999 m</td></tr><tr><td>40–49</td><td>1700–2099 m</td><td>1500–1899 m</td></tr><tr><td>50+</td><td>1600–1999 m</td><td>1400–1699 m</td></tr></table><br><strong>How to improve:</strong> 150 min/week of "Zone 2" aerobic work (a pace where you can still talk in full sentences, but only just) plus intervals near your max.`,
+      source: "Sources: Cooper K.H., JAMA (1968); Mandsager K. et al., JAMA Network Open (2018); Kokkinos P. et al., JACC (2022).",
+    },
+    {
+      key: "gripStrength",
+      name: "Grip strength",
+      body: `A simple stand-in for total-body muscle mass and strength (unless you're a rock climber or arm wrestler). In a study of 12,000 adults 50+, the weakest-grip group had a 45% higher mortality risk; a meta-analysis of nearly 2 million people across 38 studies found the strongest-grip group had a 31% lower risk of death from any cause. A 2026 study (5,472 women aged 63–99) found grip strength protects even people who don't meet cardio activity guidelines.<br><br><strong>How to test:</strong> a hand dynamometer (~$20–30), seated, elbow at 90°.<br><br><table><tr><th>Age</th><th>Men: normal</th><th>Women: normal</th></tr><tr><td>20–29</td><td>37–58 kg</td><td>22–41 kg</td></tr><tr><td>30–39</td><td>36–56 kg</td><td>20–35 kg</td></tr><tr><td>40–49</td><td>35–55 kg</td><td>19–33 kg</td></tr><tr><td>50+</td><td>21–51 kg</td><td>15–32 kg</td></tr></table><br><strong>How to improve:</strong> strength work that loads your grip (pull-ups, rows, farmer's carries) with gradual progressive overload.`,
+      source: "Sources: meta-analysis of 38 studies, ~2M people, Archives of Physical Medicine and Rehabilitation (2018); JAMA Network Open (2026); The Lancet (2015).",
+    },
+    {
+      key: "workingMemory",
+      name: "Working memory",
+      body: `Your ability to hold information "in the moment" and operate on it — starts declining in early adulthood. An 8-year study of 3,000+ older adults found low scores on a standard processing-speed test predicted higher mortality even after adjusting for age and heart disease; combined with slow gait, mortality risk was nearly 4x higher.<br><br><strong>How to test:</strong> a digit span test — repeat a sequence of numbers forward, then backward.<br><br><table><tr><th>Direction</th><th>Normal</th></tr><tr><td>Forward</td><td>5–6 digits</td></tr><tr><td>Backward</td><td>3–4 digits</td></tr></table><br><strong>How to improve:</strong> aerobic and strength training (benefits shown regardless of baseline) plus direct memory training — n-back, digit span itself.`,
+      source: "Sources: Cardiovascular Health Study, 2008; meta-analysis of 36 RCTs (2018); meta-analysis of 27 RCTs (2019).",
+    },
+    {
+      key: "balance",
+      name: "Balance",
+      body: `Static balance — your ability to stand still without losing stability. People who can't hold a one-legged stance for 10 seconds have an 84% higher risk of death over the next 7–11 years (1,700 people, BJSM 2022) — not from the fall itself, but from the loss of mobility afterward (a hip fracture carries a ~50% mortality risk over 5 years). Single-leg balance declines faster with age than grip or knee strength.<br><br><strong>How to test:</strong> stand on one leg, close your eyes, time yourself.<br><br><table><tr><th>Age</th><th>Men</th><th>Women</th></tr><tr><td>20–39</td><td>21 sec</td><td>17 sec</td></tr><tr><td>40–59</td><td>18 sec</td><td>15 sec</td></tr><tr><td>60–80</td><td>9 sec</td><td>7.5 sec</td></tr></table><br><strong>How to improve:</strong> practice throughout the day (stand on one leg during a phone call) plus lunges, especially on an unstable surface.`,
+      source: "Sources: Araujo C.G. et al., BJSM (2022); Mayo Clinic study, PLOS ONE (2024).",
+    },
+    {
+      key: "agility",
+      name: "Agility",
+      body: `Your ability to stay in control of your body while moving — catching yourself if you stumble, reacting quickly. Walking speed is directly tied to mortality: every 0.1 m/s increase lowers mortality risk by about 12% (pooled analysis of 34,485 older adults, JAMA 2011).<br><br><strong>How to test:</strong> the sit-to-stand test — how many times you can stand up and sit back down without using your hands in 30 seconds.<br><br><table><tr><th>Age</th><th>Men</th><th>Women</th></tr><tr><td>60–64</td><td>14</td><td>12</td></tr><tr><td>70–74</td><td>12</td><td>10</td></tr><tr><td>80–84</td><td>10</td><td>9</td></tr><tr><td>90–94</td><td>7</td><td>4</td></tr></table><br><strong>How to improve:</strong> high-knee marching, weighted carries with direction changes, controlled up-downs from the floor.`,
+      source: "Sources: pooled analysis of 34,485 people, JAMA (2011); CDC STEADI data.",
+    },
+    {
+      key: "relationalCapacity",
+      name: "Relational capacity",
+      body: `Your ability to build and maintain trusting relationships. People with strong ties have a 19% lower stroke risk and a 24% lower risk of early death; a meta-analysis of 3.4 million people found loneliness raises mortality risk by 26%, isolation by 29%, and living alone by 32% — more than the mortality effect of obesity.<br><br><strong>How to test:</strong> a 7-statement questionnaire (Ryff scale), each rated 1–6 — e.g. "I know I can trust my friends, and they know they can trust me."<br><br><table><tr><th>Score</th><th>What it means</th></tr><tr><td>35–42</td><td>Strong result</td></tr><tr><td>25–34</td><td>Solid, room to deepen</td></tr><tr><td>17–24</td><td>Worth focusing on</td></tr><tr><td>7–16</td><td>A good area to invest in first</td></tr></table><br><strong>How to improve:</strong> regular (even minimal) contact with close people, intentional conversations with strangers, deeper questions with people you already know.`,
+      source: "Sources: Holt-Lunstad J. et al., Perspectives on Psychological Science (2015); PNAS.",
+    },
+    {
+      key: "functionalStrength",
+      name: "Functional strength",
+      body: `Not raw muscle strength, but your ability to apply it to everyday movements: stairs, getting up off the floor, carrying groceries. The Sitting-Rising Test independently predicted mortality in a prospective study of 4,282 people aged 46–75 over 12 years.<br><br><strong>How to test:</strong> from standing, lower yourself to a cross-legged seat on the floor and stand back up. Start at 10 points (5 for sitting, 5 for rising), minus 1 point for each hand/knee support used, minus 0.5 for wobbling.<br><br><table><tr><th>Score (out of 10)</th><th>What it means</th></tr><tr><td>8–10</td><td>Strong combination of strength, flexibility, balance</td></tr><tr><td>4–7</td><td>Average, room to train</td></tr><tr><td>0–3</td><td>5–6x higher mortality risk than the 8–10 group</td></tr></table><br><strong>How to improve:</strong> strength training plus "explosive" sports like racket sports.`,
+      source: "Source: Araújo C.G. et al., European Journal of Preventive Cardiology (2014, 2025).",
+    },
+    {
+      key: "enduranceUnderLoad",
+      name: "Endurance under load",
+      body: `Your ability to keep moving for a long time while carrying weight — including your own body weight. A study of 33,560 UK adults found that those who accumulated most of their steps in bouts of 15+ minutes had roughly one-fifth the mortality over 9.5 years compared to those whose longest bouts were under 5 minutes.<br><br><strong>How to test:</strong> march in place holding dumbbells or wearing a weighted vest, time yourself until your heart rate noticeably rises and until you have to stop — these become your benchmarks for tracking progress.<br><br><strong>How to improve:</strong> weighted walking — burns 30–45% more calories than regular walking and causes fewer injuries than running.`,
+      source: "Source: Annals of Internal Medicine (2025), 33,560 UK adults.",
+    },
+  ],
+};
+
+function localizedLongevityMarkers() {
+  return LONGEVITY_MARKERS[getLang()] || LONGEVITY_MARKERS.ru;
+}
+
 // Canonical source list (TZ section 9, 11.08.2026: "обязательная, отдельно
 // видимая страница/подраздел Базы знаний... каждый фактор должен вести на
 // соответствующий источник"). Implemented as a subsection of the existing
@@ -969,6 +1083,8 @@ const STRINGS = {
       sourcesNote: "Полный список научных источников, на которых основана модель — с прямыми ссылками. Пополняется по мере добавления новых факторов.",
       additionalLink: "доп. ссылка",
       additionalSource: "доп. источник",
+      markersTitle: "8 маркеров, которые стоит знать",
+      markersNote: "Не входит в расчёт капитала — отдельные научно обоснованные самопроверки, которые можно сделать дома за 5 минут, без анализов и оборудования.",
     },
     daily: {
       summaryLowActivity: "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.",
@@ -1267,6 +1383,8 @@ const STRINGS = {
       sourcesNote: "The full list of scientific sources the model is based on, with direct links. Grows as new factors are added.",
       additionalLink: "additional link",
       additionalSource: "additional source",
+      markersTitle: "8 markers worth knowing",
+      markersNote: "Not part of your capital calculation — separate, science-backed self-tests you can do at home in 5 minutes, no lab work or equipment needed.",
     },
     daily: {
       summaryLowActivity: "Add 30 minutes of activity today — that's a real boost to your capital.",
@@ -4312,6 +4430,19 @@ function renderKnowledge(screen) {
         }</li>`
       ).join("")}
     </ul>
+
+    <h2>${t("knowledge.markersTitle")}</h2>
+    <div class="note">${t("knowledge.markersNote")}</div>
+    ${localizedLongevityMarkers().map(
+      (item) => `
+      <details class="kb-card">
+        <summary><span class="name">${item.name}</span></summary>
+        <div class="kb-card-body">
+          <div>${item.body}</div>
+          <div class="source">${item.source}</div>
+        </div>
+      </details>`
+    ).join("")}
   `;
 }
 
