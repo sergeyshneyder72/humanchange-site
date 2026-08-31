@@ -819,14 +819,14 @@ button {
 .kb-card summary::-webkit-details-marker { display: none; }
 .kb-card summary::marker { content: ""; }
 
+/* Chevron stays pointing down in both states (31.08.2026 — flipping to
+   ▲ on open made otherwise-identical cards look inconsistent depending
+   on which ones happened to be expanded, e.g. "скоро" factor cards vs.
+   "8 маркеров"/VO2 Max in the same list). */
 .kb-card summary::after {
   content: " ▾";
   color: var(--muted);
   font-weight: 400;
-}
-
-.kb-card[open] summary::after {
-  content: " ▴";
 }
 
 .kb-card-body {
