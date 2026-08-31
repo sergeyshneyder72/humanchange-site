@@ -1047,7 +1047,7 @@ const STRINGS = {
       periodYear: "Год",
       todaySummaryTitle: "Итог дня",
       markTodayTitle: "Отметить сегодня",
-      daysAbbrev: "дн.",
+      daysAbbrev: "дней",
       chartEmpty: "Пока нет данных — отметьте первый день ниже.",
     },
     history: {
@@ -3594,15 +3594,23 @@ function animateRevealNumber(target) {
 // Same "count up/down" pattern as animateRevealNumber's onboarding
 // reveal, applied to the dashboard capital number after a daily save
 // (12.08.2026 fix) so it visibly rolls from the old total to the new
-// one instead of jumping instantly.
+// one instead of jumping instantly. NOTE: not currently called from
+// anywhere (dead code, predates this note) — kept in sync with the
+// 31.08.2026 capital-value markup split (number + unit now separate
+// spans, see renderDashboard) so it isn't a landmine if it's wired up
+// later: `el` is expected to be the OUTER .capital-value container,
+// and only its number child gets its text replaced each frame — the
+// unit span is static and untouched, exactly like animateRevealNumber
+// already leaves #reveal-day-word alone.
 function animateCapitalValue(el, from, to, duration = 1200) {
   if (!el) return;
+  const numberEl = el.querySelector("#capital-value-number") || el;
   const start = performance.now();
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
     const eased = 1 - Math.pow(1 - t, 3);
     const current = from + (to - from) * eased;
-    el.textContent = formatDays(current);
+    numberEl.textContent = formatDaysNumber(current);
     el.className = `capital-value ${current >= 0 ? "positive" : "negative"}`;
     if (t < 1) requestAnimationFrame(tick);
   }
@@ -4278,8 +4286,8 @@ function renderDashboard(screen) {
     <div class="dashboard-sticky-top">
       <h2 class="screen-title">${t("dashboard.title")}</h2>
       <div class="capital-header">
-        <div class="capital-value ${capitalValueRounded >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
-        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} ${trendSuffix}</div>
+        <div class="capital-value ${capitalValueRounded >= 0 ? "positive" : "negative"}"><span id="capital-value-number">${formatDaysNumber(capitalValue)}</span> <span class="capital-value-unit">${t("dashboard.daysAbbrev")}</span></div>
+        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDaysNumber(Math.abs(trend))} ${trendSuffix}</div>
       </div>
     </div>
 
@@ -4342,11 +4350,23 @@ function renderDashboard(screen) {
 // is a tiny nonzero residual (e.g. slowly-decaying sleep debt after a
 // run of normal sleep — see dailyEngagementPhrase for the matching
 // phrase-selection fix). Real values still round normally.
-function formatDays(value) {
+// 31.08.2026: split out the number-only half of formatDays. Two call
+// sites need the bare number with no unit word at all: the dashboard's
+// trend line (user explicitly asked for no "дней"/"days" there, just
+// "+1.93 за неделю" — the period suffix already makes the unit obvious)
+// and the big capital-value headline, which needs the number and the
+// unit word as separate elements so the unit can render at a smaller
+// font-size without shrinking the number too (see .capital-value-unit
+// in app.css) — a plain string can't carry that per-word styling.
+function formatDaysNumber(value) {
   const rounded = Math.round(Math.abs(value) * 100) / 100;
-  if (rounded === 0) return `0.00 ${t("dashboard.daysAbbrev")}`;
+  if (rounded === 0) return "0.00";
   const sign = value > 0 ? "+" : "−";
-  return `${sign}${rounded.toFixed(2)} ${t("dashboard.daysAbbrev")}`;
+  return `${sign}${rounded.toFixed(2)}`;
+}
+
+function formatDays(value) {
+  return `${formatDaysNumber(value)} ${t("dashboard.daysAbbrev")}`;
 }
 
 // "Итог дня" (renamed from "Следующий шаг", TZ section 8, 11.08.2026):

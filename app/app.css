@@ -574,6 +574,18 @@ button {
 .capital-header .capital-value.positive { color: var(--accent); }
 .capital-header .capital-value.negative { color: var(--danger); }
 
+/* 31.08.2026: the number and the unit word are now separate spans (see
+   renderDashboard) specifically so this word can run smaller than the
+   number next to it — "дней" spelled out in full at the same 60px as
+   the number risked not fitting/wrapping on narrower phones, "дн." did
+   fit but the user wants the full word. 0.5em keeps it legible while
+   keeping the number itself the visual focus. */
+.capital-value-unit {
+  font-size: 0.5em;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
 .capital-trend {
   font-size: 22.5px;
   color: var(--muted);
