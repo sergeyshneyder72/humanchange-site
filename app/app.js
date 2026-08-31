@@ -1039,7 +1039,9 @@ const STRINGS = {
     },
     dashboard: {
       title: "Портфель",
-      trendSuffix: "за 7 дней",
+      trendSuffixWeek: "за неделю",
+      trendSuffixMonth: "за месяц",
+      trendSuffixYear: "за год",
       periodWeek: "Неделя",
       periodMonth: "Месяц",
       periodYear: "Год",
@@ -1339,7 +1341,9 @@ const STRINGS = {
     },
     dashboard: {
       title: "Portfolio",
-      trendSuffix: "over 7 days",
+      trendSuffixWeek: "over the past week",
+      trendSuffixMonth: "over the past month",
+      trendSuffixYear: "over the past year",
       periodWeek: "Week",
       periodMonth: "Month",
       periodYear: "Year",
@@ -2569,11 +2573,22 @@ function cumulativeSeries() {
   });
 }
 
-function sevenDayTrend() {
+// 31.08.2026: generalized from the old sevenDayTrend() — the trend line
+// under the capital header now follows whichever period tab (week/
+// month/year) is selected on the chart below it, instead of always
+// showing a fixed 7-day figure regardless of that selection. Same
+// index-shift approach as before (N entries back in the ledger series,
+// not N actual calendar days — unchanged from the original
+// implementation, so a user with gaps in their log gets the same
+// approximation behavior this always had, just now for 30/365 too).
+const TREND_PERIOD_DAYS = { week: 7, month: 30, year: 365 };
+
+function trendForPeriod(period) {
+  const days = TREND_PERIOD_DAYS[period] || TREND_PERIOD_DAYS.week;
   const series = cumulativeSeries();
   if (series.length === 0) return 0;
   const last = series[series.length - 1].value;
-  const idx = series.length - 8; // 7 days back from the last entry
+  const idx = series.length - 1 - days;
   const prior = idx >= 0 ? series[idx].value : 0;
   return last - prior;
 }
@@ -4235,7 +4250,9 @@ function renderDashboard(screen) {
   }
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
-  const trend = sevenDayTrend();
+  const trend = trendForPeriod(period);
+  const trendSuffix =
+    period === "week" ? t("dashboard.trendSuffixWeek") : period === "year" ? t("dashboard.trendSuffixYear") : t("dashboard.trendSuffixMonth");
   const capitalValue = series.length ? series[series.length - 1].value : 0;
 
   const today = todayStr();
@@ -4254,7 +4271,7 @@ function renderDashboard(screen) {
       <h2 class="screen-title">${t("dashboard.title")}</h2>
       <div class="capital-header">
         <div class="capital-value ${capitalValueRounded >= 0 ? "positive" : "negative"}">${formatDays(capitalValue)}</div>
-        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} ${t("dashboard.trendSuffix")}</div>
+        <div class="capital-trend ${trendRounded >= 0 ? "positive" : "negative"}">${trendRounded >= 0 ? "▲" : "▼"} ${formatDays(Math.abs(trend))} ${trendSuffix}</div>
       </div>
     </div>
 
