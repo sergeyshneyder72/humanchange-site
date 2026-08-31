@@ -819,14 +819,23 @@ button {
 .kb-card summary::-webkit-details-marker { display: none; }
 .kb-card summary::marker { content: ""; }
 
-/* Chevron stays pointing down in both states (31.08.2026 — flipping to
-   ▲ on open made otherwise-identical cards look inconsistent depending
-   on which ones happened to be expanded, e.g. "скоро" factor cards vs.
-   "8 маркеров"/VO2 Max in the same list). */
-.kb-card summary::after {
+/* Down when closed, up when open (31.08.2026, take 2). The earlier
+   "always down" version above was working around a real CSS bug, not a
+   design choice: `.kb-card[open] summary::after` (no child combinator)
+   matches ANY summary nested inside an open .kb-card, so once nesting
+   was introduced ("8 маркеров" wrapping the marker cards), opening the
+   outer card flipped every inner card's arrow too, even ones still
+   collapsed — that's what actually looked "inconsistent". The real fix
+   is scoping each rule to the card's OWN summary with `>`, so a card's
+   arrow only reflects its own [open] state, never an ancestor's. */
+.kb-card > summary::after {
   content: " ▾";
   color: var(--muted);
   font-weight: 400;
+}
+
+.kb-card[open] > summary::after {
+  content: " ▴";
 }
 
 .kb-card-body {
