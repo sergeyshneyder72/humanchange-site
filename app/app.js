@@ -1152,6 +1152,7 @@ const STRINGS = {
       careRow: "Служба заботы и Фонд идей",
       factorsRow: "Факторы на главном экране",
       billingRow: "Тарифы и оплата",
+      privacyRow: "Политика конфиденциальности",
       billingTitle: "Тарифы и оплата",
       billingIntro: "Новым пользователям доступен бесплатный пробный период. После пробного периода: 990 ₽/мес, 9 900 ₽/год, 14 900 ₽ — пожизненный доступ.",
       billingNoAutopayHint: "Автоматической оплаты в приложении пока нет — платёжные системы ещё не подключены. Нажмите кнопку ниже, мы откроем письмо с запросом, отправьте его — и мы вручную вышлем вам ссылку на оплату.",
@@ -1454,6 +1455,7 @@ const STRINGS = {
       careRow: "Care & Idea Fund",
       factorsRow: "Home screen factors",
       billingRow: "Plans & billing",
+      privacyRow: "Privacy Policy",
       billingTitle: "Plans & billing",
       billingIntro: "New users get a free trial period. After the trial: 990 RUB/month, 9,900 RUB/year, 14,900 RUB — lifetime access.",
       billingNoAutopayHint: "There's no automatic in-app payment yet — payment processing isn't connected. Tap the button below to open a pre-filled email; send it and we'll manually send you a payment link.",
@@ -3768,6 +3770,7 @@ function renderSettings(screen) {
       <button class="settings-row" data-view="factors">${t("settings.factorsRow")}</button>
       <div class="settings-row settings-row-disabled">${t("settings.fitnessTrackersRow")} <span class="optional-badge">${t("knowledge.comingSoon")}</span></div>
       <button class="settings-row" data-view="billing">${t("settings.billingRow")}</button>
+      <a class="settings-row" href="${getLang() === "ru" ? "../ru/privacy.html" : "../privacy.html"}" target="_blank" rel="noopener noreferrer">${t("settings.privacyRow")}</a>
     </div>
   `;
   wireLanguageSwitcher(screen, () => renderSettings(screen));
