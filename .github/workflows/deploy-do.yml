@@ -17,5 +17,6 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
             cd /var/www/humanchange
+            git remote set-url origin https://github.com/sergeyshneyder72/humanchange-site.git
             git fetch origin main
             git reset --hard origin/main
