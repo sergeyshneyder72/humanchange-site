@@ -1006,7 +1006,8 @@ const STRINGS = {
       stressLevelLabel: "Уровень стресса",
       nutritionStepTitle: "Питание",
       habitsTitle: "Вредные привычки",
-      cigarettesLabel: "Сигарет в день (0, если не курите)",
+      smokesLabel: "Вы курите сигареты?",
+      cigarettesLabel: "Сколько сигарет в день?",
       smokingGoalLabel: "Хотите бросить курить?",
       vapeLabel: "Вейп / кальян — используете?",
       yesLabel: "Да",
@@ -1018,7 +1019,8 @@ const STRINGS = {
       alcoholSpiritsPrefix: "крепкий",
       alcoholWinePrefix: "вино",
       alcoholBeerPrefix: "пиво",
-      cigarettesAlert: "Сигарет в день обязательно для продолжения (0, если не курите).",
+      smokesAlert: "Пожалуйста, ответьте, курите ли вы.",
+      cigarettesAlert: "Укажите, сколько сигарет вы курите в день.",
       smokingGoalAlert: "Пожалуйста, ответьте на вопрос про цель по курению.",
       healthTitle: "Здоровье",
       illnessHasLabel: "Есть ли серьёзные заболевания?",
@@ -1309,7 +1311,8 @@ const STRINGS = {
       stressLevelLabel: "Stress level",
       nutritionStepTitle: "Nutrition",
       habitsTitle: "Bad habits",
-      cigarettesLabel: "Cigarettes per day (0 if you don't smoke)",
+      smokesLabel: "Do you smoke cigarettes?",
+      cigarettesLabel: "How many cigarettes per day?",
       smokingGoalLabel: "Want to quit smoking?",
       vapeLabel: "Do you vape / use hookah?",
       yesLabel: "Yes",
@@ -1321,7 +1324,8 @@ const STRINGS = {
       alcoholSpiritsPrefix: "spirits",
       alcoholWinePrefix: "wine",
       alcoholBeerPrefix: "beer",
-      cigarettesAlert: "Cigarettes per day is required to continue (0 if you don't smoke).",
+      smokesAlert: "Please answer whether you smoke.",
+      cigarettesAlert: "Please enter how many cigarettes you smoke per day.",
       smokingGoalAlert: "Please answer the question about your smoking goal.",
       healthTitle: "Health",
       illnessHasLabel: "Do you have any serious medical conditions?",
@@ -2750,8 +2754,11 @@ function isStepValid(step, draft) {
     return true;
   }
   if (step === "habits") {
-    if (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null) return false;
-    if (Number(draft.cigarettesPerDay) > 0 && draft.smokingGoalConfirmed === undefined) return false;
+    if (draft.smokes === undefined) return false;
+    if (draft.smokes === true) {
+      if (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null) return false;
+      if (Number(draft.cigarettesPerDay) > 0 && draft.smokingGoalConfirmed === undefined) return false;
+    }
     return true;
   }
   return true;
@@ -3251,15 +3258,44 @@ function renderOnboarding() {
       ${nutritionRowHtml("f", draft)}
     `;
   } else if (step === "habits") {
+    // 02.09.2026: split the old single numeric field ("0 if you don't
+    // smoke") into an explicit Да/Нет question first — matches how every
+    // other yes/no factor in this step (vape, illness) already reads, and
+    // avoids asking non-smokers to type "0". The cigarettes-per-day field
+    // now only appears once the person says "Да" (progressive reveal, same
+    // display:none/block pattern as f_smokingGoalBlock right below it —
+    // NOT a floating overlay/modal, see the comment above
+    // .factor-edit-screen in app.css for why real popups were dropped from
+    // this app). "Нет" is collected as cigarettesPerDay = 0, same value the
+    // rest of the formula already expects.
+    //
+    // Backward compatibility: anyone who completed onboarding before this
+    // field existed only has cigarettesPerDay saved, no explicit smokes
+    // yes/no. Derive it once so a returning user doing an "official recalc"
+    // (state.recalcMode, draft seeded from their saved state.onboarding at
+    // the "Пересчитать" entry point) sees their own answer pre-filled
+    // instead of an unanswered question and a hidden number they already
+    // gave us.
+    if (draft.smokes === undefined && draft.cigarettesPerDay !== undefined && draft.cigarettesPerDay !== null && draft.cigarettesPerDay !== "") {
+      draft.smokes = Number(draft.cigarettesPerDay) > 0;
+    }
+    const cigVisible = draft.smokes === true;
     body = `
       <div class="onboarding-header">
         <h1>${t("onboarding.habitsTitle")}</h1>
       </div>
       <div class="field">
-        <label>${t("onboarding.cigarettesLabel")} ${reqMark()}</label>
-        <input type="number" min="0" id="f_cigarettesPerDay" value="${escapeHtml(draft.cigarettesPerDay ?? "")}">
+        <label>${t("onboarding.smokesLabel")} ${reqMark()}</label>
+        <div class="radio-row">
+          <label><input type="radio" name="f_smokes" value="yes" ${draft.smokes === true ? "checked" : ""}> ${t("onboarding.yesLabel")}</label>
+          <label><input type="radio" name="f_smokes" value="no" ${draft.smokes === false ? "checked" : ""}> ${t("onboarding.noLabel")}</label>
+        </div>
       </div>
-      <div class="field" id="f_smokingGoalBlock" style="display:${Number(draft.cigarettesPerDay) > 0 ? "block" : "none"}">
+      <div class="field" id="f_cigarettesBlock" style="display:${cigVisible ? "block" : "none"}">
+        <label>${t("onboarding.cigarettesLabel")} ${reqMark()}</label>
+        <input type="number" min="1" id="f_cigarettesPerDay" value="${escapeHtml(cigVisible ? (draft.cigarettesPerDay ?? "") : "")}">
+      </div>
+      <div class="field" id="f_smokingGoalBlock" style="display:${cigVisible && Number(draft.cigarettesPerDay) > 0 ? "block" : "none"}">
         <label>${t("onboarding.smokingGoalLabel")} ${reqMark()}</label>
         <div class="radio-row">
           <label><input type="radio" name="f_smokingGoal" value="yes" ${draft.smokingGoalConfirmed === true ? "checked" : ""}> ${t("onboarding.goalYes")}</label>
@@ -3437,7 +3473,16 @@ function renderOnboarding() {
       });
     }
     if (step === "habits") {
-      document.getElementById("f_cigarettesPerDay").addEventListener("input", (e) => {
+      const cigInput = document.getElementById("f_cigarettesPerDay");
+      document.querySelectorAll('input[name="f_smokes"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          const smokes = e.target.value === "yes";
+          document.getElementById("f_cigarettesBlock").style.display = smokes ? "block" : "none";
+          document.getElementById("f_smokingGoalBlock").style.display = smokes && Number(cigInput.value) > 0 ? "block" : "none";
+          if (!smokes) cigInput.value = "";
+        });
+      });
+      cigInput.addEventListener("input", (e) => {
         document.getElementById("f_smokingGoalBlock").style.display = Number(e.target.value) > 0 ? "block" : "none";
       });
     }
@@ -3473,7 +3518,11 @@ function renderOnboarding() {
         alert(t("onboarding.activityGoalAlert"));
         return;
       }
-      if (step === "habits" && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
+      if (step === "habits" && draft.smokes === undefined) {
+        alert(t("onboarding.smokesAlert"));
+        return;
+      }
+      if (step === "habits" && draft.smokes === true && (draft.cigarettesPerDay === "" || draft.cigarettesPerDay === undefined || draft.cigarettesPerDay === null)) {
         alert(t("onboarding.cigarettesAlert"));
         return;
       }
@@ -3558,7 +3607,13 @@ function collectStepFields(step, draft) {
       other: !!document.getElementById("f_nutrition_supplements_other")?.checked,
     };
   } else if (step === "habits") {
-    draft.cigarettesPerDay = val("f_cigarettesPerDay");
+    const smokesChecked = checkedRadio("f_smokes");
+    draft.smokes = smokesChecked ? smokesChecked.value === "yes" : draft.smokes;
+    if (draft.smokes === false) {
+      draft.cigarettesPerDay = 0;
+    } else if (draft.smokes === true) {
+      draft.cigarettesPerDay = val("f_cigarettesPerDay");
+    }
     const vapeChecked = checkedRadio("f_vape");
     draft.vapeHookah = vapeChecked ? vapeChecked.value : draft.vapeHookah;
     draft.alcoholSpirits = val("f_alcoholSpiritsRange") || "";
@@ -3566,7 +3621,7 @@ function collectStepFields(step, draft) {
     draft.alcoholBeer = val("f_alcoholBeerRange") || "";
     draft.alcoholOtherHas = !!document.getElementById("f_alcoholOtherHas")?.checked;
     draft.alcoholOtherText = val("f_alcoholOtherText") || "";
-    if (Number(draft.cigarettesPerDay) > 0) {
+    if (draft.smokes === true && Number(draft.cigarettesPerDay) > 0) {
       const goalChecked = checkedRadio("f_smokingGoal");
       draft.smokingGoalConfirmed = goalChecked ? goalChecked.value === "yes" : draft.smokingGoalConfirmed;
     } else {
