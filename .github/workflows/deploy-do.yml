@@ -16,6 +16,17 @@ jobs:
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
+            echo "===DIAG: env proxy vars==="
+            env | grep -i proxy || echo "(none)"
+            echo "===DIAG: global gitconfig==="
+            cat ~/.gitconfig 2>/dev/null || echo "(no ~/.gitconfig)"
+            echo "===DIAG: system gitconfig==="
+            cat /etc/gitconfig 2>/dev/null || echo "(no /etc/gitconfig)"
+            echo "===DIAG: git config --global -l==="
+            git config --global -l || echo "(none)"
+            echo "===DIAG: repo .git/config==="
+            cat /var/www/humanchange/.git/config 2>/dev/null || echo "(missing)"
+            echo "===DIAG: end==="
             cd /var/www/humanchange
             git remote set-url origin https://github.com/sergeyshneyder72/humanchange-site.git
             git fetch origin main
