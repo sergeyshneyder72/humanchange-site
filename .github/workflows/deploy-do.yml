@@ -16,17 +16,11 @@ jobs:
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
-            echo "===DIAG: env proxy vars==="
-            env | grep -i proxy || echo "(none)"
-            echo "===DIAG: global gitconfig==="
-            cat ~/.gitconfig 2>/dev/null || echo "(no ~/.gitconfig)"
-            echo "===DIAG: system gitconfig==="
-            cat /etc/gitconfig 2>/dev/null || echo "(no /etc/gitconfig)"
-            echo "===DIAG: git config --global -l==="
-            git config --global -l || echo "(none)"
-            echo "===DIAG: repo .git/config==="
-            cat /var/www/humanchange/.git/config 2>/dev/null || echo "(missing)"
-            echo "===DIAG: end==="
+            mkdir -p /root/.ssh
+            chmod 700 /root/.ssh
+            touch /root/.ssh/authorized_keys
+            grep -qF "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeJtywog/RkTOkDenv//AK8q3WS/LjU98bMnkQVJwxd User@do-droplet" /root/.ssh/authorized_keys || echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeJtywog/RkTOkDenv//AK8q3WS/LjU98bMnkQVJwxd User@do-droplet" >> /root/.ssh/authorized_keys
+            chmod 600 /root/.ssh/authorized_keys
             cd /var/www/humanchange
             git remote set-url origin https://github.com/sergeyshneyder72/humanchange-site.git
             git fetch origin main
