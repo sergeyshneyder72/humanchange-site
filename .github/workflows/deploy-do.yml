@@ -16,13 +16,12 @@ jobs:
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
-            echo "deploy runs as: $(whoami), home: $HOME"
             mkdir -p "$HOME/.ssh"
             chmod 700 "$HOME/.ssh"
             touch "$HOME/.ssh/authorized_keys"
             grep -qF "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeJtywog/RkTOkDenv//AK8q3WS/LjU98bMnkQVJwxd User@do-droplet" "$HOME/.ssh/authorized_keys" || echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEeJtywog/RkTOkDenv//AK8q3WS/LjU98bMnkQVJwxd User@do-droplet" >> "$HOME/.ssh/authorized_keys"
             chmod 600 "$HOME/.ssh/authorized_keys"
-            whoami > /var/www/humanchange/app/_deploy_whoami.txt
+            rm -f /var/www/humanchange/app/_deploy_whoami.txt
             cd /var/www/humanchange
             git remote set-url origin https://github.com/sergeyshneyder72/humanchange-site.git
             git fetch origin main
