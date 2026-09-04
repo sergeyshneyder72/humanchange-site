@@ -2663,13 +2663,45 @@ function applyInactivityDecay(today) {
   }
 }
 
+// Display-only smoothing (04.09.2026, per Sergey: "я не должен увидеть
+// проседание портфеля не из-за чего"). The underlying math is completely
+// untouched — entry.deltaDays is exactly what it always was, and the
+// per-day "Списания"/"Дивиденды" breakdown still shows the real
+// (rounded-for-display) numbers for anyone who opens a specific day.
+// This only changes what the cumulative HEADLINE/chart show day to day:
+// a day whose OWN deltaDays is smaller in magnitude than this threshold
+// (a quiet day — only background drift like decaying sleep debt or
+// bedtime-regularity variance, no meaningful action logged) doesn't move
+// the visible running total at all; the gap between the true total and
+// the frozen displayed one is carried forward silently. The next day
+// with a real swing in EITHER direction jumps the display straight to
+// the true running total, which already has every quiet day's hidden
+// drift baked into it — so it's absorbed into a change that's visible
+// anyway, instead of surfacing on its own as an "unexplained" dip.
+// Deliberately NOT solved by rounding every day's contribution before
+// summing (that would zero out several intentionally-tiny calibrated
+// effects, like the ~0.004 good-sleep bonus, permanently — see chat log
+// 04.09.2026) and NOT solved by showing extra decimal places in the
+// breakdown either (Sergey's own objection: that would imply a false
+// precision this model doesn't have). Threshold is a product/UX judgment
+// call, not a sourced number — same category as the other undisclosed
+// "own choice" constants already flagged elsewhere in this file — picked
+// to swallow the model's smallest intentionally-tiny effects while still
+// surfacing real ones (a missed smoking waterline, the sleep-regularity
+// penalty, any of the nutrition/stress point factors).
+const DISPLAY_SMOOTHING_THRESHOLD_DAYS = 0.01;
+
 function cumulativeSeries() {
   const dates = sortedLedgerDates();
-  let running = 0;
+  let trueRunning = 0;
+  let displayed = 0;
   return dates.map((date) => {
     const entry = state.ledger[date];
-    running += entry.deltaDays;
-    return { date, value: running, entry };
+    trueRunning += entry.deltaDays || 0;
+    if (Math.abs(entry.deltaDays || 0) >= DISPLAY_SMOOTHING_THRESHOLD_DAYS) {
+      displayed = trueRunning;
+    }
+    return { date, value: displayed, entry };
   });
 }
 
