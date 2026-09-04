@@ -1837,6 +1837,16 @@ function trackEvent(name) {
   }
 }
 
+// Per-step onboarding funnel tracking — added 03.09.2026 to see exactly
+// which onboarding screen users drop off on (before, we only had
+// reveal-reached / completed as broad checkpoints). Fires once per
+// distinct step actually reached, not on every re-render of the same
+// step (renderOnboarding runs again on every input change within a
+// step). Excluded for recalcMode for the same reason as the other
+// onboarding events: that's an existing user editing their profile,
+// not new-user acquisition funnel progress.
+let lastTrackedOnboardingStep = null;
+
 let state = loadState();
 
 /* ---------------------------------------------------------------------
@@ -3135,6 +3145,11 @@ function renderOnboarding() {
   const step = state.onboardingStep || ONBOARDING_STEPS[0];
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
   const draft = state.onboardingDraft || {};
+
+  if (!state.recalcMode && step !== lastTrackedOnboardingStep) {
+    trackEvent(`onboarding_step_${step}`);
+    lastTrackedOnboardingStep = step;
+  }
 
   const dots = ONBOARDING_STEPS.slice(0, -1)
     .map((_, i) => `<span class="${i <= stepIndex ? "done" : ""}"></span>`)
