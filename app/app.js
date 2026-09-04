@@ -1112,6 +1112,7 @@ const STRINGS = {
       trendSuffixWeek: "за неделю",
       trendSuffixMonth: "за месяц",
       trendSuffixYear: "за год",
+      trendSuffixSinceStart: "с начала отслеживания",
       periodWeek: "Неделя",
       periodMonth: "Месяц",
       periodYear: "Год",
@@ -1411,6 +1412,7 @@ const STRINGS = {
       trendSuffixWeek: "over the past week",
       trendSuffixMonth: "over the past month",
       trendSuffixYear: "over the past year",
+      trendSuffixSinceStart: "since you started tracking",
       periodWeek: "Week",
       periodMonth: "Month",
       periodYear: "Year",
@@ -3035,14 +3037,27 @@ function cumulativeSeries() {
 // approximation behavior this always had, just now for 30/365 too).
 const TREND_PERIOD_DAYS = { week: 7, month: 30, year: 365 };
 
+// Bug fixed 04.09.2026 (Sergey's report: "одинаковая цифра во всех
+// периодах" — Месяц and Год showed the exact same number as each other
+// AND as the main "Портфель" total). Root cause: when the ledger has
+// FEWER entries than the period needs (e.g. an account 3 weeks old has
+// no "30 days ago" or "365 days ago" point), `idx` goes negative and the
+// old code silently used `prior = 0`, which makes `last - 0 = last` —
+// i.e. Month and Year both silently fell back to "the entire lifetime
+// total", identical to each other and to the headline number, while
+// still being LABELED "за месяц"/"за год" as if a real 30/365-day
+// window had been measured. The math wasn't wrong (that total-since-
+// day-one figure is a real, honest number), just mislabeled. Now
+// returns a `sinceStart` flag so the caller can show an accurate label
+// instead of pretending there's a full period's worth of data.
 function trendForPeriod(period) {
   const days = TREND_PERIOD_DAYS[period] || TREND_PERIOD_DAYS.week;
   const series = cumulativeSeries();
-  if (series.length === 0) return 0;
+  if (series.length === 0) return { value: 0, sinceStart: false };
   const last = series[series.length - 1].value;
   const idx = series.length - 1 - days;
-  const prior = idx >= 0 ? series[idx].value : 0;
-  return last - prior;
+  if (idx < 0) return { value: last, sinceStart: true };
+  return { value: last - series[idx].value, sinceStart: false };
 }
 
 /* ---------------------------------------------------------------------
@@ -4760,9 +4775,14 @@ function renderDashboard(screen) {
   }
   const period = state.chartPeriod || "month";
   const series = cumulativeSeries();
-  const trend = trendForPeriod(period);
-  const trendSuffix =
-    period === "week" ? t("dashboard.trendSuffixWeek") : period === "year" ? t("dashboard.trendSuffixYear") : t("dashboard.trendSuffixMonth");
+  const { value: trend, sinceStart } = trendForPeriod(period);
+  const trendSuffix = sinceStart
+    ? t("dashboard.trendSuffixSinceStart")
+    : period === "week"
+      ? t("dashboard.trendSuffixWeek")
+      : period === "year"
+        ? t("dashboard.trendSuffixYear")
+        : t("dashboard.trendSuffixMonth");
   const capitalValue = series.length ? series[series.length - 1].value : 0;
 
   const today = todayStr();
