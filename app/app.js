@@ -1142,6 +1142,8 @@ const STRINGS = {
       weeklySportBonusShortLabel: "Недельная доплата за спорт",
       sleepDebtLabel: "Долг сна",
       sleepRegularityLabel: "Регулярность сна",
+      weeklySleepBonusShortLabel: "Недельная премия за регулярность сна",
+      monthlySleepBonusShortLabel: "Месячная премия за регулярность сна",
       inactivityChargeLabel: (sphere, days, pct) => `Бездействие (${sphere}): ${days}+ дней, −${pct}% от Дивидендов`,
       sportSphere: "спорт",
       activitySphereFallback: "активность",
@@ -1447,6 +1449,8 @@ const STRINGS = {
       weeklySportBonusShortLabel: "Weekly sport bonus",
       sleepDebtLabel: "Sleep debt",
       sleepRegularityLabel: "Sleep regularity",
+      weeklySleepBonusShortLabel: "Weekly sleep-regularity bonus",
+      monthlySleepBonusShortLabel: "Monthly sleep-regularity bonus",
       inactivityChargeLabel: (sphere, days, pct) => `Inactivity (${sphere}): ${days}+ days, −${pct}% of dividends`,
       sportSphere: "sport",
       activitySphereFallback: "activity",
@@ -2101,6 +2105,160 @@ function isRegularDrinkerApprox(ob) {
   );
 }
 
+/* ---------------------------------------------------------------------
+ * "Immediate feedback" daily points (04.09.2026, Sergey's own spec —
+ * see chat log 04.09.2026): every trackable factor should move the
+ * number up or down by at least a little the moment it's logged, so the
+ * person sees in the moment what's good and what's bad, not just via
+ * the slow-moving smoking/activity/sleep mechanics above. Each function
+ * below returns a small integer point value for ONE day's entry;
+ * dailyWellbeingPoints-style grouping happens at the cascadeRecalcFrom
+ * call site, not here, so each factor's own contribution stays visible
+ * in dailyFactorBreakdown. Same "unanswered isn't the worst case" rule
+ * as everywhere else in this file (see hasRealFieldValue) — a field
+ * that was never opened today always scores 0, never the penalty tier.
+ * ------------------------------------------------------------------- */
+
+// Points → days conversion shared by every factor in this block. One
+// flat rate (not sourced — Sergey's own choice, confirmed 04.09.2026
+// after briefly trying 0.02) so the RELATIVE weights he assigned to each
+// factor (1 to 9 points) translate directly into relative day impact,
+// without a separate calibration per factor.
+const POINTS_TO_DAYS = 0.01;
+
+// Protein (04.09.2026 spec): logged at all = +1; >=3x/day OR 30-60g =
+// +2; every meal OR >60g = +4 — tiers aren't additive, the highest one
+// reached wins.
+function proteinPoints(entry) {
+  const times = entry.nutritionProteinTimes;
+  const hasTimes = times !== undefined && times !== "" && times !== null;
+  const everyMeal = times === "every_meal";
+  const timesNum = hasTimes && !everyMeal ? Number(times) || 0 : 0;
+  const grams = Number(entry.nutritionProteinGrams) || 0;
+  if (!hasTimes && grams <= 0) return 0; // never opened today
+  if (everyMeal || grams > 60) return 4;
+  if (timesNum >= 3 || (grams >= 30 && grams <= 60)) return 2;
+  return 1;
+}
+
+// Water (04.09.2026 spec) — normalized to ml first, since the field can
+// be entered in ml or l (nutritionWaterUnit).
+function waterPoints(entry) {
+  if (entry.nutritionWaterAmount === undefined || entry.nutritionWaterAmount === "") return 0;
+  const raw = Number(entry.nutritionWaterAmount) || 0;
+  const ml = entry.nutritionWaterUnit === "l" ? raw * 1000 : raw;
+  if (ml < 300) return -2;
+  if (ml < 500) return -1;
+  if (ml < 1000) return 0;
+  if (ml < 1500) return 1;
+  if (ml < 2000) return 2;
+  return 4;
+}
+
+// Flour (04.09.2026 spec): both wholegrain options score like "none" —
+// the point is avoiding refined flour, not avoiding flour altogether.
+function flourPoints(entry) {
+  switch (entry.nutritionFlourType) {
+    case "none":
+    case "wholegrainSourdough":
+    case "wholegrainPasta":
+      return 2;
+    case "white":
+      return -4;
+    default:
+      return 0; // not answered
+  }
+}
+
+// Sugar (04.09.2026 spec) — multi-select checkboxes, sum every checked
+// source. The explicit "none" checkbox (not just "nothing checked") is
+// what scores the +4 — matches the data model in
+// readFactorModalFields/wireNutritionExclusiveCheckboxes, where "Не
+// было" is its own mutually-exclusive checkbox, not an inferred default.
+function sugarPoints(entry) {
+  const s = entry.nutritionSugarSources;
+  if (!s || Object.keys(s).length === 0) return 0; // tile never opened today
+  if (s.none) return 4;
+  let points = 0;
+  let any = false;
+  if (s.inProducts) { points -= 1; any = true; }
+  if (s.juices) { points -= 2; any = true; }
+  if (s.added) { points -= 2; any = true; }
+  if (s.sweetDrinks) { points -= 4; any = true; }
+  return any ? points : 0; // checkboxes touched but nothing checked = unanswered, not "none"
+}
+
+// Supplements (04.09.2026 spec): +3 per checked item, simple sum.
+function supplementsPoints(entry) {
+  const s = entry.nutritionSupplements;
+  if (!s) return 0;
+  return (s.vitamins ? 3 : 0) + (s.minerals ? 3 : 0) + (s.other ? 3 : 0);
+}
+
+// Stress (04.09.2026 spec): 1-5 scale, 3 = neutral middle, symmetric
+// +/-1 and +/-2 steps either side (low stress rewarded, high stress
+// penalized).
+function stressPoints(entry) {
+  switch (entry.stressLevel) {
+    case "1": return 2;
+    case "2": return 1;
+    case "3": return 0;
+    case "4": return -1;
+    case "5": return -2;
+    default: return 0; // not answered
+  }
+}
+
+// Social connection / cognitive activity / purpose (04.09.2026 spec):
+// same +4/+1/-2 shape across all three, just different field/option
+// names per factor.
+function socialPoints(entry) {
+  switch (entry.socialQualityToday) {
+    case "full": return 4;
+    case "some": return 1;
+    case "none": return -2;
+    default: return 0;
+  }
+}
+function cognitivePoints(entry) {
+  switch (entry.cognitiveActivityToday) {
+    case "full": return 4;
+    case "some": return 1;
+    case "none": return -2;
+    default: return 0;
+  }
+}
+function purposePoints(entry) {
+  switch (entry.purposeToday) {
+    case "yes": return 4;
+    case "somewhat": return 1;
+    case "no": return -2;
+    default: return 0;
+  }
+}
+
+// Alcohol (04.09.2026, replaces the old binary "drank today = flat
+// penalty" mechanic below): Sergey's own equivalence, confirmed
+// 04.09.2026 — 100ml spirits = 350ml wine = 1000ml beer = -2 points.
+// Each beverage's range option is a WEEKLY ml bucket (TZ section 1 step
+// 5), so this uses the bucket's own midpointMl as the representative
+// weekly volume and spreads it evenly across 7 days. Always <= 0 for
+// each beverage — no bonus side, per Sergey's "всегда штраф в
+// пропорции" — an unanswered/"0" bucket just contributes 0.
+const ALCOHOL_POINTS_PER_ML = {
+  spirits: -2 / 100,
+  wine: -2 / 350,
+  beer: -2 / 1000,
+};
+function alcoholPoints(spiritsToday, wineToday, beerToday) {
+  const spiritsMl = rangeLookup(ALCOHOL_SPIRITS_RANGE_OPTIONS, spiritsToday, "midpointMl") || 0;
+  const wineMl = rangeLookup(ALCOHOL_WINE_RANGE_OPTIONS, wineToday, "midpointMl") || 0;
+  const beerMl = rangeLookup(ALCOHOL_BEER_RANGE_OPTIONS, beerToday, "midpointMl") || 0;
+  const weeklyPoints =
+    spiritsMl * ALCOHOL_POINTS_PER_ML.spirits + wineMl * ALCOHOL_POINTS_PER_ML.wine + beerMl * ALCOHOL_POINTS_PER_ML.beer;
+  return weeklyPoints / 7;
+}
+
 // Smoking and activity are the only factors left here (TZ section 3.3,
 // 11.08.2026): sleep and alcohol's one-time onboarding contribution was
 // REMOVED, not kept alongside their new daily mechanic — replaces,
@@ -2345,8 +2503,27 @@ function hadRecentExtremeExertion(dateStr) {
 // detected, the oversleep penalty is suppressed (returns 0 — neutral,
 // not bonused) rather than charged at the steeper SLEEP_DEBT_OVER_COEFF
 // rate. Doesn't affect the undersleep side at all.
-function sleepDebtPenalty(debt, hasTodayData, isRecoveryContext) {
-  if (hasTodayData && Math.abs(debt) <= SLEEP_DEBT_GOOD_BAND_HOURS) return SLEEP_DEBT_GOOD_BONUS;
+// bedtimeToday (04.09.2026, Sergey's own spec, confirmed via his own
+// 2:00am -> x0.8 example): only multiplies the GOOD-band bonus, never
+// the under/oversleep penalty branches below — timing only matters once
+// the duration itself was already good. Before 23:00 = x1.5; 23:00-24:00
+// = x1.0 (neutral, no bonus/penalty for timing); after midnight decays
+// -0.1 per hour past midnight, floored at 0 rather than going negative
+// (a very late bedtime should zero out the timing bonus, not flip the
+// whole day's sleep entry into a penalty by itself).
+function sleepBedtimeMultiplier(bedtimeToday) {
+  if (!bedtimeToday) return 1; // no bedtime logged — neutral, don't invent a penalty for missing data
+  const mins = circularBedtimeMinutes(bedtimeToday);
+  if (mins < 23 * 60) return 1.5;
+  if (mins <= 24 * 60) return 1;
+  const hoursPastMidnight = (mins - 24 * 60) / 60;
+  return Math.max(0, 1 - 0.1 * hoursPastMidnight);
+}
+
+function sleepDebtPenalty(debt, hasTodayData, isRecoveryContext, bedtimeToday) {
+  if (hasTodayData && Math.abs(debt) <= SLEEP_DEBT_GOOD_BAND_HOURS) {
+    return SLEEP_DEBT_GOOD_BONUS * sleepBedtimeMultiplier(bedtimeToday);
+  }
   if (debt < 0 && isRecoveryContext) return 0;
   const coeff = debt > 0 ? SLEEP_DEBT_UNDER_COEFF : SLEEP_DEBT_OVER_COEFF;
   return -(coeff * debt * debt) || 0; // avoid returning -0 at debt=0
@@ -2415,19 +2592,15 @@ function sleepRegularityPenalty(uptoDateStr) {
   return -(t * SLEEP_REGULARITY_MAX_PENALTY_DAYS);
 }
 
-// Binary, not dose-scaled (TZ section 3.3): the Tsai source has no
-// dose-response data for alcohol, so "drank today" (any of the 3 fields
-// above its "0" bucket, same check as isRegularDrinkerApprox) applies the
-// full daily-equivalent anchor; not drinking is neutral, no deposit.
-// Same "disclosed rough approximation" caveat as the sleep mechanism above.
-function dailyAlcoholDelta(spiritsToday, wineToday, beerToday, gender) {
-  const drankToday = isRegularDrinkerApprox({
-    alcoholSpirits: spiritsToday,
-    alcoholWine: wineToday,
-    alcoholBeer: beerToday,
-  });
-  if (!drankToday) return 0;
-  return -(yearsLostForGender("alcohol", gender) / 365);
+// Replaced 04.09.2026 (was binary: any drinking = flat Tsai
+// daily-equivalent penalty, see git history) with the proportional
+// points-based version — see alcoholPoints above for the ml/points
+// equivalence and rationale. onboarding's one-time starting-capital
+// calc (tsaiYearsLostTotal/isRegularDrinkerApprox) is untouched by this
+// — that's a separate mechanic on the initial baseline, not the daily
+// ledger.
+function dailyAlcoholDelta(spiritsToday, wineToday, beerToday) {
+  return alcoholPoints(spiritsToday, wineToday, beerToday) * POINTS_TO_DAYS;
 }
 
 // Monday of the ISO week containing dateStr ('YYYY-MM-DD'). Parses and
@@ -2478,6 +2651,51 @@ function weeklyActivityTopUpDays(sundayDateStr) {
   const weeklyEffective = Math.min(rawMinutes, 630);
   const topUpMinutes = Math.max(0, weeklyEffective - creditedMinutes);
   return ((topUpMinutes / 60) * 6) / 24;
+}
+
+// Sleep-regularity premium (04.09.2026, Sergey's own spec): "все бонусы
+// за сон за эту неделю x1,5" — a +50% top-up on the week's/month's own
+// summed duration+timing bonus (entry.sleepDebtDelta's positive/good-band
+// values only — NOT sleepRegularityDelta itself, which is the signal
+// this premium gates on, not what it's a percentage of; double-counting
+// the same mechanism as both gate and reward would be circular).
+//
+// Eligibility (correction made 04.09.2026, confirmed with Sergey):
+// sleepRegularityPenalty(date) returns a POSITIVE bonus when genuinely
+// regular (sd <= SLEEP_REGULARITY_THRESHOLD_MIN), and exactly 0 only
+// when there's insufficient data (<SLEEP_REGULARITY_MIN_SAMPLES bedtime
+// entries in the trailing window) — this is NOT the same as "regular".
+// An insufficient-data week/month is therefore excluded here (`> 0`,
+// not `>= 0`) rather than treated as regular by default.
+function weeklySleepRegularityTopUpDays(sundayDateStr) {
+  if (sleepRegularityPenalty(sundayDateStr) <= 0) return 0;
+  const monday = mondayOfWeek(sundayDateStr);
+  let sum = 0;
+  for (const date of weekDatesFrom(monday)) {
+    const entry = state.ledger[date];
+    if (entry && entry.sleepDebtDelta > 0) sum += entry.sleepDebtDelta;
+  }
+  return sum * 0.5;
+}
+
+function isLastDayOfMonth(dateStr) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  const next = new Date(d);
+  next.setUTCDate(d.getUTCDate() + 1);
+  return next.getUTCMonth() !== d.getUTCMonth();
+}
+
+function monthlySleepRegularityTopUpDays(dateStr) {
+  if (sleepRegularityPenalty(dateStr) <= 0) return 0;
+  const d = new Date(dateStr + "T00:00:00Z");
+  const monthStartStr = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  let sum = 0;
+  for (const date of sortedLedgerDates()) {
+    if (date < monthStartStr || date > dateStr) continue;
+    const entry = state.ledger[date];
+    if (entry && entry.sleepDebtDelta > 0) sum += entry.sleepDebtDelta;
+  }
+  return sum * 0.5;
 }
 
 function sortedLedgerDates() {
@@ -2536,7 +2754,6 @@ function isDateEditable(dateStr) {
 // by anything at or after it and don't need to move.
 function cascadeRecalcFrom(fromDate) {
   const today = todayStr();
-  const gender = state.onboarding.gender;
   const affectedDates = sortedLedgerDates().filter((d) => d >= fromDate && d <= today);
 
   const priorDates = sortedLedgerDates().filter((d) => d < fromDate);
@@ -2563,24 +2780,62 @@ function cascadeRecalcFrom(fromDate) {
     entry.sleepDebt = debt;
     const hasTodaySleepData = factHours !== undefined && !Number.isNaN(factHours);
     const isRecoveryContext = decayed >= SLEEP_RECOVERY_DEBT_THRESHOLD_HOURS || hadRecentExtremeExertion(date);
-    entry.sleepDebtDelta = sleepDebtPenalty(debt, hasTodaySleepData, isRecoveryContext);
+    entry.sleepDebtDelta = sleepDebtPenalty(debt, hasTodaySleepData, isRecoveryContext, entry.bedtimeToday);
     entry.sleepRegularityDelta = sleepRegularityPenalty(date);
     entry.sleepDelta = entry.sleepDebtDelta + entry.sleepRegularityDelta;
     runningDebt = debt;
     runningDebtDate = date;
 
-    const alcoholDelta = dailyAlcoholDelta(entry.alcoholSpirits, entry.alcoholWine, entry.alcoholBeer, gender);
+    const alcoholDelta = dailyAlcoholDelta(entry.alcoholSpirits, entry.alcoholWine, entry.alcoholBeer);
     entry.alcoholDelta = alcoholDelta;
-    entry.deltaDays = baseDelta + entry.sleepDelta + alcoholDelta;
+
+    // "Immediate feedback" points factors (04.09.2026) — see the block
+    // above isRegularDrinkerApprox for the scoring functions. Each group
+    // kept as its own entry field (not one lumped total) so
+    // dailyFactorBreakdown can show every factor's own contribution,
+    // same transparency convention as sleep/alcohol/smoking above.
+    entry.nutritionDelta =
+      (proteinPoints(entry) + waterPoints(entry) + flourPoints(entry) + sugarPoints(entry) + supplementsPoints(entry)) *
+      POINTS_TO_DAYS;
+    entry.stressDelta = stressPoints(entry) * POINTS_TO_DAYS;
+    entry.socialDelta = socialPoints(entry) * POINTS_TO_DAYS;
+    entry.cognitiveDelta = cognitivePoints(entry) * POINTS_TO_DAYS;
+    entry.purposeDelta = purposePoints(entry) * POINTS_TO_DAYS;
+
+    entry.deltaDays =
+      baseDelta +
+      entry.sleepDelta +
+      alcoholDelta +
+      entry.nutritionDelta +
+      entry.stressDelta +
+      entry.socialDelta +
+      entry.cognitiveDelta +
+      entry.purposeDelta;
     delete entry.weeklyBonusDays;
+    delete entry.weeklySleepBonusDays;
+    delete entry.monthlySleepBonusDays;
   }
 
   for (const date of affectedDates) {
-    if (new Date(date + "T00:00:00").getDay() !== 0) continue;
-    const bonus = weeklyActivityTopUpDays(date);
-    if (bonus > 0) {
-      state.ledger[date].weeklyBonusDays = bonus;
-      state.ledger[date].deltaDays += bonus;
+    const dow = new Date(date + "T00:00:00").getDay();
+    if (dow === 0) {
+      const bonus = weeklyActivityTopUpDays(date);
+      if (bonus > 0) {
+        state.ledger[date].weeklyBonusDays = bonus;
+        state.ledger[date].deltaDays += bonus;
+      }
+      const weeklySleepBonus = weeklySleepRegularityTopUpDays(date);
+      if (weeklySleepBonus > 0) {
+        state.ledger[date].weeklySleepBonusDays = weeklySleepBonus;
+        state.ledger[date].deltaDays += weeklySleepBonus;
+      }
+    }
+    if (isLastDayOfMonth(date)) {
+      const monthlySleepBonus = monthlySleepRegularityTopUpDays(date);
+      if (monthlySleepBonus > 0) {
+        state.ledger[date].monthlySleepBonusDays = monthlySleepBonus;
+        state.ledger[date].deltaDays += monthlySleepBonus;
+      }
     }
   }
 
@@ -4942,7 +5197,14 @@ function dailyFactorBreakdown(entry) {
   if (entry.weeklyBonusDays) items.push({ label: t("history.weeklySportBonusShortLabel"), amount: entry.weeklyBonusDays, pinned: true });
   if (entry.sleepDebtDelta) items.push({ label: t("history.sleepDebtLabel"), amount: entry.sleepDebtDelta });
   if (entry.sleepRegularityDelta) items.push({ label: t("history.sleepRegularityLabel"), amount: entry.sleepRegularityDelta });
+  if (entry.weeklySleepBonusDays) items.push({ label: t("history.weeklySleepBonusShortLabel"), amount: entry.weeklySleepBonusDays, pinned: true });
+  if (entry.monthlySleepBonusDays) items.push({ label: t("history.monthlySleepBonusShortLabel"), amount: entry.monthlySleepBonusDays, pinned: true });
   if (entry.alcoholDelta) items.push({ label: t("factorLabels.alcohol"), amount: entry.alcoholDelta });
+  if (entry.nutritionDelta) items.push({ label: t("factorLabels.nutrition"), amount: entry.nutritionDelta });
+  if (entry.stressDelta) items.push({ label: t("factorLabels.stress"), amount: entry.stressDelta });
+  if (entry.socialDelta) items.push({ label: t("factorLabels.social"), amount: entry.socialDelta });
+  if (entry.cognitiveDelta) items.push({ label: t("factorLabels.cognitive"), amount: entry.cognitiveDelta });
+  if (entry.purposeDelta) items.push({ label: t("factorLabels.purpose"), amount: entry.purposeDelta });
   return items;
 }
 
