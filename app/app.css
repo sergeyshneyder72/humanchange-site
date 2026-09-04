@@ -751,6 +751,29 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
+  position: relative;
+}
+
+/* "Отметить сегодня" card already filled in today's ledger — added
+   04.09.2026 per Sergey's request, so reopening the app mid-day shows
+   at a glance what's already logged instead of the user having to
+   remember or reopen each card. Reuses the app's existing positive/
+   accent tokens (same ones the capital header and engagement card use)
+   rather than a new color, and pairs the tint with a checkmark glyph
+   rather than relying on color alone. */
+.factor-card.filled {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.filled-check {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .factor-card.clickable {

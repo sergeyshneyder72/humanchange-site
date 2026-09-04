@@ -4167,6 +4167,25 @@ function hasRealFieldValue(entry, field, numeric) {
   return numeric ? true : entry[field] !== "";
 }
 
+// Dashboard "Отметить сегодня" card is "filled" for a day if that day's
+// ledger entry has a real value (per hasRealFieldValue above) in ANY of
+// the factor's own fields — added 04.09.2026 per Sergey's request, so
+// reopening the app mid-day shows at a glance what's already logged
+// instead of making the user remember or reopen every card to check.
+// "Any", not "every": the factor's whole edit form is read and saved as
+// one object on a single Save click (see readFactorModalFields), so in
+// normal use its fields become real together, not one at a time — the
+// distinction only matters for old/partial data, where "any" is the
+// more forgiving read.
+function isFactorFilledToday(key, entry) {
+  const neutral = FACTOR_NEUTRAL_VALUES[key];
+  if (!neutral) return false;
+  return Object.keys(neutral).some((field) => {
+    const numeric = typeof neutral[field] === "number";
+    return hasRealFieldValue(entry, field, numeric);
+  });
+}
+
 // Resolves one factor's field(s) for a save: reads live form values if
 // the factor is currently visible; otherwise keeps whatever real value
 // the day already had (so re-saving an unrelated field on a day with
@@ -4475,12 +4494,14 @@ function renderDashboard(screen) {
     <h3>${t("dashboard.markTodayTitle")}</h3>
     <div class="factor-grid">
       ${ALL_FACTORS.filter((f) => state.visibleFactors.includes(f.key))
-        .map(
-          (f) => `
-            <button type="button" class="factor-card clickable" data-factor-key="${f.key}">
+        .map((f) => {
+          const filled = isFactorFilledToday(f.key, todayEntry);
+          return `
+            <button type="button" class="factor-card clickable${filled ? " filled" : ""}" data-factor-key="${f.key}">
               <div class="name">${f.label}</div>
-            </button>`
-        )
+              ${filled ? `<div class="filled-check" aria-hidden="true">✓</div>` : ""}
+            </button>`;
+        })
         .join("")}
     </div>
   `;
