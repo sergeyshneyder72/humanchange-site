@@ -45,12 +45,47 @@ const ICONS = {
  * Data / constants
  * ------------------------------------------------------------------- */
 
-// Approximate remaining-life-expectancy-in-years table, illustrative of
-// SSA Period Life Table (US) magnitudes. TODO: replace with a real
-// SSA/WHO GHO data source before this number is shown as authoritative.
+// Remaining-life-expectancy-in-years table — real data, not a placeholder.
+// Source: SSA Office of the Chief Actuary, Period Life Table, 2023 (as
+// used in the 2026 Trustees Report), single year of age, both sexes,
+// https://www.ssa.gov/oact/STATS/table4c6.html (fetched 04.09.2026).
+// Replaces the earlier 6-point (30/40/50/60/70/80) illustrative table —
+// that one was only ever "SSA-magnitude", not the real published values,
+// and linear interpolation across a 10-year gap could be off by well
+// over a year in the more curved parts of the range (50s-70s). This is
+// the SSA's own e(x) column for every age 0-119 — no interpolation left
+// to do except between adjacent single years (see the age+0.5 note in
+// interpolateLifeExpectancyYears below for why we don't just look up the
+// integer age directly).
 const LIFE_EXPECTANCY_TABLE = {
-  male: { 30: 47.4, 40: 38.1, 50: 29.3, 60: 21.3, 70: 14.3, 80: 8.6 },
-  female: { 30: 51.4, 40: 41.6, 50: 32.6, 60: 24.0, 70: 16.4, 80: 9.8 },
+  male: {
+    0: 75.79, 1: 75.25, 2: 74.28, 3: 73.31, 4: 72.33, 5: 71.34, 6: 70.35, 7: 69.36, 8: 68.37, 9: 67.38,
+    10: 66.39, 11: 65.39, 12: 64.4, 13: 63.41, 14: 62.43, 15: 61.45, 16: 60.48, 17: 59.51, 18: 58.56, 19: 57.62,
+    20: 56.69, 21: 55.76, 22: 54.83, 23: 53.9, 24: 52.98, 25: 52.06, 26: 51.14, 27: 50.23, 28: 49.32, 29: 48.41,
+    30: 47.5, 31: 46.6, 32: 45.7, 33: 44.81, 34: 43.91, 35: 43.02, 36: 42.13, 37: 41.24, 38: 40.36, 39: 39.47,
+    40: 38.59, 41: 37.71, 42: 36.83, 43: 35.95, 44: 35.08, 45: 34.21, 46: 33.34, 47: 32.48, 48: 31.62, 49: 30.76,
+    50: 29.9, 51: 29.05, 52: 28.21, 53: 27.38, 54: 26.55, 55: 25.73, 56: 24.92, 57: 24.12, 58: 23.34, 59: 22.56,
+    60: 21.79, 61: 21.04, 62: 20.29, 63: 19.56, 64: 18.83, 65: 18.12, 66: 17.41, 67: 16.71, 68: 16.02, 69: 15.34,
+    70: 14.66, 71: 14.0, 72: 13.34, 73: 12.69, 74: 12.05, 75: 11.42, 76: 10.8, 77: 10.19, 78: 9.61, 79: 9.04,
+    80: 8.5, 81: 7.97, 82: 7.46, 83: 6.97, 84: 6.5, 85: 6.04, 86: 5.61, 87: 5.2, 88: 4.81, 89: 4.45,
+    90: 4.11, 91: 3.8, 92: 3.5, 93: 3.23, 94: 2.99, 95: 2.77, 96: 2.58, 97: 2.41, 98: 2.27, 99: 2.15,
+    100: 2.04, 101: 1.93, 102: 1.83, 103: 1.72, 104: 1.63, 105: 1.54, 106: 1.45, 107: 1.36, 108: 1.28, 109: 1.2,
+    110: 1.13, 111: 1.05, 112: 0.98, 113: 0.92, 114: 0.85, 115: 0.79, 116: 0.74, 117: 0.68, 118: 0.63, 119: 0.58
+  },
+  female: {
+    0: 81.06, 1: 80.48, 2: 79.51, 3: 78.53, 4: 77.54, 5: 76.55, 6: 75.56, 7: 74.57, 8: 73.58, 9: 72.59,
+    10: 71.59, 11: 70.6, 12: 69.61, 13: 68.62, 14: 67.63, 15: 66.64, 16: 65.66, 17: 64.67, 18: 63.69, 19: 62.72,
+    20: 61.74, 21: 60.77, 22: 59.8, 23: 58.83, 24: 57.86, 25: 56.9, 26: 55.93, 27: 54.97, 28: 54.0, 29: 53.04,
+    30: 52.08, 31: 51.13, 32: 50.18, 33: 49.23, 34: 48.28, 35: 47.34, 36: 46.39, 37: 45.45, 38: 44.51, 39: 43.58,
+    40: 42.64, 41: 41.71, 42: 40.78, 43: 39.86, 44: 38.93, 45: 38.01, 46: 37.1, 47: 36.18, 48: 35.27, 49: 34.36,
+    50: 33.45, 51: 32.55, 52: 31.66, 53: 30.77, 54: 29.89, 55: 29.01, 56: 28.14, 57: 27.28, 58: 26.42, 59: 25.57,
+    60: 24.73, 61: 23.9, 62: 23.08, 63: 22.27, 64: 21.46, 65: 20.66, 66: 19.87, 67: 19.08, 68: 18.3, 69: 17.53,
+    70: 16.76, 71: 16.01, 72: 15.26, 73: 14.53, 74: 13.81, 75: 13.1, 76: 12.41, 77: 11.73, 78: 11.08, 79: 10.44,
+    80: 9.82, 81: 9.22, 82: 8.64, 83: 8.08, 84: 7.54, 85: 7.02, 86: 6.53, 87: 6.05, 88: 5.61, 89: 5.19,
+    90: 4.8, 91: 4.44, 92: 4.1, 93: 3.79, 94: 3.5, 95: 3.23, 96: 2.99, 97: 2.77, 98: 2.57, 99: 2.39,
+    100: 2.23, 101: 2.08, 102: 1.94, 103: 1.82, 104: 1.7, 105: 1.59, 106: 1.48, 107: 1.38, 108: 1.29, 109: 1.2,
+    110: 1.13, 111: 1.05, 112: 0.98, 113: 0.92, 114: 0.85, 115: 0.79, 116: 0.74, 117: 0.68, 118: 0.63, 119: 0.58
+  },
 };
 
 // Region select for onboarding (TZ section 1: "регион (страна/город
@@ -79,15 +114,54 @@ const REGION_OPTIONS = [
 // Region adjustment to the starting-capital baseline (TZ section 1:
 // "Источник — актуарная таблица: SSA Period Life Table (US) либо WHO
 // Global Health Observatory. Fallback на глобальные показатели WHO при
-// отсутствии данных по региону."). LIFE_EXPECTANCY_TABLE above already
-// IS the US SSA-magnitude table, so "us" gets no adjustment; every other
-// region falls back to an illustrative WHO-global-average discount vs.
-// that US baseline. This is a placeholder ratio, not a verified
-// per-country dataset — TODO: replace with real WHO GHO country tables.
-const REGION_GLOBAL_FALLBACK_PCT = -0.07;
+// отсутствии данных по региону."). Real per-country, per-sex data —
+// added 04.09.2026, replacing the earlier flat -7% that was applied to
+// literally every non-US country regardless of direction (that gave
+// Germany/Canada/Australia/UK the same penalty as Russia, which is
+// backwards — several of these countries have HIGHER life expectancy
+// than the US). Source: World Bank Open Data, "Life expectancy at
+// birth, male/female (years)" (SP.DYN.LE00.MA.IN / SP.DYN.LE00.FE.IN),
+// most recent available year per country: 2022. https://data.worldbank.org
+// (fetched 04.09.2026). Raw at-birth figures are stored here (not
+// pre-baked percentages) so the source number for each country is
+// visible and independently checkable; regionAdjustmentPct below derives
+// the ratio to the US at call time.
+//
+// Method note (disclosed simplification): this assumes each country's
+// age-shaped mortality curve has roughly the same SHAPE as the US SSA
+// curve above, just scaled by that country's overall life-expectancy
+// gap to the US at birth. A true per-country, per-age life table would
+// remove the need for this assumption — that's a bigger data-collection
+// effort than fits this pass, flagged here rather than hidden.
+const REGION_LIFE_EXPECTANCY_AT_BIRTH = {
+  us: { male: 74.8, female: 80.2 },
+  ru: { male: 67.57, female: 77.77 },
+  by: { male: 69.438, female: 79.002 },
+  ua: { male: 66.193, female: 79.413 },
+  kz: { male: 68.986, female: 77.752 },
+  de: { male: 78.33, female: 83.0 },
+  gb: { male: 79.1, female: 83.018 },
+  fr: { male: 79.3, female: 85.1 },
+  es: { male: 80.5, female: 85.9 },
+  it: { male: 80.7, female: 84.8 },
+  pl: { male: 73.4, female: 81.1 },
+  il: { male: 80.7, female: 84.8 },
+  ca: { male: 78.89, female: 83.41 },
+  au: { male: 81.2, female: 85.3 },
+  // "other" / any country not in the onboarding list: World Bank's
+  // "World" aggregate — the WHO-global-fallback TZ asked for.
+  other: { male: 70.586, female: 75.491 },
+};
 
-function regionAdjustmentPct(region) {
-  return region === "us" ? 0 : REGION_GLOBAL_FALLBACK_PCT;
+function regionAdjustmentPct(region, gender) {
+  const entry = REGION_LIFE_EXPECTANCY_AT_BIRTH[region] || REGION_LIFE_EXPECTANCY_AT_BIRTH.other;
+  const us = REGION_LIFE_EXPECTANCY_AT_BIRTH.us;
+  if (gender === "male") return entry.male / us.male - 1;
+  if (gender === "female") return entry.female / us.female - 1;
+  // Non-binary / prefer-not-to-say: average of the two sex-specific
+  // ratios (same MVP simplification already used for this case in
+  // interpolateLifeExpectancyYears below).
+  return (entry.male / us.male + entry.female / us.female) / 2 - 1;
 }
 
 // Range-picker options for onboarding (TZ section 1, 10.08.2026 update:
@@ -1880,13 +1954,23 @@ function interpolateLifeExpectancyYears(gender, age) {
   const ages = Object.keys(source)
     .map(Number)
     .sort((a, b) => a - b);
-  if (age <= ages[0]) return source[ages[0]];
-  if (age >= ages[ages.length - 1]) return source[ages[ages.length - 1]];
+  // Onboarding collects age in whole completed years ("35" means
+  // "somewhere between my 35th and 36th birthday"), but the SSA table's
+  // own definition is "average remaining years for a person at that
+  // EXACT age" (see its footnote) — i.e. it's defined at the birthday
+  // itself. The average person who reports "35" is actually ~35.5 years
+  // old (assuming birthdays land uniformly through the year, a
+  // population-level assumption, not something knowable for one
+  // individual) — added 04.09.2026 per Sergey's observation. Standard
+  // actuarial fix: interpolate at age+0.5, not the raw integer.
+  const exactAge = age + 0.5;
+  if (exactAge <= ages[0]) return source[ages[0]];
+  if (exactAge >= ages[ages.length - 1]) return source[ages[ages.length - 1]];
   for (let i = 0; i < ages.length - 1; i++) {
     const a0 = ages[i];
     const a1 = ages[i + 1];
-    if (age >= a0 && age <= a1) {
-      const t = (age - a0) / (a1 - a0);
+    if (exactAge >= a0 && exactAge <= a1) {
+      const t = (exactAge - a0) / (a1 - a0);
       return source[a0] + t * (source[a1] - source[a0]);
     }
   }
@@ -2068,7 +2152,7 @@ function tsaiYearsLostTotal(ob) {
 function computeStartingCapitalDays(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
 
-  const regionPct = regionAdjustmentPct(ob.region);
+  const regionPct = regionAdjustmentPct(ob.region, ob.gender);
   const illnessPct = illnessAdjustmentPct(ob);
 
   const yearsLost = tsaiYearsLostTotal(ob);
@@ -2095,7 +2179,7 @@ function computeStartingCapitalDays(ob) {
 // сравнение не со средним, а с самим собой.
 function averageBaselineDaysForPeer(ob) {
   const baselineYears = interpolateLifeExpectancyYears(ob.gender, ob.age);
-  const regionPct = regionAdjustmentPct(ob.region);
+  const regionPct = regionAdjustmentPct(ob.region, ob.gender);
   return Math.max(Math.round(baselineYears * 365.25 * (1 + regionPct)), 0);
 }
 
