@@ -276,12 +276,6 @@ const NUTRITION_SUGAR_SOURCES = [
   { key: "added", label: "Добавленный (в чай, кофе и т.п.)" },
 ];
 
-const NUTRITION_SUPPLEMENT_TYPES = [
-  { key: "vitamins", label: "Витамины" },
-  { key: "minerals", label: "Минералы" },
-  { key: "other", label: "Другое" },
-];
-
 // Meals-per-day switched from an exact 1..6 count to ranges (25.08.2026,
 // user feedback) — precision here wasn't meaningful (no formula reads
 // this field, see FACTOR_NEUTRAL_VALUES/nutrition), and a range is an
@@ -1284,8 +1278,6 @@ const STRINGS = {
       proteinTitle: "Белок",
       proteinTimesLabel: "Раз в день",
       proteinEveryMeal: "В каждом приёме пищи",
-      proteinGramsLabel: "Граммы/день",
-      proteinGramsPlaceholder: "г",
       waterLabel: "Вода",
       waterHint: "Считается только чистая вода — чай, кофе и другие напитки не считаются.",
       sugarHint: "Не считается, если было за час до/после интенсивной тренировки или во время неё — в этом случае сахар усваивается иначе.",
@@ -1294,7 +1286,6 @@ const STRINGS = {
       unitL: "л",
       flourLabel: "Мучное",
       sugarLabel: "Сахар",
-      supplementsLabel: "БАДы",
     },
     nutritionFlourOptions: {
       none: "Нет",
@@ -1308,11 +1299,6 @@ const STRINGS = {
       juices: "Соки",
       sweetDrinks: "Сладкие напитки",
       added: "Добавленный (в чай, кофе и т.п.)",
-    },
-    nutritionSupplementOptions: {
-      vitamins: "Витамины",
-      minerals: "Минералы",
-      other: "Другое",
     },
     alcoholSpiritsOptions: {
       "0": "0", lt100: "до 100 мл/нед", "100to350": "100–350 мл/нед", gt350: "более 350 мл/нед",
@@ -1591,8 +1577,6 @@ const STRINGS = {
       proteinTitle: "Protein",
       proteinTimesLabel: "Times a day",
       proteinEveryMeal: "With every meal",
-      proteinGramsLabel: "Grams/day",
-      proteinGramsPlaceholder: "g",
       waterLabel: "Water",
       waterHint: "Only plain water counts — tea, coffee, and other drinks don't count.",
       sugarHint: "Doesn't count if it was within an hour before/after intense exercise, or during it — sugar is metabolized differently in that window.",
@@ -1601,7 +1585,6 @@ const STRINGS = {
       unitL: "l",
       flourLabel: "Flour/grain foods",
       sugarLabel: "Sugar",
-      supplementsLabel: "Supplements",
     },
     nutritionFlourOptions: {
       none: "None",
@@ -1615,11 +1598,6 @@ const STRINGS = {
       juices: "Juices",
       sweetDrinks: "Sweet drinks",
       added: "Added (to tea, coffee, etc.)",
-    },
-    nutritionSupplementOptions: {
-      vitamins: "Vitamins",
-      minerals: "Minerals",
-      other: "Other",
     },
     alcoholSpiritsOptions: {
       "0": "0", lt100: "under 100 ml/wk", "100to350": "100–350 ml/wk", gt350: "over 350 ml/wk",
@@ -2126,19 +2104,48 @@ function isRegularDrinkerApprox(ob) {
 // without a separate calibration per factor.
 const POINTS_TO_DAYS = 0.01;
 
-// Protein (04.09.2026 spec): logged at all = +1; >=3x/day OR 30-60g =
-// +2; every meal OR >60g = +4 — tiers aren't additive, the highest one
-// reached wins.
+// Evidence-weight multiplier (04.09.2026, added after reviewing sourced
+// effect sizes for each Phase 9 factor): social connection and purpose
+// in life scored the same +4/+1/-2 tier as stress/cognitive activity,
+// but their sourced effect sizes are far larger — Holt-Lunstad et al.
+// 2010 (PLoS Medicine, 148 studies, n=308,849) found lacking social
+// connection carries a mortality risk comparable to smoking up to 15
+// cigarettes/day; an HRS cohort study (JAMA Network Open 2019, n=6985)
+// found the lowest vs highest life-purpose category had HR 2.43
+// (1.57-3.75) for all-cause mortality — one of the largest effect sizes
+// found across all 11 factors researched. Rather than change the raw
+// point tiers (which would make the interface numbers inconsistent with
+// every other factor's +4/+1/-2 shape), this multiplier is applied only
+// where points convert to days, so "+4" still reads the same everywhere
+// in the UI but carries more actual weight for these two factors. ×2 is
+// Sergey's own choice from a menu of options (×1.5/×2/no change) — the
+// evidence supports weighting these higher, but translating a hazard
+// ratio into an exact point-multiplier has no rigorous derivation, so
+// this is a deliberate judgment call, not a computed value.
+const EVIDENCE_WEIGHT_MULTIPLIER = 2;
+
+// Protein (revised 04.09.2026, replaces the original grams-based tiers):
+// Chen et al., Eur J Epidemiol 2020 (Rotterdam Study n=7786 + 11-cohort
+// meta-analysis n=350,452) found total/animal protein intake ABOVE
+// ~0.8-1.0 g/kg/day carries a small but real mortality HR increase
+// (1.12-1.18), not a benefit — so the original ">60g = max tier" bonus
+// rewarded exactly the intake range this evidence doesn't support. Grams
+// tracking (and its whole input field) is dropped entirely rather than
+// recalibrated, since the app has no way to relate a self-reported gram
+// figure to the person's own body weight anyway. What DOES hold up
+// (Mamerow et al. 2014, ISSN 2017 Position Stand): distributing protein
+// across meals measurably increases 24h muscle protein synthesis vs.
+// concentrating it in one meal — so frequency alone is scored: 1x/day
+// = +1, 2x/day = +2, every meal = +4 (even if that's only 1-2 meals
+// that day — "every meal" is about coverage, not raw count).
 function proteinPoints(entry) {
   const times = entry.nutritionProteinTimes;
-  const hasTimes = times !== undefined && times !== "" && times !== null;
-  const everyMeal = times === "every_meal";
-  const timesNum = hasTimes && !everyMeal ? Number(times) || 0 : 0;
-  const grams = Number(entry.nutritionProteinGrams) || 0;
-  if (!hasTimes && grams <= 0) return 0; // never opened today
-  if (everyMeal || grams > 60) return 4;
-  if (timesNum >= 3 || (grams >= 30 && grams <= 60)) return 2;
-  return 1;
+  if (times === undefined || times === "" || times === null) return 0; // never opened today
+  if (times === "every_meal") return 4;
+  const timesNum = Number(times) || 0;
+  if (timesNum <= 0) return 0;
+  if (timesNum === 1) return 1;
+  return 2; // 2 or more explicit times/day
 }
 
 // Water (04.09.2026 spec) — normalized to ml first, since the field can
@@ -2155,8 +2162,16 @@ function waterPoints(entry) {
   return 4;
 }
 
-// Flour (04.09.2026 spec): both wholegrain options score like "none" —
-// the point is avoiding refined flour, not avoiding flour altogether.
+// Flour (revised 04.09.2026): both wholegrain options score like "none"
+// — the point is avoiding refined flour, not avoiding flour altogether.
+// White-bread penalty softened from -4 to -2 (was originally symmetric
+// with the wrong emphasis): Aune et al., BMJ 2016 and a 2022 AJCN
+// dose-response meta-analysis (24 studies, n=1.62M) give solid evidence
+// that whole grain intake LOWERS all-cause mortality (RR 0.94 per 30g/
+// day), but the evidence specifically tying refined grain intake to
+// higher ALL-CAUSE mortality is comparatively weaker/more mixed (clearer
+// for CVD-specific outcomes) — so the penalty for white bread shouldn't
+// be twice the size of the well-evidenced wholegrain bonus.
 function flourPoints(entry) {
   switch (entry.nutritionFlourType) {
     case "none":
@@ -2164,7 +2179,7 @@ function flourPoints(entry) {
     case "wholegrainPasta":
       return 2;
     case "white":
-      return -4;
+      return -2;
     default:
       return 0; // not answered
   }
@@ -2188,12 +2203,16 @@ function sugarPoints(entry) {
   return any ? points : 0; // checkboxes touched but nothing checked = unanswered, not "none"
 }
 
-// Supplements (04.09.2026 spec): +3 per checked item, simple sum.
-function supplementsPoints(entry) {
-  const s = entry.nutritionSupplements;
-  if (!s) return 0;
-  return (s.vitamins ? 3 : 0) + (s.minerals ? 3 : 0) + (s.other ? 3 : 0);
-}
+// Supplements: REMOVED 04.09.2026 (was a flat +3/item bonus). Cochrane
+// (Bjelakovic et al., 78 RCTs, n=296,707) found beta-carotene+vitamin A
+// and beta-carotene+vitamin E supplementation INCREASED all-cause
+// mortality (RR 1.16 and 1.06 respectively); separately, a 2024 JAMA
+// Network Open analysis of ~400,000 people over up to 27 years found
+// daily multivitamin use had a NULL association with mortality — no
+// benefit. There's no evidence base for rewarding indiscriminate
+// supplement use, so the whole mechanic (scoring, UI tile, data fields)
+// was removed rather than just zeroed out — see git history for the
+// removed nutritionSupplements field/checkboxes.
 
 // Stress (04.09.2026 spec): 1-5 scale, 3 = neutral middle, symmetric
 // +/-1 and +/-2 steps either side (low stress rewarded, high stress
@@ -2211,7 +2230,10 @@ function stressPoints(entry) {
 
 // Social connection / cognitive activity / purpose (04.09.2026 spec):
 // same +4/+1/-2 shape across all three, just different field/option
-// names per factor.
+// names per factor. The raw point values below stay identical across
+// all three — see EVIDENCE_WEIGHT_MULTIPLIER further down for why
+// social/purpose end up worth more in actual days despite scoring the
+// same +4/+1/-2 here.
 function socialPoints(entry) {
   switch (entry.socialQualityToday) {
     case "full": return 4;
@@ -2237,26 +2259,50 @@ function purposePoints(entry) {
   }
 }
 
-// Alcohol (04.09.2026, replaces the old binary "drank today = flat
-// penalty" mechanic below): Sergey's own equivalence, confirmed
-// 04.09.2026 — 100ml spirits = 350ml wine = 1000ml beer = -2 points.
-// Each beverage's range option is a WEEKLY ml bucket (TZ section 1 step
-// 5), so this uses the bucket's own midpointMl as the representative
-// weekly volume and spreads it evenly across 7 days. Always <= 0 for
-// each beverage — no bonus side, per Sergey's "всегда штраф в
-// пропорции" — an unanswered/"0" bucket just contributes 0.
-const ALCOHOL_POINTS_PER_ML = {
-  spirits: -2 / 100,
-  wine: -2 / 350,
-  beer: -2 / 1000,
+// Alcohol (rewritten 04.09.2026, replaces both the original flat-penalty
+// mechanic AND the first Phase 9 revision's ad-hoc "-2 points per
+// 100ml/350ml/1000ml" equivalence — same relative ratios, but now
+// anchored to real sourced numbers instead of an intuitive guess):
+//
+// 1. Each beverage's ml is converted to grams of ethanol using its
+//    typical ABV (spirits ~40%, wine ~12%, beer ~5%) and ethanol's
+//    density (0.789 g/ml) — standard conversion, not itself a modeling
+//    choice.
+// 2. Wood et al., Lancet 2018 (individual-participant meta-analysis,
+//    599,912 current drinkers, 83 studies): the risk-minimizing
+//    threshold for all-cause mortality is ~100g ethanol/week — below it,
+//    the classic "protective" J-curve is a confounding artifact that
+//    disappears after adjustment, so there's no bonus for staying under
+//    it, only "no penalty" (same "always a charge, never a deposit"
+//    principle as before, just with a real threshold instead of "any
+//    amount = drinking").
+// 3. Spiegelhalter's "microlife" translation of that same Lancet data:
+//    each standard UK unit (8g ethanol) consumed ABOVE the threshold
+//    costs roughly 15-30 minutes of life expectancy on average — this
+//    uses the midpoint, 20 minutes/unit, as a disclosed round-number
+//    choice, not a value the source itself singles out.
+// This replaces the old "-2 points" abstraction entirely — alcohol's
+// daily charge is computed directly in days from grams of ethanol, no
+// POINTS_TO_DAYS conversion involved, since the source data comes
+// already denominated in life-expectancy terms.
+const ALCOHOL_ETHANOL_DENSITY_G_PER_ML = 0.789;
+const ALCOHOL_ABV = { spirits: 0.4, wine: 0.12, beer: 0.05 };
+const ALCOHOL_GRAMS_PER_ML = {
+  spirits: ALCOHOL_ABV.spirits * ALCOHOL_ETHANOL_DENSITY_G_PER_ML,
+  wine: ALCOHOL_ABV.wine * ALCOHOL_ETHANOL_DENSITY_G_PER_ML,
+  beer: ALCOHOL_ABV.beer * ALCOHOL_ETHANOL_DENSITY_G_PER_ML,
 };
-function alcoholPoints(spiritsToday, wineToday, beerToday) {
+const ALCOHOL_RISK_FREE_THRESHOLD_G_PER_WEEK = 100; // Wood et al., Lancet 2018
+const ALCOHOL_STANDARD_UNIT_GRAMS = 8; // UK unit, matches Spiegelhalter's own units
+const ALCOHOL_MINUTES_LOST_PER_UNIT_ABOVE_THRESHOLD = 20; // midpoint of the disclosed 15-30 min/unit range
+
+function weeklyEthanolGrams(spiritsToday, wineToday, beerToday) {
   const spiritsMl = rangeLookup(ALCOHOL_SPIRITS_RANGE_OPTIONS, spiritsToday, "midpointMl") || 0;
   const wineMl = rangeLookup(ALCOHOL_WINE_RANGE_OPTIONS, wineToday, "midpointMl") || 0;
   const beerMl = rangeLookup(ALCOHOL_BEER_RANGE_OPTIONS, beerToday, "midpointMl") || 0;
-  const weeklyPoints =
-    spiritsMl * ALCOHOL_POINTS_PER_ML.spirits + wineMl * ALCOHOL_POINTS_PER_ML.wine + beerMl * ALCOHOL_POINTS_PER_ML.beer;
-  return weeklyPoints / 7;
+  return (
+    spiritsMl * ALCOHOL_GRAMS_PER_ML.spirits + wineMl * ALCOHOL_GRAMS_PER_ML.wine + beerMl * ALCOHOL_GRAMS_PER_ML.beer
+  );
 }
 
 // Smoking and activity are the only factors left here (TZ section 3.3,
@@ -2503,21 +2549,35 @@ function hadRecentExtremeExertion(dateStr) {
 // detected, the oversleep penalty is suppressed (returns 0 — neutral,
 // not bonused) rather than charged at the steeper SLEEP_DEBT_OVER_COEFF
 // rate. Doesn't affect the undersleep side at all.
-// bedtimeToday (04.09.2026, Sergey's own spec, confirmed via his own
-// 2:00am -> x0.8 example): only multiplies the GOOD-band bonus, never
-// the under/oversleep penalty branches below — timing only matters once
-// the duration itself was already good. Before 23:00 = x1.5; 23:00-24:00
-// = x1.0 (neutral, no bonus/penalty for timing); after midnight decays
-// -0.1 per hour past midnight, floored at 0 rather than going negative
-// (a very late bedtime should zero out the timing bonus, not flip the
-// whole day's sleep entry into a penalty by itself).
+// bedtimeToday: only multiplies the GOOD-band bonus, never the
+// under/oversleep penalty branches below — timing only matters once the
+// duration itself was already good.
+//
+// Reshaped 04.09.2026 (was a flat plateau — any time before 23:00 got
+// the same x1.5, so 20:00 scored identically to 22:30). Nikbakhtian et
+// al., Eur Heart J Digital Health 2021 (UK Biobank, n=103,712,
+// accelerometer-derived, 5.7yr follow-up): sleep-onset timing and
+// cardiovascular disease risk is U-SHAPED, not "earlier is always
+// better" — lowest risk at 22:00-22:59, and sleep onset BEFORE 22:00
+// carried HR 1.24 (1.10-1.39) vs that window, adjusted for duration and
+// regularity. So the peak bonus now only applies to 22:00-23:00; times
+// earlier than that decay at the same -0.1/hour rate as the existing
+// after-midnight side, floored at 0 — mirrors the after-midnight
+// rationale (too late shouldn't flip into a penalty by itself; same now
+// applies symmetrically to too early).
 function sleepBedtimeMultiplier(bedtimeToday) {
   if (!bedtimeToday) return 1; // no bedtime logged — neutral, don't invent a penalty for missing data
   const mins = circularBedtimeMinutes(bedtimeToday);
-  if (mins < 23 * 60) return 1.5;
-  if (mins <= 24 * 60) return 1;
-  const hoursPastMidnight = (mins - 24 * 60) / 60;
-  return Math.max(0, 1 - 0.1 * hoursPastMidnight);
+  if (mins >= 22 * 60 && mins < 23 * 60) return 1.5; // peak window, Nikbakhtian et al. 2021
+  if (mins >= 23 * 60 && mins <= 24 * 60) return 1; // 23:00-24:00, neutral
+  if (mins > 24 * 60) {
+    const hoursPastMidnight = (mins - 24 * 60) / 60;
+    return Math.max(0, 1 - 0.1 * hoursPastMidnight);
+  }
+  // mins < 22*60: bedtime earlier than 22:00 — mirrors the after-midnight
+  // decay, same rate, same floor.
+  const hoursBefore22 = (22 * 60 - mins) / 60;
+  return Math.max(0, 1 - 0.1 * hoursBefore22);
 }
 
 function sleepDebtPenalty(debt, hasTodayData, isRecoveryContext, bedtimeToday) {
@@ -2600,7 +2660,12 @@ function sleepRegularityPenalty(uptoDateStr) {
 // — that's a separate mechanic on the initial baseline, not the daily
 // ledger.
 function dailyAlcoholDelta(spiritsToday, wineToday, beerToday) {
-  return alcoholPoints(spiritsToday, wineToday, beerToday) * POINTS_TO_DAYS;
+  const weeklyGrams = weeklyEthanolGrams(spiritsToday, wineToday, beerToday);
+  const excessGrams = Math.max(0, weeklyGrams - ALCOHOL_RISK_FREE_THRESHOLD_G_PER_WEEK);
+  const excessUnits = excessGrams / ALCOHOL_STANDARD_UNIT_GRAMS;
+  const minutesLostPerWeek = excessUnits * ALCOHOL_MINUTES_LOST_PER_UNIT_ABOVE_THRESHOLD;
+  const daysLostPerWeek = minutesLostPerWeek / (24 * 60);
+  return -(daysLostPerWeek / 7);
 }
 
 // Monday of the ISO week containing dateStr ('YYYY-MM-DD'). Parses and
@@ -2795,12 +2860,12 @@ function cascadeRecalcFrom(fromDate) {
     // dailyFactorBreakdown can show every factor's own contribution,
     // same transparency convention as sleep/alcohol/smoking above.
     entry.nutritionDelta =
-      (proteinPoints(entry) + waterPoints(entry) + flourPoints(entry) + sugarPoints(entry) + supplementsPoints(entry)) *
+      (proteinPoints(entry) + waterPoints(entry) + flourPoints(entry) + sugarPoints(entry)) *
       POINTS_TO_DAYS;
     entry.stressDelta = stressPoints(entry) * POINTS_TO_DAYS;
-    entry.socialDelta = socialPoints(entry) * POINTS_TO_DAYS;
+    entry.socialDelta = socialPoints(entry) * POINTS_TO_DAYS * EVIDENCE_WEIGHT_MULTIPLIER;
     entry.cognitiveDelta = cognitivePoints(entry) * POINTS_TO_DAYS;
-    entry.purposeDelta = purposePoints(entry) * POINTS_TO_DAYS;
+    entry.purposeDelta = purposePoints(entry) * POINTS_TO_DAYS * EVIDENCE_WEIGHT_MULTIPLIER;
 
     entry.deltaDays =
       baseDelta +
@@ -3328,18 +3393,15 @@ function numberOptionsHtml(max, selectedValue) {
 function nutritionRowHtml(idPrefix, entry) {
   if (!isFactorVisible("nutrition")) return "";
   const sugar = entry.nutritionSugarSources || {};
-  const supplements = entry.nutritionSupplements || {};
   // 24.08.2026: translated as part of the onboarding "nutrition" step
   // checkpoint — this function is shared with the dashboard "modal" and
   // history "edit" forms, so those pick up the translation too, not just
-  // onboarding. NUTRITION_FLOUR_OPTIONS/NUTRITION_SUGAR_SOURCES/
-  // NUTRITION_SUPPLEMENT_TYPES themselves stay Russian-labeled (untouched
-  // canonical lists); only a localized value/label or key/label
-  // projection is built here for rendering, same pattern as
-  // localizedRegionOptions et al.
+  // onboarding. NUTRITION_FLOUR_OPTIONS/NUTRITION_SUGAR_SOURCES
+  // themselves stay Russian-labeled (untouched canonical lists); only a
+  // localized value/label or key/label projection is built here for
+  // rendering, same pattern as localizedRegionOptions et al.
   const flourOptions = NUTRITION_FLOUR_OPTIONS.map((o) => ({ value: o.value, label: t(`nutritionFlourOptions.${o.value}`) }));
   const sugarOptions = NUTRITION_SUGAR_SOURCES.map((s) => ({ key: s.key, label: t(`nutritionSugarOptions.${s.key}`) }));
-  const supplementOptions = NUTRITION_SUPPLEMENT_TYPES.map((s) => ({ key: s.key, label: t(`nutritionSupplementOptions.${s.key}`) }));
   return `
     <div class="nutrition-tile">
       <h3>${t("nutrition.quantityTitle")}</h3>
@@ -3371,10 +3433,6 @@ function nutritionRowHtml(idPrefix, entry) {
             ${numberOptionsHtml(6, entry.nutritionProteinTimes ?? "")}
             <option value="every_meal" ${entry.nutritionProteinTimes === "every_meal" ? "selected" : ""}>${t("nutrition.proteinEveryMeal")}</option>
           </select>
-        </div>
-        <div class="field">
-          <label>${t("nutrition.proteinGramsLabel")}</label>
-          <input type="number" id="${idPrefix}_nutrition_protein_grams" min="0" step="1" placeholder="${t("nutrition.proteinGramsPlaceholder")}" value="${entry.nutritionProteinGrams ?? ""}">
         </div>
       </div>
     </div>
@@ -3418,19 +3476,6 @@ function nutritionRowHtml(idPrefix, entry) {
       </div>
     </div>
 
-    <div class="nutrition-tile">
-      <h3>${t("nutrition.supplementsLabel")}</h3>
-      <div class="field">
-        <div class="checkbox-list">
-          ${supplementOptions
-            .map(
-              (s) =>
-                `<label class="checkbox-row"><input type="checkbox" id="${idPrefix}_nutrition_supplements_${s.key}" ${supplements[s.key] ? "checked" : ""}> ${s.label}</label>`
-            )
-            .join("")}
-        </div>
-      </div>
-    </div>
   `;
 }
 
@@ -3976,7 +4021,6 @@ function collectStepFields(step, draft) {
     draft.nutritionMealsCount = val("f_nutrition_meals") || "";
     draft.nutritionSnacksCount = val("f_nutrition_snacks") || "";
     draft.nutritionProteinTimes = val("f_nutrition_protein_times") || "";
-    draft.nutritionProteinGrams = val("f_nutrition_protein_grams") || "";
     draft.nutritionWaterAmount = val("f_nutrition_water_amount") || "";
     draft.nutritionWaterUnit = val("f_nutrition_water_unit") || "ml";
     draft.nutritionFlourType = val("f_nutrition_flour") || "";
@@ -3986,11 +4030,6 @@ function collectStepFields(step, draft) {
       juices: !!document.getElementById("f_nutrition_sugar_juices")?.checked,
       sweetDrinks: !!document.getElementById("f_nutrition_sugar_sweetDrinks")?.checked,
       added: !!document.getElementById("f_nutrition_sugar_added")?.checked,
-    };
-    draft.nutritionSupplements = {
-      vitamins: !!document.getElementById("f_nutrition_supplements_vitamins")?.checked,
-      minerals: !!document.getElementById("f_nutrition_supplements_minerals")?.checked,
-      other: !!document.getElementById("f_nutrition_supplements_other")?.checked,
     };
   } else if (step === "habits") {
     const smokesChecked = checkedRadio("f_smokes");
@@ -4432,12 +4471,10 @@ const FACTOR_NEUTRAL_VALUES = {
     nutritionMealsCount: "",
     nutritionSnacksCount: "",
     nutritionProteinTimes: "",
-    nutritionProteinGrams: "",
     nutritionWaterAmount: "",
     nutritionWaterUnit: "ml",
     nutritionFlourType: "",
     nutritionSugarSources: {},
-    nutritionSupplements: {},
   },
   social: { socialQualityToday: "" },
   weight: { weightKg: "", bodyFatPercent: "" },
@@ -4628,7 +4665,6 @@ function readFactorModalFields(idPrefix, key) {
         nutritionMealsCount: document.getElementById(`${idPrefix}_nutrition_meals`).value,
         nutritionSnacksCount: document.getElementById(`${idPrefix}_nutrition_snacks`).value,
         nutritionProteinTimes: document.getElementById(`${idPrefix}_nutrition_protein_times`).value,
-        nutritionProteinGrams: document.getElementById(`${idPrefix}_nutrition_protein_grams`).value,
         nutritionWaterAmount: document.getElementById(`${idPrefix}_nutrition_water_amount`).value,
         nutritionWaterUnit: document.getElementById(`${idPrefix}_nutrition_water_unit`).value,
         nutritionFlourType: document.getElementById(`${idPrefix}_nutrition_flour`).value,
@@ -4638,11 +4674,6 @@ function readFactorModalFields(idPrefix, key) {
           juices: !!document.getElementById(`${idPrefix}_nutrition_sugar_juices`)?.checked,
           sweetDrinks: !!document.getElementById(`${idPrefix}_nutrition_sugar_sweetDrinks`)?.checked,
           added: !!document.getElementById(`${idPrefix}_nutrition_sugar_added`)?.checked,
-        },
-        nutritionSupplements: {
-          vitamins: !!document.getElementById(`${idPrefix}_nutrition_supplements_vitamins`)?.checked,
-          minerals: !!document.getElementById(`${idPrefix}_nutrition_supplements_minerals`)?.checked,
-          other: !!document.getElementById(`${idPrefix}_nutrition_supplements_other`)?.checked,
         },
       };
     case "social":
