@@ -4786,12 +4786,24 @@ const FACTOR_NEUTRAL_VALUES = {
 };
 
 // A field counts as "already answered for real" if it's not undefined
-// (never saved) — for numeric fields that's the whole check, since 0 is
-// itself a real answer; for the string/select fields "" is this app's
-// existing convention for "not selected", same as every other select.
+// (never saved) — for numeric fields that's mostly the whole check, since
+// 0 is itself a real answer; for the string/select fields "" is this
+// app's existing convention for "not selected", same as every other
+// select.
+//
+// 05.09.2026 bug fix: numeric fields also need an actual typeof check,
+// not just "!== undefined". renderDashboard's todayEntry fallback (used
+// when today has no ledger entry at all) is `{ cigarettes: "",
+// activityMinutes: "" }` — a placeholder empty STRING, not a real 0 —
+// so the old "numeric ? true : ..." check treated that placeholder as a
+// real answer and showed "Активность"/"Курение" as already filled today
+// even with nothing saved. Real values for these two fields are always
+// actual numbers (see readFactorModalFields: `Number(...) || 0`), so
+// requiring typeof === "number" excludes the string placeholder without
+// affecting any genuine 0 answer.
 function hasRealFieldValue(entry, field, numeric) {
   if (!entry || entry[field] === undefined) return false;
-  return numeric ? true : entry[field] !== "";
+  return numeric ? typeof entry[field] === "number" : entry[field] !== "";
 }
 
 // Dashboard "Отметить сегодня" card is "filled" for a day if that day's
