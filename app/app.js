@@ -1321,6 +1321,7 @@ const STRINGS = {
       copied: "Скопировано!",
       copyFailed: "Не удалось скопировать",
       save: "Сохранить",
+      idealMarker: "цель",
     },
     dashboard: {
       title: "Портфель",
@@ -1646,6 +1647,7 @@ const STRINGS = {
       copied: "Copied!",
       copyFailed: "Couldn't copy",
       save: "Save",
+      idealMarker: "target",
     },
     dashboard: {
       title: "Portfolio",
@@ -3499,15 +3501,22 @@ function collapsibleHint(text) {
 }
 
 // Ideal-target inline hints (05.09.2026) — same collapsed-by-default pattern
-// as collapsibleHint above, but marked with "★" instead of "ⓘ" so it reads
-// as a distinct kind of hint (the formula's target value for this field,
-// not a methodology note) even on fields that show both. Initially shipped
-// as an always-visible line per Sergey's first description of the feature;
-// moved behind this marker per his follow-up ("на экране не надо, спрячь
-// во всплывающую подсказку") — the always-on line was too much screen
-// clutter across every field of every form.
+// as collapsibleHint above, but marked with a short "(цель)"/"(target)"
+// word instead of "ⓘ" so it reads as a distinct kind of hint (the
+// formula's target value for this field, not a methodology note) even on
+// fields that show both. Initially shipped as an always-visible line per
+// Sergey's first description of the feature; moved behind a marker per
+// his follow-up ("на экране не надо, спрячь во всплывающую подсказку");
+// that marker was then a bare "★" glyph, which per his next round of
+// feedback ("звездочки не должны стоять так отдельно... сама звездочка не
+// лучший выбор, интуитивно непонятно") sat on its own line taking real
+// vertical space AND didn't self-explain what it was. Fixed both: this
+// helper is now inline-sized (see .ideal-hint-details CSS) so call sites
+// append it directly onto the field's <label> text instead of as a
+// separate block below the input, and the marker itself is a short real
+// word instead of an unlabeled symbol.
 function idealHint(text) {
-  return `<details class="hint-details ideal-hint-details"><summary>★</summary><div class="hint">${text}</div></details>`;
+  return `<details class="hint-details ideal-hint-details"><summary>(${t("common.idealMarker")})</summary><div class="hint">${text}</div></details>`;
 }
 
 function selectOptionsHtml(options, selectedValue) {
@@ -3581,7 +3590,7 @@ function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
   return `
     <details class="field alcohol-details" ${summary ? "open" : ""}>
       <summary>${summaryLabel}${summary ? ` — ${escapeHtml(summary)}` : ""}</summary>
-      <div style="margin-top:10px;">${idealHint(t("factorFields.alcoholIdealHint"))}</div>
+      ${idealHint(t("factorFields.alcoholIdealHint"))}
       <div class="log-row" style="margin-top:10px;">
         <div class="field">
           <label>${t("factorFields.alcoholSpiritsLabel")}</label>
@@ -3628,10 +3637,9 @@ function activityFieldHtml(idPrefix, entry, label, withHint) {
   if (!isFactorVisible("sport")) return "";
   return `
     <div class="field">
-      <label>${label}</label>
+      <label>${label} ${idealHint(t("factorFields.activityIdealHint"))}</label>
       <input type="number" min="0" id="${idPrefix}_activity" value="${escapeHtml(entry.activityMinutes ?? "")}">
       ${withHint ? `<div class="hint">${t("factorFields.activityHint")}</div>` : ""}
-      ${idealHint(t("factorFields.activityIdealHint"))}
     </div>
   `;
 }
@@ -3654,15 +3662,13 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
   return `
     <div class="log-row">
       <div class="field">
-        <label>${sleepLabel}</label>
+        <label>${sleepLabel} ${idealHint(t("factorFields.sleepDurationIdealHint"))}</label>
         <input type="number" min="0" max="24" step="0.25" placeholder="${t("factorFields.sleepHoursPlaceholder")}" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
         <div class="hint">${t("factorFields.sleepHoursHint")}</div>
-        ${idealHint(t("factorFields.sleepDurationIdealHint"))}
       </div>
       <div class="field">
-        <label>${bedtimeLabel}</label>
+        <label>${bedtimeLabel} ${idealHint(t("factorFields.bedtimeIdealHint"))}</label>
         ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
-        ${idealHint(t("factorFields.bedtimeIdealHint"))}
       </div>
     </div>
   `;
@@ -3723,7 +3729,7 @@ function nutritionRowHtml(idPrefix, entry) {
       <h3>${t("nutrition.proteinTitle")}</h3>
       <div class="log-row">
         <div class="field">
-          <label>${t("nutrition.proteinTimesLabel")}</label>
+          <label>${t("nutrition.proteinTimesLabel")} ${idealHint(t("nutrition.proteinIdealHint"))}</label>
           <select id="${idPrefix}_nutrition_protein_times">
             <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${numberOptionsHtml(6, entry.nutritionProteinTimes ?? "")}
@@ -3731,11 +3737,10 @@ function nutritionRowHtml(idPrefix, entry) {
           </select>
         </div>
       </div>
-      ${idealHint(t("nutrition.proteinIdealHint"))}
     </div>
 
     <div class="nutrition-tile">
-      <h3>${t("nutrition.waterLabel")}</h3>
+      <h3>${t("nutrition.waterLabel")} ${idealHint(t("nutrition.waterIdealHint"))}</h3>
       <div class="field">
         ${collapsibleHint(t("nutrition.waterHint"))}
         <div class="log-row nutrition-water-row">
@@ -3745,23 +3750,21 @@ function nutritionRowHtml(idPrefix, entry) {
             <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>${t("nutrition.unitL")}</option>
           </select>
         </div>
-        ${idealHint(t("nutrition.waterIdealHint"))}
       </div>
     </div>
 
     <div class="nutrition-tile">
-      <h3>${t("nutrition.flourLabel")}</h3>
+      <h3>${t("nutrition.flourLabel")} ${idealHint(t("nutrition.flourIdealHint"))}</h3>
       <div class="field">
         <select id="${idPrefix}_nutrition_flour">
           <option value="">${t("onboarding.selectPlaceholder")}</option>
           ${selectOptionsHtml(flourOptions, entry.nutritionFlourType)}
         </select>
-        ${idealHint(t("nutrition.flourIdealHint"))}
       </div>
     </div>
 
     <div class="nutrition-tile">
-      <h3>${t("nutrition.sugarLabel")}</h3>
+      <h3>${t("nutrition.sugarLabel")} ${idealHint(t("nutrition.sugarIdealHint"))}</h3>
       <div class="field">
         ${collapsibleHint(t("nutrition.sugarHint"))}
         <div class="checkbox-list">
@@ -3772,7 +3775,6 @@ function nutritionRowHtml(idPrefix, entry) {
             )
             .join("")}
         </div>
-        ${idealHint(t("nutrition.sugarIdealHint"))}
       </div>
     </div>
 
@@ -3805,13 +3807,12 @@ function socialRowHtml(idPrefix, entry) {
   if (!isFactorVisible("social")) return "";
   return `
     <div class="field">
-      <label>${t("factorFields.socialLabel")}</label>
+      <label>${t("factorFields.socialLabel")} ${idealHint(t("factorFields.socialIdealHint"))}</label>
       ${collapsibleHint(t("factorFields.socialHint"))}
       <select id="${idPrefix}_social">
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedSocialQualityOptions(), entry.socialQualityToday)}
       </select>
-      ${idealHint(t("factorFields.socialIdealHint"))}
     </div>
   `;
 }
@@ -3835,12 +3836,11 @@ function purposeRowHtml(idPrefix, entry) {
   if (!isFactorVisible("purpose")) return "";
   return `
     <div class="field">
-      <label>${t("factorFields.purposeLabel")}</label>
+      <label>${t("factorFields.purposeLabel")} ${idealHint(t("factorFields.purposeIdealHint"))}</label>
       <select id="${idPrefix}_purpose">
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedPurposeOptions(), entry.purposeToday)}
       </select>
-      ${idealHint(t("factorFields.purposeIdealHint"))}
     </div>
   `;
 }
@@ -3849,13 +3849,12 @@ function cognitiveRowHtml(idPrefix, entry) {
   if (!isFactorVisible("cognitive")) return "";
   return `
     <div class="field">
-      <label>${t("factorFields.cognitiveLabel")}</label>
+      <label>${t("factorFields.cognitiveLabel")} ${idealHint(t("factorFields.cognitiveIdealHint"))}</label>
       ${collapsibleHint(t("factorFields.cognitiveHint"))}
       <select id="${idPrefix}_cognitive">
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedCognitiveActivityOptions(), entry.cognitiveActivityToday)}
       </select>
-      ${idealHint(t("factorFields.cognitiveIdealHint"))}
     </div>
   `;
 }
@@ -4943,12 +4942,11 @@ function factorModalFieldsHtml(idPrefix, key, entry) {
       if (!isFactorVisible("stress")) return "";
       return `
         <div class="field">
-          <label>${todayFlavor ? t("factorFields.stressLabelToday") : t("factorFields.stressLabel")}</label>
+          <label>${todayFlavor ? t("factorFields.stressLabelToday") : t("factorFields.stressLabel")} ${idealHint(t("factorFields.stressIdealHint"))}</label>
           <select id="${idPrefix}_stress">
             <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${selectOptionsHtml(localizedStressLevelOptions(), entry.stressLevel)}
           </select>
-          ${idealHint(t("factorFields.stressIdealHint"))}
         </div>`;
     default:
       return "";

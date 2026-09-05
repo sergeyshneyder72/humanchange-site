@@ -216,11 +216,32 @@ button {
 }
 
 /* Ideal-target hints (05.09.2026) — same collapsed .hint-details mechanism,
-   marked with "★" instead of "ⓘ" and tinted with the accent color so it
-   reads as a distinct kind of hint (the formula's target value) even on
-   fields that already show a plain ⓘ methodology hint. */
+   marked with a short "(цель)"/"(target)" word instead of "ⓘ" and tinted
+   with the accent color so it reads as a distinct kind of hint (the
+   formula's target value) even on fields that already show a plain ⓘ
+   methodology hint.
+   05.09.2026, second pass (user feedback: the standalone "★" sat on its
+   own line eating vertical space and didn't self-explain): this variant
+   is inline-sized so call sites can append it straight onto a field's
+   <label> text (same line, small trailing note) instead of stacking it
+   as its own block under the input/select. Only the closed summary is
+   inline — once tapped open, the revealed .hint text still flows as a
+   normal block underneath, same as every other .hint-details. */
+.ideal-hint-details {
+  display: inline;
+  margin-top: 0;
+  margin-left: 6px;
+}
+
 .ideal-hint-details summary {
+  display: inline;
+  font-size: 15.5px;
   color: var(--accent);
+}
+
+.ideal-hint-details .hint {
+  display: block;
+  margin-top: 4px;
 }
 
 /* Alcohol input, collapsed by default (17.08.2026) — same details/
