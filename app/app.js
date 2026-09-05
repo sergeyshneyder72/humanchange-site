@@ -1321,7 +1321,7 @@ const STRINGS = {
       copied: "Скопировано!",
       copyFailed: "Не удалось скопировать",
       save: "Сохранить",
-      idealMarker: "цель",
+      idealMarker: "идеал",
     },
     dashboard: {
       title: "Портфель",
@@ -1647,7 +1647,7 @@ const STRINGS = {
       copied: "Copied!",
       copyFailed: "Couldn't copy",
       save: "Save",
-      idealMarker: "target",
+      idealMarker: "ideal",
     },
     dashboard: {
       title: "Portfolio",
@@ -3501,7 +3501,7 @@ function collapsibleHint(text) {
 }
 
 // Ideal-target inline hints (05.09.2026) — same collapsed-by-default pattern
-// as collapsibleHint above, but marked with a short "(цель)"/"(target)"
+// as collapsibleHint above, but marked with a short "(идеал)"/"(ideal)"
 // word instead of "ⓘ" so it reads as a distinct kind of hint (the
 // formula's target value for this field, not a methodology note) even on
 // fields that show both. Initially shipped as an always-visible line per
@@ -3514,7 +3514,9 @@ function collapsibleHint(text) {
 // helper is now inline-sized (see .ideal-hint-details CSS) so call sites
 // append it directly onto the field's <label> text instead of as a
 // separate block below the input, and the marker itself is a short real
-// word instead of an unlabeled symbol.
+// word — briefly "цель" ("goal"), changed again per his next comment
+// (read as a task/action, not a reference value) to "идеал"/"ideal", a
+// noun naming the value itself.
 function idealHint(text) {
   return `<details class="hint-details ideal-hint-details"><summary>(${t("common.idealMarker")})</summary><div class="hint">${text}</div></details>`;
 }
