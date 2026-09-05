@@ -215,6 +215,14 @@ button {
   margin-top: 0;
 }
 
+/* Ideal-target hints (05.09.2026) — same collapsed .hint-details mechanism,
+   marked with "★" instead of "ⓘ" and tinted with the accent color so it
+   reads as a distinct kind of hint (the formula's target value) even on
+   fields that already show a plain ⓘ methodology hint. */
+.ideal-hint-details summary {
+  color: var(--accent);
+}
+
 /* Alcohol input, collapsed by default (17.08.2026) — same details/
    summary pattern as .hint-details above, but the summary itself is a
    full field-label-sized tappable row (it replaces three separate field

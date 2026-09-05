@@ -3498,6 +3498,18 @@ function collapsibleHint(text) {
   return `<details class="hint-details"><summary>ⓘ</summary><div class="hint">${text}</div></details>`;
 }
 
+// Ideal-target inline hints (05.09.2026) — same collapsed-by-default pattern
+// as collapsibleHint above, but marked with "★" instead of "ⓘ" so it reads
+// as a distinct kind of hint (the formula's target value for this field,
+// not a methodology note) even on fields that show both. Initially shipped
+// as an always-visible line per Sergey's first description of the feature;
+// moved behind this marker per his follow-up ("на экране не надо, спрячь
+// во всплывающую подсказку") — the always-on line was too much screen
+// clutter across every field of every form.
+function idealHint(text) {
+  return `<details class="hint-details ideal-hint-details"><summary>★</summary><div class="hint">${text}</div></details>`;
+}
+
 function selectOptionsHtml(options, selectedValue) {
   return options
     .map((o) => `<option value="${o.value}" ${selectedValue === o.value ? "selected" : ""}>${o.label}</option>`)
@@ -3569,7 +3581,7 @@ function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
   return `
     <details class="field alcohol-details" ${summary ? "open" : ""}>
       <summary>${summaryLabel}${summary ? ` — ${escapeHtml(summary)}` : ""}</summary>
-      <div class="hint ideal-hint" style="margin-top:10px;">${t("factorFields.alcoholIdealHint")}</div>
+      <div style="margin-top:10px;">${idealHint(t("factorFields.alcoholIdealHint"))}</div>
       <div class="log-row" style="margin-top:10px;">
         <div class="field">
           <label>${t("factorFields.alcoholSpiritsLabel")}</label>
@@ -3619,7 +3631,7 @@ function activityFieldHtml(idPrefix, entry, label, withHint) {
       <label>${label}</label>
       <input type="number" min="0" id="${idPrefix}_activity" value="${escapeHtml(entry.activityMinutes ?? "")}">
       ${withHint ? `<div class="hint">${t("factorFields.activityHint")}</div>` : ""}
-      <div class="hint ideal-hint">${t("factorFields.activityIdealHint")}</div>
+      ${idealHint(t("factorFields.activityIdealHint"))}
     </div>
   `;
 }
@@ -3645,12 +3657,12 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
         <label>${sleepLabel}</label>
         <input type="number" min="0" max="24" step="0.25" placeholder="${t("factorFields.sleepHoursPlaceholder")}" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
         <div class="hint">${t("factorFields.sleepHoursHint")}</div>
-        <div class="hint ideal-hint">${t("factorFields.sleepDurationIdealHint")}</div>
+        ${idealHint(t("factorFields.sleepDurationIdealHint"))}
       </div>
       <div class="field">
         <label>${bedtimeLabel}</label>
         ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
-        <div class="hint ideal-hint">${t("factorFields.bedtimeIdealHint")}</div>
+        ${idealHint(t("factorFields.bedtimeIdealHint"))}
       </div>
     </div>
   `;
@@ -3719,7 +3731,7 @@ function nutritionRowHtml(idPrefix, entry) {
           </select>
         </div>
       </div>
-      <div class="hint ideal-hint">${t("nutrition.proteinIdealHint")}</div>
+      ${idealHint(t("nutrition.proteinIdealHint"))}
     </div>
 
     <div class="nutrition-tile">
@@ -3733,7 +3745,7 @@ function nutritionRowHtml(idPrefix, entry) {
             <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>${t("nutrition.unitL")}</option>
           </select>
         </div>
-        <div class="hint ideal-hint">${t("nutrition.waterIdealHint")}</div>
+        ${idealHint(t("nutrition.waterIdealHint"))}
       </div>
     </div>
 
@@ -3744,7 +3756,7 @@ function nutritionRowHtml(idPrefix, entry) {
           <option value="">${t("onboarding.selectPlaceholder")}</option>
           ${selectOptionsHtml(flourOptions, entry.nutritionFlourType)}
         </select>
-        <div class="hint ideal-hint">${t("nutrition.flourIdealHint")}</div>
+        ${idealHint(t("nutrition.flourIdealHint"))}
       </div>
     </div>
 
@@ -3760,7 +3772,7 @@ function nutritionRowHtml(idPrefix, entry) {
             )
             .join("")}
         </div>
-        <div class="hint ideal-hint">${t("nutrition.sugarIdealHint")}</div>
+        ${idealHint(t("nutrition.sugarIdealHint"))}
       </div>
     </div>
 
@@ -3799,7 +3811,7 @@ function socialRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedSocialQualityOptions(), entry.socialQualityToday)}
       </select>
-      <div class="hint ideal-hint">${t("factorFields.socialIdealHint")}</div>
+      ${idealHint(t("factorFields.socialIdealHint"))}
     </div>
   `;
 }
@@ -3828,7 +3840,7 @@ function purposeRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedPurposeOptions(), entry.purposeToday)}
       </select>
-      <div class="hint ideal-hint">${t("factorFields.purposeIdealHint")}</div>
+      ${idealHint(t("factorFields.purposeIdealHint"))}
     </div>
   `;
 }
@@ -3843,7 +3855,7 @@ function cognitiveRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedCognitiveActivityOptions(), entry.cognitiveActivityToday)}
       </select>
-      <div class="hint ideal-hint">${t("factorFields.cognitiveIdealHint")}</div>
+      ${idealHint(t("factorFields.cognitiveIdealHint"))}
     </div>
   `;
 }
@@ -4924,7 +4936,7 @@ function factorModalFieldsHtml(idPrefix, key, entry) {
             <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${selectOptionsHtml(localizedStressLevelOptions(), entry.stressLevel)}
           </select>
-          <div class="hint ideal-hint">${t("factorFields.stressIdealHint")}</div>
+          ${idealHint(t("factorFields.stressIdealHint"))}
         </div>`;
     default:
       return "";
