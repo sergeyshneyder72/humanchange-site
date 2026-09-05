@@ -527,6 +527,23 @@ function localizedKnowledgeBase() {
   return KNOWLEDGE_BASE[getLang()] || KNOWLEDGE_BASE.ru;
 }
 
+// "Идеальные показатели" (04.09.2026, Sergey's request): a quick-scan
+// table at the top of the Knowledge Base so someone who just wants "what
+// number should I aim for" doesn't have to open every accordion card
+// below. Order follows ALL_FACTORS; "weight" is skipped since it has no
+// formula yet (nothing to target). Values are pulled from the same
+// constants the daily formula itself uses (SLEEP_DEBT_NORM_HOURS, the
+// 22:00-23:00 bedtime peak, ALCOHOL_RISK_FREE_THRESHOLD_G_PER_WEEK,
+// etc.) — see idealTargets i18n strings for the exact wording, kept in
+// sync by hand since these are prose, not computed at render time.
+function localizedIdealTargets() {
+  return ALL_FACTORS.filter((f) => f.key !== "weight").map((f) => ({
+    key: f.key,
+    label: f.label,
+    value: t(`idealTargets.${f.key}`),
+  }));
+}
+
 // "8 тренируемых маркеров долголетия" (31.08.2026) — a separate section in
 // the Knowledge Base, deliberately NOT mixed into KNOWLEDGE_BASE above:
 // those cards map 1:1 to actual formula factors (active or planned), while
@@ -1358,6 +1375,19 @@ const STRINGS = {
       additionalSource: "доп. источник",
       markersTitle: "8 маркеров, которые стоит знать",
       markersNote: "Не входит в расчёт капитала — отдельные научно обоснованные самопроверки, которые можно сделать дома за 5 минут, без анализов и оборудования.",
+      idealTargetsTitle: "Идеальные показатели",
+      idealTargetsNote: "Коротко — что именно формула считает лучшим результатом по каждому фактору, чтобы не искать это в описаниях ниже. Подробности и источники — в карточках под таблицей.",
+    },
+    idealTargets: {
+      smoking: "Меньше вашей обычной нормы — в идеале 0",
+      sport: "150+ мин/нед (минимум ВОЗ), полный дневной бонус — от 90 мин/день",
+      sleep: "7–8 часов сна, отход ко сну в 22:00–23:00, одно и то же время каждый день (разброс ≤30 мин)",
+      alcohol: "Не больше ~100 г чистого этанола в неделю",
+      nutrition: "Белок — в каждый приём пищи; вода — 2000+ мл/день; мучное — цельнозерновое; сахар — не было",
+      stress: "Низкий уровень (1–2 из 5)",
+      social: "Полноценное общение в течение дня",
+      cognitive: "Насыщенная умственная активность (чтение, игры, музыка и т.п.)",
+      purpose: "Чёткое ощущение смысла и цели в течение дня",
     },
     daily: {
       summaryLowActivity: "Добавьте 30 минут активности сегодня — это ощутимый плюс к капиталу.",
@@ -1384,27 +1414,35 @@ const STRINGS = {
       activityLabelToday: "Минут активности сегодня",
       activityLabel: "Минут активности",
       activityHint: "Не считается медленная прогулка — подробнее в Базе знаний.",
+      activityIdealHint: "Оптимально: от 150 мин/нед (минимум ВОЗ), полный дневной бонус — от 90 мин/день.",
       sleepLabelToday: "Сон прошлой ночью",
       sleepLabel: "Сон (за прошедшую ночь)",
       sleepHoursPlaceholder: "Например, 7.5",
       sleepHoursHint: "В часах, можно дробно.",
+      sleepDurationIdealHint: "Оптимально: 7–8 часов.",
       bedtimeLabelEdit: "Во сколько легли спать накануне",
       bedtimeLabelToday: "Во сколько легли спать вчера",
+      bedtimeIdealHint: "Оптимально: 22:00–23:00, в одно и то же время каждый день.",
       alcoholLabelToday: "Алкоголь сегодня",
       alcoholLabel: "Алкоголь",
       alcoholSpiritsLabel: "Крепкий алкоголь",
       alcoholWineLabel: "Вино",
       alcoholBeerLabel: "Пиво/слабоалкогольное",
+      alcoholIdealHint: "Оптимально: не больше ~100 г чистого этанола в неделю.",
       socialLabel: "Общение с близкими сегодня",
       socialHint: "Считается вовлечённое общение вживую или по звонку — разговор, время вместе. Переписка по работе не в счёт.",
+      socialIdealHint: "Оптимально: полноценное общение в течение дня.",
       weightLabel: "Вес сегодня, кг (необязательно)",
       bodyFatLabel: "% жира (необязательно)",
       bodyFatHint: "Точнее отражает состав тела, чем вес сам по себе.",
       purposeLabel: "Чувствовали сегодня смысл в своих делах?",
+      purposeIdealHint: "Оптимально: чёткое ощущение смысла и цели в течение дня.",
       cognitiveLabel: "Учились сегодня новому или решали непростую задачу?",
       cognitiveHint: "Такая нагрузка формирует новые нейронные связи — работает как тренировка для мозга.",
+      cognitiveIdealHint: "Оптимально: насыщенная умственная активность каждый день.",
       stressLabelToday: "Уровень стресса сегодня",
       stressLabel: "Уровень стресса",
+      stressIdealHint: "Оптимально: низкий уровень (1–2 из 5).",
     },
     socialQualityOptions: {
       full: "Полноценное общение", some: "Немного", none: "Не было",
@@ -1477,13 +1515,17 @@ const STRINGS = {
       proteinTitle: "Белок",
       proteinTimesLabel: "Раз в день",
       proteinEveryMeal: "В каждом приёме пищи",
+      proteinIdealHint: "Оптимально: белок в каждый приём пищи.",
       waterLabel: "Вода",
       waterHint: "Считается только чистая вода — чай, кофе и другие напитки не считаются.",
+      waterIdealHint: "Оптимально: 2000+ мл чистой воды в день.",
       sugarHint: "Не считается, если было за час до/после интенсивной тренировки или во время неё — в этом случае сахар усваивается иначе.",
+      sugarIdealHint: "Оптимально: без добавленного сахара.",
       waterAmountPlaceholder: "Количество",
       unitMl: "мл",
       unitL: "л",
       flourLabel: "Мучное",
+      flourIdealHint: "Оптимально: цельнозерновое вместо белого.",
       sugarLabel: "Сахар",
     },
     nutritionFlourOptions: {
@@ -1658,6 +1700,19 @@ const STRINGS = {
       additionalSource: "additional source",
       markersTitle: "8 markers worth knowing",
       markersNote: "Not part of your capital calculation — separate, science-backed self-tests you can do at home in 5 minutes, no lab work or equipment needed.",
+      idealTargetsTitle: "Ideal targets",
+      idealTargetsNote: "A quick reference for what the formula treats as the best result for each factor, so you don't have to dig through the descriptions below. Details and sources are in the cards under the table.",
+    },
+    idealTargets: {
+      smoking: "Less than your usual baseline — ideally 0",
+      sport: "150+ min/week (WHO minimum), full daily bonus from 90 min/day",
+      sleep: "7–8 hours of sleep, bedtime 22:00–23:00, the same time every day (spread ≤30 min)",
+      alcohol: "No more than ~100g of pure ethanol per week",
+      nutrition: "Protein at every meal; water — 2000+ ml/day; flour — whole grain; sugar — none",
+      stress: "Low level (1–2 out of 5)",
+      social: "Full, meaningful connection during the day",
+      cognitive: "Rich mental activity (reading, games, music, etc.)",
+      purpose: "A clear sense of purpose during the day",
     },
     daily: {
       summaryLowActivity: "Add 30 minutes of activity today — that's a real boost to your capital.",
@@ -1684,27 +1739,35 @@ const STRINGS = {
       activityLabelToday: "Minutes of activity today",
       activityLabel: "Minutes of activity",
       activityHint: "A slow walk doesn't count — see the Knowledge Base for details.",
+      activityIdealHint: "Ideal: 150+ min/week (WHO minimum), full daily bonus from 90 min/day.",
       sleepLabelToday: "Sleep last night",
       sleepLabel: "Sleep (last night)",
       sleepHoursPlaceholder: "E.g., 7.5",
       sleepHoursHint: "In hours, decimals allowed.",
+      sleepDurationIdealHint: "Ideal: 7–8 hours.",
       bedtimeLabelEdit: "What time did you go to sleep the night before",
       bedtimeLabelToday: "What time did you go to sleep last night",
+      bedtimeIdealHint: "Ideal: 22:00–23:00, the same time every day.",
       alcoholLabelToday: "Alcohol today",
       alcoholLabel: "Alcohol",
       alcoholSpiritsLabel: "Spirits",
       alcoholWineLabel: "Wine",
       alcoholBeerLabel: "Beer/low-alcohol",
+      alcoholIdealHint: "Ideal: no more than ~100g of pure ethanol per week.",
       socialLabel: "Time with loved ones today",
       socialHint: "Counts as engaged in-person or call time — a real conversation, time together. Work messaging doesn't count.",
+      socialIdealHint: "Ideal: full, meaningful connection during the day.",
       weightLabel: "Weight today, kg (optional)",
       bodyFatLabel: "Body fat % (optional)",
       bodyFatHint: "A more precise picture of body composition than weight alone.",
       purposeLabel: "Did you feel a sense of purpose in what you did today?",
+      purposeIdealHint: "Ideal: a clear sense of purpose during the day.",
       cognitiveLabel: "Did you learn something new or tackle a hard problem today?",
       cognitiveHint: "This kind of load builds new neural connections — it works like a workout for the brain.",
+      cognitiveIdealHint: "Ideal: rich mental activity every day.",
       stressLabelToday: "Stress level today",
       stressLabel: "Stress level",
+      stressIdealHint: "Ideal: low level (1–2 out of 5).",
     },
     socialQualityOptions: {
       full: "Fully engaged", some: "A little", none: "None",
@@ -1777,13 +1840,17 @@ const STRINGS = {
       proteinTitle: "Protein",
       proteinTimesLabel: "Times a day",
       proteinEveryMeal: "With every meal",
+      proteinIdealHint: "Ideal: protein at every meal.",
       waterLabel: "Water",
       waterHint: "Only plain water counts — tea, coffee, and other drinks don't count.",
+      waterIdealHint: "Ideal: 2000+ ml of plain water per day.",
       sugarHint: "Doesn't count if it was within an hour before/after intense exercise, or during it — sugar is metabolized differently in that window.",
+      sugarIdealHint: "Ideal: no added sugar.",
       waterAmountPlaceholder: "Amount",
       unitMl: "ml",
       unitL: "l",
       flourLabel: "Flour/grain foods",
+      flourIdealHint: "Ideal: whole grain instead of white.",
       sugarLabel: "Sugar",
     },
     nutritionFlourOptions: {
@@ -3502,6 +3569,7 @@ function alcoholFieldsHtml(idPrefix, entry, summaryLabel) {
   return `
     <details class="field alcohol-details" ${summary ? "open" : ""}>
       <summary>${summaryLabel}${summary ? ` — ${escapeHtml(summary)}` : ""}</summary>
+      <div class="hint ideal-hint" style="margin-top:10px;">${t("factorFields.alcoholIdealHint")}</div>
       <div class="log-row" style="margin-top:10px;">
         <div class="field">
           <label>${t("factorFields.alcoholSpiritsLabel")}</label>
@@ -3551,6 +3619,7 @@ function activityFieldHtml(idPrefix, entry, label, withHint) {
       <label>${label}</label>
       <input type="number" min="0" id="${idPrefix}_activity" value="${escapeHtml(entry.activityMinutes ?? "")}">
       ${withHint ? `<div class="hint">${t("factorFields.activityHint")}</div>` : ""}
+      <div class="hint ideal-hint">${t("factorFields.activityIdealHint")}</div>
     </div>
   `;
 }
@@ -3576,10 +3645,12 @@ function sleepRowHtml(idPrefix, entry, sleepLabel) {
         <label>${sleepLabel}</label>
         <input type="number" min="0" max="24" step="0.25" placeholder="${t("factorFields.sleepHoursPlaceholder")}" id="${idPrefix}_sleep_hours" value="${escapeHtml(entry.sleepHoursExact ?? "")}">
         <div class="hint">${t("factorFields.sleepHoursHint")}</div>
+        <div class="hint ideal-hint">${t("factorFields.sleepDurationIdealHint")}</div>
       </div>
       <div class="field">
         <label>${bedtimeLabel}</label>
         ${timePickerHtml(`${idPrefix}_bedtime`, entry.bedtimeToday)}
+        <div class="hint ideal-hint">${t("factorFields.bedtimeIdealHint")}</div>
       </div>
     </div>
   `;
@@ -3648,6 +3719,7 @@ function nutritionRowHtml(idPrefix, entry) {
           </select>
         </div>
       </div>
+      <div class="hint ideal-hint">${t("nutrition.proteinIdealHint")}</div>
     </div>
 
     <div class="nutrition-tile">
@@ -3661,6 +3733,7 @@ function nutritionRowHtml(idPrefix, entry) {
             <option value="l" ${entry.nutritionWaterUnit === "l" ? "selected" : ""}>${t("nutrition.unitL")}</option>
           </select>
         </div>
+        <div class="hint ideal-hint">${t("nutrition.waterIdealHint")}</div>
       </div>
     </div>
 
@@ -3671,6 +3744,7 @@ function nutritionRowHtml(idPrefix, entry) {
           <option value="">${t("onboarding.selectPlaceholder")}</option>
           ${selectOptionsHtml(flourOptions, entry.nutritionFlourType)}
         </select>
+        <div class="hint ideal-hint">${t("nutrition.flourIdealHint")}</div>
       </div>
     </div>
 
@@ -3686,6 +3760,7 @@ function nutritionRowHtml(idPrefix, entry) {
             )
             .join("")}
         </div>
+        <div class="hint ideal-hint">${t("nutrition.sugarIdealHint")}</div>
       </div>
     </div>
 
@@ -3724,6 +3799,7 @@ function socialRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedSocialQualityOptions(), entry.socialQualityToday)}
       </select>
+      <div class="hint ideal-hint">${t("factorFields.socialIdealHint")}</div>
     </div>
   `;
 }
@@ -3752,6 +3828,7 @@ function purposeRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedPurposeOptions(), entry.purposeToday)}
       </select>
+      <div class="hint ideal-hint">${t("factorFields.purposeIdealHint")}</div>
     </div>
   `;
 }
@@ -3766,6 +3843,7 @@ function cognitiveRowHtml(idPrefix, entry) {
         <option value="">${t("onboarding.selectPlaceholder")}</option>
         ${selectOptionsHtml(localizedCognitiveActivityOptions(), entry.cognitiveActivityToday)}
       </select>
+      <div class="hint ideal-hint">${t("factorFields.cognitiveIdealHint")}</div>
     </div>
   `;
 }
@@ -4846,6 +4924,7 @@ function factorModalFieldsHtml(idPrefix, key, entry) {
             <option value="">${t("onboarding.selectPlaceholder")}</option>
             ${selectOptionsHtml(localizedStressLevelOptions(), entry.stressLevel)}
           </select>
+          <div class="hint ideal-hint">${t("factorFields.stressIdealHint")}</div>
         </div>`;
     default:
       return "";
@@ -5155,6 +5234,22 @@ function renderChartSvg(series, period) {
 function renderKnowledge(screen) {
   screen.innerHTML = `
     <h2 class="screen-title">${t("knowledge.title")}</h2>
+
+    <h2>${t("knowledge.idealTargetsTitle")}</h2>
+    <div class="note">${t("knowledge.idealTargetsNote")}</div>
+    <div class="ideal-targets-card">
+      <table class="ideal-targets-table">
+        <tbody>
+          ${localizedIdealTargets()
+            .map(
+              (item) =>
+                `<tr><td class="ideal-targets-factor">${escapeHtml(item.label)}</td><td class="ideal-targets-value">${escapeHtml(item.value)}</td></tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+
     ${localizedKnowledgeBase().map(
       (item) => `
       <details class="kb-card ${item.active || item.note ? "" : "disabled"}">

@@ -915,6 +915,43 @@ button {
 }
 .kb-card-body th { color: var(--muted); font-weight: 600; }
 
+/* Ideal-targets cheat sheet (05.09.2026) — summary table at the top of the
+   Knowledge Base screen, same bordered-card look as .kb-card so it reads
+   as part of the same screen rather than a different component. */
+.ideal-targets-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  margin-bottom: 20px;
+}
+
+.ideal-targets-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ideal-targets-table tr:not(:last-child) td {
+  border-bottom: 1px solid var(--line);
+}
+
+.ideal-targets-table td {
+  padding: 8px 0;
+  font-size: 17.5px;
+  vertical-align: top;
+}
+
+.ideal-targets-factor {
+  font-weight: 700;
+  white-space: nowrap;
+  width: 40%;
+  padding-right: 12px;
+}
+
+.ideal-targets-value {
+  color: var(--muted);
+}
+
 .reading-list {
   padding-left: 18px;
   color: var(--muted);
