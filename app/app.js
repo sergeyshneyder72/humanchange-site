@@ -6198,17 +6198,36 @@ function renderHistory(screen) {
  * in-app browser and tell the person how to get to a real one.
  *
  * UA sniffing for in-app browsers is inherently best-effort — there's no
- * reliable API for "am I in a WebView" — so this combines two things:
+ * reliable API for "am I in a WebView" — so this combines several signals,
+ * roughly in order of confidence:
  * (1) known apps that do stamp an identifiable token onto the UA
  * (Instagram, Facebook, TikTok, WhatsApp, Line, WeChat, Snapchat,
- * Twitter, and Telegram on at least some platforms/versions), and
+ * Twitter, and Telegram on at least some platforms/versions);
  * (2) a fallback for iOS specifically: real Mobile Safari and every
  * other iOS browser (Chrome/Firefox/Edge) always leaves one of
  * Safari/CriOS/FxiOS/EdgiOS in the UA — a bare WKWebView that skipped
  * its own token (reported for at least some Telegram iOS versions) has
- * none of them. False negatives are expected (an in-app browser that
- * mimics Safari's UA exactly won't be caught); false positives are far
- * less likely since (2) only fires on iOS with none of those tokens.
+ * none of them;
+ * (3) added 07.09.2026 after realizing (2) has no Android equivalent —
+ * an Android *embedded WebView* (as opposed to Custom Tabs, which is
+ * literally the user's real Chrome and shares its cookies/storage, so
+ * carries none of this risk) stamps "; wv)" into the UA — a documented
+ * Android convention since Lollipop; and (4) the modern, more reliable
+ * version of the same signal where available: Chromium's User-Agent
+ * Client Hints (navigator.userAgentData.brands) explicitly lists
+ * "Android WebView" as a brand for that same embedded-WebView case, even
+ * on apps that scrub the legacy "wv" string.
+ *
+ * Deliberately signal-based (fire only on a specific marker), never
+ * "doesn't match a known-good browser" (which would false-positive on
+ * Android's much more fragmented real-browser landscape — Samsung
+ * Internet, UC Browser, Yandex, Brave, Xiaomi Mint... — unlike iOS
+ * where Apple requires every real browser to be a WebKit reskin with
+ * one of a small, fixed set of tokens). Net effect: false negatives are
+ * expected (an in-app browser that fully mimics a real browser's UA and
+ * client hints won't be caught, and Custom-Tabs-based in-app browsers
+ * correctly aren't — they don't need to be); false positives should be
+ * rare, since every branch requires a positive, specific marker.
  * ------------------------------------------------------------------- */
 
 function detectInAppBrowser() {
@@ -6230,6 +6249,21 @@ function detectInAppBrowser() {
   const isIOS = /iPhone|iPad|iPod/.test(ua);
   if (isIOS && !/Safari|CriOS|FxiOS|EdgiOS/.test(ua)) {
     return { isInApp: true, appName: null };
+  }
+  const isAndroid = /Android/.test(ua);
+  if (isAndroid) {
+    // "; wv)" is the documented Android convention (since Lollipop) for an
+    // app embedding a genuine WebView, as opposed to Custom Tabs (which
+    // instantiates the user's real Chrome — safe, shares its storage).
+    if (/; ?wv\)/i.test(ua)) {
+      return { isInApp: true, appName: null };
+    }
+    // Modern Chromium also exposes this via User-Agent Client Hints, even on
+    // apps that scrub the legacy "wv" token out of the UA string itself.
+    const brands = navigator.userAgentData && navigator.userAgentData.brands;
+    if (Array.isArray(brands) && brands.some((b) => /WebView/i.test(b.brand || ""))) {
+      return { isInApp: true, appName: null };
+    }
   }
   return { isInApp: false, appName: null };
 }
