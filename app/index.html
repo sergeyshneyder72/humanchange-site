@@ -5,7 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Капитал здоровья — приложение</title>
 <meta name="description" content="Отслеживайте свои привычки и наблюдайте, как они меняют ваш капитал здоровья.">
-<link rel="stylesheet" href="app.css?v=1c8fdf8">
+
+<!-- 07.09.2026: PWA installability — added after a user report (Telegram
+     in-app browser screenshots) traced a report of "no Add to Home Screen
+     option" to two separate causes: (1) this file had zero PWA metadata at
+     all — no manifest, no apple-touch-icon, no standalone-mode meta tags,
+     so even a successful "Add to Home Screen" in real Safari produced a
+     bookmark-with-screenshot-icon that reopened inside Safari's chrome
+     instead of a real app icon/standalone window; (2) separately, and not
+     fixable from this file, in-app browsers (Telegram/Instagram/etc.)
+     don't expose "Add to Home Screen" at all — see the banner logic in
+     app.js (detectInAppBrowser/renderInAppBrowserBanner) for that half. -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f6f4a">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Капитал здоровья">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="stylesheet" href="app.css?v=028f3ca">
 </head>
 <body>
 <div id="app"></div>
@@ -19,6 +39,6 @@
 <script defer src="https://analytics.humanchange.app/script.js" data-website-id="4b2a1ed0-a279-4c78-a53d-e71012eb0964"></script>
 <script defer src="https://analytics.humanchange.app/recorder.js" data-website-id="4b2a1ed0-a279-4c78-a53d-e71012eb0964"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
-<script src="app.js?v=20260903a" defer></script>
+<script src="app.js?v=20260907a" defer></script>
 </body>
 </html>

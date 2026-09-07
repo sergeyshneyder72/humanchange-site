@@ -15,6 +15,41 @@
 
 * { box-sizing: border-box; }
 
+/* 07.09.2026: in-app browser notice (see detectInAppBrowser/
+   renderInAppBrowserBanner in app.js) — injected directly onto
+   document.body, outside #app, so it survives every SPA re-render and
+   sits above onboarding/app alike. Sticky rather than fixed so it
+   doesn't need extra top-padding hacks on every other screen; amber
+   "notice" tone (not --accent, not --danger) since this isn't a brand
+   moment or an error, just a heads-up. */
+.inapp-browser-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fff4d6;
+  color: #6b4f00;
+  font-size: 15px;
+  line-height: 1.35;
+  border-bottom: 1px solid #f0dfa0;
+}
+
+.inapp-browser-banner span { flex: 1; }
+
+.inapp-browser-banner-close {
+  flex: none;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
 /* App-shell layout (17.08.2026 fix — see .bottom-nav below for why):
    html/body never scroll; #app is a full-height flex column and only
    its middle item (.wrap) scrolls. This is the second time a "fixed"
@@ -448,6 +483,16 @@ button {
 .onboarding-header p {
   color: var(--muted);
   margin: 4px 0 0;
+}
+
+/* 07.09.2026: the "5 required questions" line demoted from the hook
+   (see welcome.title/intro + renderWelcomeScreen) to a small effort-
+   preview note — same muted, slightly smaller treatment as .field .hint
+   so it doesn't compete visually with the headline above it. */
+.welcome-questions-note {
+  font-size: 16.5px;
+  color: var(--muted);
+  margin: 0 0 20px;
 }
 
 .progress-dots {

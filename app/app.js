@@ -1322,6 +1322,16 @@ const STRINGS = {
       copyFailed: "Не удалось скопировать",
       save: "Сохранить",
       idealMarker: "идеал",
+      close: "Закрыть",
+    },
+    inAppBanner: {
+      // 07.09.2026: in-app browsers (Telegram/Instagram/etc.) never expose
+      // "Add to Home Screen" — see detectInAppBrowser/renderInAppBrowserBanner.
+      // {app} is replaced with the detected app's name; genericText covers
+      // the fallback case where we can tell it's *some* in-app WebView but
+      // couldn't identify which app from the user agent.
+      namedText: "Страница открыта в {app} — здесь нельзя установить приложение на экран. Нажмите «⋯» в углу и выберите «Открыть в Safari» (или в браузере).",
+      genericText: "Похоже, страница открыта внутри другого приложения — установить на экран отсюда нельзя. Откройте её в Safari или Chrome.",
     },
     dashboard: {
       title: "Портфель",
@@ -1552,13 +1562,27 @@ const STRINGS = {
       "0": "0", lt700: "до 0.7 л/нед", "700to2000": "0.7–2 л/нед", gt2000: "более 2 л/нед",
     },
     welcome: {
-      title: "Добро пожаловать в «Капитал здоровья»",
-      intro: "Пять обязательных вопросов, и ещё несколько — по желанию. Чем больше заполните, тем точнее будет результат.",
+      // 07.09.2026: hook rewrite (frame-control pass, "Pitch Anything"
+      // idea per user request) — the old title/intro led with the
+      // procedure ("5 обязательных вопросов"), which put a form/paperwork
+      // frame in charge before the person had any reason to care about the
+      // result. This is a straight ad-to-app landing: the hook has to win
+      // attention in the first two lines or the visit is wasted. New copy
+      // leads with an intrigue-gap question instead of a question count;
+      // the question count moved into intro as a small effort-preview, not
+      // the headline. Data note + disclaimer are unchanged in substance
+      // (still required, still must be accepted via the checkbox below)
+      // but are now rendered inside a collapsed ⓘ hint instead of two
+      // full paragraphs standing between the hook and the button — see
+      // renderWelcomeScreen.
+      title: "Сколько дней здоровой жизни вы теряете прямо сейчас?",
+      intro: "Сон, привычки, вес — каждый день что-то из этого списывается со счёта. Через 2 минуты посчитаем, сколько именно, и покажем ваш капитал здоровья — в днях.",
+      questionsNote: "5 вопросов обязательных, ещё несколько — по желанию для точности.",
       dataNote: "Мы собираем эти данные, чтобы рассчитать Ваш персональный капитал здоровья. Сейчас всё хранится локально на Вашем устройстве и никуда не передаётся.",
       disclaimer:
         "Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.",
       consent: "Я прочитал(а) и согласен(на)",
-      start: "Начать →",
+      start: "Показать мой счёт →",
     },
     regions: {
       us: "США", ru: "Россия", by: "Беларусь", ua: "Украина", kz: "Казахстан",
@@ -1648,6 +1672,11 @@ const STRINGS = {
       copyFailed: "Couldn't copy",
       save: "Save",
       idealMarker: "ideal",
+      close: "Close",
+    },
+    inAppBanner: {
+      namedText: "This page is open inside {app} — you can't add it to your home screen from here. Tap \"⋯\" and choose \"Open in Safari\" (or your browser).",
+      genericText: "It looks like this page is open inside another app — you can't add it to your home screen from here. Open it in Safari or Chrome instead.",
     },
     dashboard: {
       title: "Portfolio",
@@ -1878,13 +1907,14 @@ const STRINGS = {
       "0": "0", lt700: "under 0.7 l/wk", "700to2000": "0.7–2 l/wk", gt2000: "over 2 l/wk",
     },
     welcome: {
-      title: "Welcome to Health Capital",
-      intro: "Five required questions, plus a few optional ones. The more you fill in, the more accurate the result.",
+      title: "How many days of healthy life are you losing right now?",
+      intro: "Sleep, habits, weight — something gets deducted from the count every day. In 2 minutes we'll show exactly how much, and reveal your health capital — in days.",
+      questionsNote: "5 required questions, plus a few optional ones for extra accuracy.",
       dataNote: "We collect this data to calculate your personal health capital. Right now everything is stored locally on your device and isn't sent anywhere.",
       disclaimer:
         "An averaged statistical estimate based on data from people with a similar profile — age, gender, region, and other factors (not a precise calculation for you personally) — based on scientific research, not a medical diagnosis or personal recommendation.",
       consent: "I have read and agree",
-      start: "Start →",
+      start: "Show my count →",
     },
     regions: {
       us: "USA", ru: "Russia", by: "Belarus", ua: "Ukraine", kz: "Kazakhstan",
@@ -3398,10 +3428,23 @@ function render() {
 // Not one of the 6 form steps — no progress dots — a plain text screen
 // that covers three requirements in one place: welcome/question-count
 // framing, data-collection consent (TZ section 13's minimal notice for
-// this pilot), and the playful-number disclaimer (TZ section 5). Text is
-// the TZ's own draft, not paraphrased. "Начать" stays disabled until the
-// checkbox is checked — this is the only gate; nothing here is saved to
-// state.onboarding, only the acceptance flag.
+// this pilot), and the playful-number disclaimer (TZ section 5).
+// "Начать" stays disabled until the checkbox is checked — this is the
+// only gate; nothing here is saved to state.onboarding, only the
+// acceptance flag.
+//
+// 07.09.2026 hook rewrite: this is the very first thing a person sees
+// after clicking an ad — the whole visit is wasted if it doesn't win
+// attention in the first two lines (frame control per "Pitch Anything" —
+// user request). The old layout led with the form/paperwork frame
+// (question count, then a data-collection paragraph, then a legal
+// disclaimer, in that order, before any hook) — three procedural blocks
+// ahead of any reason to care about the result. Now: title+intro *is*
+// the hook (intrigue-gap, not a spec sheet), the question count is a
+// small one-line effort-preview under it, and dataNote+disclaimer — same
+// required text, unchanged substance — move into a single collapsed ⓘ
+// hint right above the consent checkbox, so the legal/compliance frame
+// no longer outweighs the hook before the person has even engaged.
 function renderWelcomeScreen() {
   // 24.08.2026: this is the very first screen anyone sees, before any
   // onboarding step — the language switcher belongs here even more than
@@ -3416,10 +3459,10 @@ function renderWelcomeScreen() {
         <h1>${t("welcome.title")}</h1>
         <p>${t("welcome.intro")}</p>
       </div>
-      <p>${t("welcome.dataNote")}</p>
-      <p>${t("welcome.disclaimer")}</p>
+      <p class="welcome-questions-note">${t("welcome.questionsNote")}</p>
       <div class="field">
         <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> ${t("welcome.consent")}</label>
+        ${collapsibleHint(`${t("welcome.dataNote")} ${t("welcome.disclaimer")}`)}
       </div>
       <button class="btn" id="welcome-start" style="width:100%" disabled>${t("welcome.start")}</button>
     </div>
@@ -6072,8 +6115,76 @@ function renderHistory(screen) {
 }
 
 /* ---------------------------------------------------------------------
+ * In-app browser detection banner (07.09.2026)
+ *
+ * Traced from a user report: a Telegram-iOS screenshot showed the site
+ * opened inside Telegram's own in-app browser, whose "..." menu has
+ * "Открыть в Safari" but no "На экран «Домой»" at all — that's not
+ * fixable from our side (manifest/icons only help once someone is
+ * actually in Safari/Chrome, see index.html), so instead we detect the
+ * in-app browser and tell the person how to get to a real one.
+ *
+ * UA sniffing for in-app browsers is inherently best-effort — there's no
+ * reliable API for "am I in a WebView" — so this combines two things:
+ * (1) known apps that do stamp an identifiable token onto the UA
+ * (Instagram, Facebook, TikTok, WhatsApp, Line, WeChat, Snapchat,
+ * Twitter, and Telegram on at least some platforms/versions), and
+ * (2) a fallback for iOS specifically: real Mobile Safari and every
+ * other iOS browser (Chrome/Firefox/Edge) always leaves one of
+ * Safari/CriOS/FxiOS/EdgiOS in the UA — a bare WKWebView that skipped
+ * its own token (reported for at least some Telegram iOS versions) has
+ * none of them. False negatives are expected (an in-app browser that
+ * mimics Safari's UA exactly won't be caught); false positives are far
+ * less likely since (2) only fires on iOS with none of those tokens.
+ * ------------------------------------------------------------------- */
+
+function detectInAppBrowser() {
+  const ua = navigator.userAgent || "";
+  const named = [
+    { name: "Instagram", re: /Instagram/i },
+    { name: "Facebook", re: /FBAN|FBAV|FB_IAB/i },
+    { name: "TikTok", re: /musical_ly|TikTok/i },
+    { name: "Telegram", re: /Telegram/i },
+    { name: "WhatsApp", re: /WhatsApp/i },
+    { name: "Line", re: /Line\// },
+    { name: "WeChat", re: /MicroMessenger/i },
+    { name: "Snapchat", re: /Snapchat/i },
+    { name: "Twitter", re: /Twitter for (iPhone|iPad)/i },
+  ];
+  for (const app of named) {
+    if (app.re.test(ua)) return { isInApp: true, appName: app.name };
+  }
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  if (isIOS && !/Safari|CriOS|FxiOS|EdgiOS/.test(ua)) {
+    return { isInApp: true, appName: null };
+  }
+  return { isInApp: false, appName: null };
+}
+
+function renderInAppBrowserBanner() {
+  if (sessionStorage.getItem("inAppBannerDismissed") === "1") return;
+  const { isInApp, appName } = detectInAppBrowser();
+  if (!isInApp) return;
+  const text = appName
+    ? t("inAppBanner.namedText").replace("{app}", appName)
+    : t("inAppBanner.genericText");
+  const bar = document.createElement("div");
+  bar.className = "inapp-browser-banner";
+  bar.innerHTML = `
+    <span>${text}</span>
+    <button type="button" class="inapp-browser-banner-close" aria-label="${t("common.close")}">×</button>
+  `;
+  document.body.prepend(bar);
+  bar.querySelector(".inapp-browser-banner-close").addEventListener("click", () => {
+    sessionStorage.setItem("inAppBannerDismissed", "1");
+    bar.remove();
+  });
+}
+
+/* ---------------------------------------------------------------------
  * Init
  * ------------------------------------------------------------------- */
 
+renderInAppBrowserBanner();
 render();
 authRestoreSession();
