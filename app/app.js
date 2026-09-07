@@ -6258,13 +6258,19 @@ function renderInAppBrowserBanner() {
  * Init
  * ------------------------------------------------------------------- */
 
-// 07.09.2026: the passive dismissible banner is now only for people who
-// already finished onboarding in this browser context (their data lives
-// here, so pushing them to Safari would lose access to it, not protect
-// it) — pre-onboarding, renderInAppBrowserGate() (wired into render()
-// above) blocks the flow instead, before there's anything to lose.
-if (state.onboarding) {
-  renderInAppBrowserBanner();
-}
+// 07.09.2026, later same day: turned back OFF for already-onboarded
+// users too. Umami's Browsers breakdown (last 30 days) showed 58/75
+// visitors (77%) on iOS, and 100% of those iOS visitors landing under
+// the "iOS" browser bucket rather than "Mobile Safari" — i.e. almost the
+// entire current focus group is very likely already testing inside
+// Telegram's in-app browser, not real Safari. Supabase auth only stores
+// state.authEmail right now (see the Auth section's TODO(backend)) — no
+// ledger/onboarding sync — so telling this specific cohort to "open in
+// Safari" is not a safe recommendation yet, it's the exact action that
+// wiped Alexander's data. Leaving the banner defined (renderInAppBrowserBanner
+// above) but not calling it until state sync exists to make the advice
+// actually safe to follow. renderInAppBrowserGate() pre-onboarding is
+// unaffected — that one blocks people BEFORE they type anything, so it
+// carries no such risk.
 render();
 authRestoreSession();
