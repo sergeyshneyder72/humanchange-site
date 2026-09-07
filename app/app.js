@@ -1333,6 +1333,25 @@ const STRINGS = {
       namedText: "Страница открыта в {app} — здесь нельзя установить приложение на экран. Нажмите «⋯» в углу и выберите «Открыть в Safari» (или в браузере).",
       genericText: "Похоже, страница открыта внутри другого приложения — установить на экран отсюда нельзя. Откройте её в Safari или Chrome.",
     },
+    inAppGate: {
+      // 07.09.2026: added after Александр's test confirmed the worst case —
+      // Telegram's in-app browser and real Safari don't share localStorage,
+      // so anyone who fills onboarding inside an in-app browser and later
+      // taps "Открыть в Safari" loses every answer and starts over with no
+      // way to recover yesterday's/earlier data either (nothing to recover
+      // from — it's just gone). Unlike inAppBanner above (a dismissible
+      // heads-up shown to already-onboarded users, who'd lose MORE by being
+      // pushed out), this is a hard gate shown BEFORE onboarding starts:
+      // no typing happens here that could later be lost. "continueAnyway"
+      // is an intentional escape hatch for false-positive detections —
+      // see detectInAppBrowser's own comment on why it can misfire.
+      title: "Открой это в Safari",
+      body: "Сейчас страница открыта в {app} — установить приложение на экран отсюда нельзя, а если позже перейдёшь в Safari сам(а), все ответы придётся вводить заново: Telegram и Safari не делятся данными между собой.",
+      howTo: "Нажми «⋯» в углу экрана и выбери «Открыть в Safari» — либо скопируй ссылку и вставь её в адресную строку Safari.",
+      copyLink: "Скопировать ссылку",
+      continueAnyway: "Всё равно продолжить здесь (ответы могут потеряться)",
+      genericApp: "другом приложении",
+    },
     dashboard: {
       title: "Портфель",
       trendSuffixWeek: "за неделю",
@@ -1677,6 +1696,14 @@ const STRINGS = {
     inAppBanner: {
       namedText: "This page is open inside {app} — you can't add it to your home screen from here. Tap \"⋯\" and choose \"Open in Safari\" (or your browser).",
       genericText: "It looks like this page is open inside another app — you can't add it to your home screen from here. Open it in Safari or Chrome instead.",
+    },
+    inAppGate: {
+      title: "Open this in Safari",
+      body: "This page is currently open inside {app} — you can't install the app to your home screen from here, and if you switch to Safari later you'll have to answer everything again: Telegram and Safari don't share data with each other.",
+      howTo: "Tap \"⋯\" in the corner and choose \"Open in Safari\" — or copy the link and paste it into Safari's address bar.",
+      copyLink: "Copy link",
+      continueAnyway: "Continue here anyway (your answers may be lost)",
+      genericApp: "another app",
     },
     dashboard: {
       title: "Portfolio",
@@ -3405,6 +3432,17 @@ function copyTextToClipboard(text, btn, originalLabel) {
 
 const root = document.getElementById("app");
 
+// 07.09.2026: gate onboarding start inside an in-app browser (Telegram
+// etc.) — see the long comment on STRINGS.ru.inAppGate for why. Only
+// applies pre-onboarding: once state.onboarding exists, forcing someone
+// out would separate them from data that already lives only in this
+// browser context, which is worse, not better (see inAppBanner instead,
+// used for that case in the Init section below).
+function shouldShowInAppGate() {
+  if (state.inAppGateBypassed) return false;
+  return detectInAppBrowser().isInApp;
+}
+
 function render() {
   if (state.recalcMode) {
     // "Official recalc" (TZ section 7, 11.08.2026) re-runs the same 6-step
@@ -3412,7 +3450,9 @@ function render() {
     // already accepted, so this bypasses it and goes straight to step 1.
     renderOnboarding();
   } else if (!state.onboarding) {
-    if (!state.onboardingWelcomeAccepted) {
+    if (shouldShowInAppGate()) {
+      renderInAppBrowserGate();
+    } else if (!state.onboardingWelcomeAccepted) {
       renderWelcomeScreen();
     } else {
       renderOnboarding();
@@ -3423,6 +3463,39 @@ function render() {
 }
 
 /* ---- Onboarding ---- */
+
+// Blocking pre-onboarding screen shown inside a detected in-app browser
+// (Telegram/Instagram/etc.) — no form fields here, deliberately, since
+// anything typed on this screen would be lost the moment someone follows
+// this exact advice and switches to Safari. "Продолжить здесь" is a
+// muted, de-emphasized escape hatch (not styled as a real button) so it
+// doesn't compete with the actual recommended action, but still exists
+// for the false-positive case (see detectInAppBrowser's comment).
+function renderInAppBrowserGate() {
+  const { appName } = detectInAppBrowser();
+  const appLabel = appName || t("inAppGate.genericApp");
+  const cleanUrl = location.origin + location.pathname;
+  root.innerHTML = `
+    <div class="wrap">
+      ${languageSwitcherHtml()}
+      <div class="onboarding-header">
+        <h1>${t("inAppGate.title")}</h1>
+        <p>${t("inAppGate.body").replace("{app}", appLabel)}</p>
+      </div>
+      <p class="welcome-questions-note">${t("inAppGate.howTo")}</p>
+      <button class="btn" id="gate-copy" style="width:100%">${t("inAppGate.copyLink")}</button>
+      <button type="button" class="gate-continue-link" id="gate-continue">${t("inAppGate.continueAnyway")}</button>
+    </div>
+  `;
+  wireLanguageSwitcher(root, () => render());
+  const copyBtn = document.getElementById("gate-copy");
+  copyBtn.addEventListener("click", () => copyTextToClipboard(cleanUrl, copyBtn, t("inAppGate.copyLink")));
+  document.getElementById("gate-continue").addEventListener("click", () => {
+    state.inAppGateBypassed = true;
+    saveState();
+    render();
+  });
+}
 
 // Pre-step-1 welcome/consent screen (TZ section 1, item 6, 11.08.2026).
 // Not one of the 6 form steps — no progress dots — a plain text screen
@@ -6185,6 +6258,13 @@ function renderInAppBrowserBanner() {
  * Init
  * ------------------------------------------------------------------- */
 
-renderInAppBrowserBanner();
+// 07.09.2026: the passive dismissible banner is now only for people who
+// already finished onboarding in this browser context (their data lives
+// here, so pushing them to Safari would lose access to it, not protect
+// it) — pre-onboarding, renderInAppBrowserGate() (wired into render()
+// above) blocks the flow instead, before there's anything to lose.
+if (state.onboarding) {
+  renderInAppBrowserBanner();
+}
 render();
 authRestoreSession();

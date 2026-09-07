@@ -50,6 +50,23 @@
   padding: 0 2px;
 }
 
+/* 07.09.2026: renderInAppBrowserGate's escape hatch — deliberately NOT
+   styled like .btn, so it doesn't compete with "Скопировать ссылку"
+   (the actually-recommended action) for attention. Plain muted text,
+   underlined so it still reads as clickable. */
+.gate-continue-link {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
 /* App-shell layout (17.08.2026 fix — see .bottom-nav below for why):
    html/body never scroll; #app is a full-height flex column and only
    its middle item (.wrap) scrolls. This is the second time a "fixed"
