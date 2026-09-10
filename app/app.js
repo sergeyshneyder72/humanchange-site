@@ -5880,19 +5880,31 @@ function aggregateBreakdown() {
   return { savingsTotal, investItems, dividendsTotal, dividendItems, chargesTotal, chargeItems };
 }
 
-// Net day total (savings + dividends + charges), used only for the
-// one-line header of each date's accordion in the by-date list below —
-// same three numbers dayTransactionsHtml already breaks out, just
-// summed for a single at-a-glance figure per day.
+// Net day total, used only for the one-line header of each date's
+// accordion in the by-date list below.
+//
+// 10.09.2026 bug fix (user report: a day showing "Личные накопления
+// 0.00" / "Списания 0.00" / no dividends still displayed a -0.01
+// header, which read as an unexplained extra sleep penalty). Root
+// cause: this used to compute savings + dividends + charges as three
+// ADDITIONAL numbers on top of each other. But per dailyFactorBreakdown
+// and cascadeRecalcFrom (entry.deltaDays already sums baseDelta +
+// entry.sleepDelta + alcoholDelta + ... , and the weekly bonus is
+// added directly onto deltaDays too — see "state.ledger[date].deltaDays
+// += bonus"), entry.deltaDays IS ALREADY the fully netted total, not a
+// "deposits only" figure. dayTransactionsHtml's three rows (Личные
+// накопления / Дивиденды / Списания) are a breakdown OF that one
+// number for display, not three components to re-sum — same thing the
+// comment above dailyFactorBreakdown already said. Adding dividends and
+// charges again here double-counted both, most visibly on days whose
+// only nonzero component was the sleep-debt delta (sleep is a
+// near-daily charge, so it's usually the one dragging every day's
+// header down twice while the breakdown rows underneath correctly
+// showed ~0).
 function dayNetTotal(date) {
   const entry = state.ledger[date];
   if (!entry) return 0;
-  const savings = entry.deltaDays || 0;
-  const dividends = entry.weeklyBonusDays || 0;
-  const breakdown = dailyFactorBreakdown(entry);
-  const chargeItems = [...breakdown.filter((i) => i.amount < 0), ...dayDecayChargeItems(date)];
-  const charges = chargeItems.reduce((sum, i) => sum + i.amount, 0);
-  return savings + dividends + charges;
+  return entry.deltaDays || 0;
 }
 
 // 31.08.2026, user request: the three aggregate rows at the top of
