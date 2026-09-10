@@ -1492,6 +1492,8 @@ const STRINGS = {
       factorsRow: "Факторы на главном экране",
       billingRow: "Тарифы и оплата",
       privacyRow: "Политика конфиденциальности",
+      healthDataRow: "Политика в отношении данных о здоровье",
+      termsRow: "Условия использования",
       billingTitle: "Тарифы и оплата",
       billingIntro: "Новым пользователям доступен бесплатный пробный период. После пробного периода: 990 ₽/мес, 9 900 ₽/год, 14 900 ₽ — пожизненный доступ.",
       billingNoAutopayHint: "Автоматической оплаты в приложении пока нет — платёжные системы ещё не подключены. Нажмите кнопку ниже, мы откроем письмо с запросом, отправьте его — и мы вручную вышлем вам ссылку на оплату.",
@@ -1600,7 +1602,18 @@ const STRINGS = {
       dataNote: "Мы собираем эти данные, чтобы рассчитать Ваш персональный капитал здоровья. Сейчас всё хранится локально на Вашем устройстве и никуда не передаётся.",
       disclaimer:
         "Усреднённая статистическая оценка по данным людей схожего профиля — возраст, пол, регион и другие показатели (не точный расчёт для Вас лично) — на основе научных исследований, не медицинский диагноз и не персональная рекомендация.",
-      consent: "Я прочитал(а) и согласен(на)",
+      // 10.09.2026: was a bare "Я прочитал(а) и согласен(на)" with no link
+      // to anything — exactly the "broad/passive consent" pattern
+      // RCW 19.373.030 (Washington My Health My Data Act) prohibits for
+      // health-data collection specifically. Now names and links the three
+      // actual documents, and the {placeholders} get swapped for real <a>
+      // tags in renderWelcomeScreen — this string itself must stay
+      // plain-text-safe (no raw HTML) since t() output is also used
+      // elsewhere without escaping assumptions.
+      consent: "Я прочитал(а) и согласен(на) с {privacy}, {health} и {terms}",
+      consentPrivacyLabel: "Политикой конфиденциальности",
+      consentHealthLabel: "Политикой в отношении данных о здоровье",
+      consentTermsLabel: "Условиями использования",
       start: "Показать мой счёт →",
     },
     regions: {
@@ -1845,6 +1858,8 @@ const STRINGS = {
       factorsRow: "Home screen factors",
       billingRow: "Plans & billing",
       privacyRow: "Privacy Policy",
+      healthDataRow: "Consumer Health Data Policy",
+      termsRow: "Terms of Use",
       billingTitle: "Plans & billing",
       billingIntro: "New users get a free trial period. After the trial: 990 RUB/month, 9,900 RUB/year, 14,900 RUB — lifetime access.",
       billingNoAutopayHint: "There's no automatic in-app payment yet — payment processing isn't connected. Tap the button below to open a pre-filled email; send it and we'll manually send you a payment link.",
@@ -1940,7 +1955,10 @@ const STRINGS = {
       dataNote: "We collect this data to calculate your personal health capital. Right now everything is stored locally on your device and isn't sent anywhere.",
       disclaimer:
         "An averaged statistical estimate based on data from people with a similar profile — age, gender, region, and other factors (not a precise calculation for you personally) — based on scientific research, not a medical diagnosis or personal recommendation.",
-      consent: "I have read and agree",
+      consent: "I have read and agree to the {privacy}, {health}, and {terms}",
+      consentPrivacyLabel: "Privacy Policy",
+      consentHealthLabel: "Consumer Health Data Policy",
+      consentTermsLabel: "Terms of Use",
       start: "Show my count →",
     },
     regions: {
@@ -3525,6 +3543,22 @@ function renderWelcomeScreen() {
   // shipped without it here). Same switcher markup/behavior as
   // renderOnboarding's, just re-rendering renderWelcomeScreen() instead
   // of the step flow on click.
+  //
+  // 10.09.2026 consent fix (self-audit after publishing the new privacy
+  // docs found the gap): the checkbox used to say a bare "I have read and
+  // agree" with no link to anything, and the actual data-use explanation
+  // sat behind a collapsed ⓘ hint the person had to go out of their way to
+  // open. RCW 19.373.030 (WA MHMDA) explicitly rules out consent obtained
+  // through "broad terms of use or passive actions" — that's exactly what
+  // a bare "I agree" next to a collapsed hint is. Now the checkbox names
+  // and links all three real documents, and the data-use text is a plain
+  // visible paragraph, not something hidden by default.
+  const langPrefix = getLang() === "ru" ? "../ru/" : "../";
+  const link = (href, label) => `<a href="${langPrefix}${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  const consentHtml = t("welcome.consent")
+    .replace("{privacy}", link("privacy.html", t("welcome.consentPrivacyLabel")))
+    .replace("{health}", link("health-data.html", t("welcome.consentHealthLabel")))
+    .replace("{terms}", link("terms.html", t("welcome.consentTermsLabel")));
   root.innerHTML = `
     <div class="wrap">
       ${languageSwitcherHtml()}
@@ -3533,9 +3567,9 @@ function renderWelcomeScreen() {
         <p>${t("welcome.intro")}</p>
       </div>
       <p class="welcome-questions-note">${t("welcome.questionsNote")}</p>
+      <p class="welcome-questions-note">${t("welcome.dataNote")} ${t("welcome.disclaimer")}</p>
       <div class="field">
-        <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> ${t("welcome.consent")}</label>
-        ${collapsibleHint(`${t("welcome.dataNote")} ${t("welcome.disclaimer")}`)}
+        <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> ${consentHtml}</label>
       </div>
       <button class="btn" id="welcome-start" style="width:100%" disabled>${t("welcome.start")}</button>
     </div>
@@ -3545,6 +3579,15 @@ function renderWelcomeScreen() {
   const startBtn = document.getElementById("welcome-start");
   checkbox.addEventListener("change", () => {
     startBtn.disabled = !checkbox.checked;
+  });
+  // 10.09.2026: the consent label now contains three <a> links (see
+  // consentHtml above). A native <label> toggles its checkbox on ANY click
+  // inside it, including a click that's really "open the Privacy Policy to
+  // read it" — without this, reading the policy would silently tick the
+  // consent box. Stop that click from reaching the label/checkbox; the
+  // link's own default action (navigate/open in new tab) still happens.
+  root.querySelectorAll(".checkbox-row a").forEach((a) => {
+    a.addEventListener("click", (e) => e.stopPropagation());
   });
   startBtn.addEventListener("click", () => {
     state.onboardingWelcomeAccepted = true;
@@ -4671,6 +4714,8 @@ function renderSettings(screen) {
       <div class="settings-row settings-row-disabled">${t("settings.fitnessTrackersRow")} <span class="optional-badge">${t("knowledge.comingSoon")}</span></div>
       <button class="settings-row" data-view="billing">${t("settings.billingRow")}</button>
       <a class="settings-row" href="${getLang() === "ru" ? "../ru/privacy.html" : "../privacy.html"}" target="_blank" rel="noopener noreferrer">${t("settings.privacyRow")}</a>
+      <a class="settings-row" href="${getLang() === "ru" ? "../ru/health-data.html" : "../health-data.html"}" target="_blank" rel="noopener noreferrer">${t("settings.healthDataRow")}</a>
+      <a class="settings-row" href="${getLang() === "ru" ? "../ru/terms.html" : "../terms.html"}" target="_blank" rel="noopener noreferrer">${t("settings.termsRow")}</a>
     </div>
   `;
   wireLanguageSwitcher(screen, () => renderSettings(screen));
