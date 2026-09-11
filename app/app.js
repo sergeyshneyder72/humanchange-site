@@ -1519,6 +1519,7 @@ const STRINGS = {
       needAccount: "Ещё нет аккаунта — зарегистрироваться",
       fillEmailPassword: "Заполните email и пароль.",
       genericAuthError: "Не получилось. Проверьте данные и попробуйте снова.",
+      confirmEmailNotice: "Почти готово: мы отправили письмо со ссылкой подтверждения на этот email. Перейдите по ней, и после этого сможете войти.",
       factorsTitle: "Факторы на главном экране",
       notificationsTitle: "Уведомления",
       notificationsEmpty: "Уведомлений пока нет.",
@@ -1892,6 +1893,7 @@ const STRINGS = {
       needAccount: "Don't have an account — sign up",
       fillEmailPassword: "Fill in your email and password.",
       genericAuthError: "That didn't work. Check your details and try again.",
+      confirmEmailNotice: "Almost there: we sent a confirmation link to that email. Click it, then you'll be able to sign in.",
       factorsTitle: "Home screen factors",
       notificationsTitle: "Notifications",
       notificationsEmpty: "No notifications yet.",
@@ -2136,11 +2138,18 @@ const sb =
 async function authSignUp(email, password) {
   if (!sb) return { error: { message: "Supabase недоступен (не загрузился SDK)." } };
   const { data, error } = await sb.auth.signUp({ email, password });
-  if (!error && data.user) {
+  // Supabase creates the user row immediately (data.user is truthy) but this
+  // project requires email confirmation (mailer_autoconfirm: false) before a
+  // session is issued — data.session stays null until the user clicks the
+  // confirmation link. Checking data.user alone previously made the app show
+  // a false "logged in" state for an account Supabase doesn't consider
+  // active yet. Fixed 11.09.2026.
+  const needsConfirmation = !error && !!data.user && !data.session;
+  if (!error && data.user && data.session) {
     state.authEmail = data.user.email;
     saveState();
   }
-  return { data, error };
+  return { data, error, needsConfirmation };
 }
 
 async function authSignIn(email, password) {
@@ -4884,12 +4893,18 @@ function renderAccountSettings(screen) {
     }
     const submitBtn = document.getElementById("account-submit");
     submitBtn.disabled = true;
-    const { error } = accountFormMode === "signup"
+    const result = accountFormMode === "signup"
       ? await authSignUp(email, password)
       : await authSignIn(email, password);
     submitBtn.disabled = false;
-    if (error) {
-      errorEl.textContent = error.message || t("settings.genericAuthError");
+    if (result.error) {
+      errorEl.textContent = result.error.message || t("settings.genericAuthError");
+      errorEl.style.display = "block";
+      return;
+    }
+    if (result.needsConfirmation) {
+      errorEl.textContent = t("settings.confirmEmailNotice");
+      errorEl.style.color = "var(--accent)";
       errorEl.style.display = "block";
       return;
     }
