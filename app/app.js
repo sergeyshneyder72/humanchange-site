@@ -1614,6 +1614,13 @@ const STRINGS = {
       consentPrivacyLabel: "Политикой конфиденциальности",
       consentHealthLabel: "Политикой в отношении данных о здоровье",
       consentTermsLabel: "Условиями использования",
+      // 11.09.2026, разбор онбординга Welmi: у них перед запросом
+      // разрешений/оплаты стоят два коротких эмоциональных экрана
+      // доверия ("Мы заботимся о вас" / "Спасибо, что доверяете нам"),
+      // отдельно от юридического текста. Добавляем компактный аналог
+      // прямо перед чекбоксом согласия — не отдельным шагом (это увеличило
+      // бы трение прямо после хука), а карточкой на этом же экране.
+      trustNote: "Эти данные нужны только для того, чтобы точно посчитать ваш капитал здоровья — мы их не продаём и никому не передаём.",
       start: "Показать мой счёт →",
     },
     regions: {
@@ -1959,6 +1966,7 @@ const STRINGS = {
       consentPrivacyLabel: "Privacy Policy",
       consentHealthLabel: "Consumer Health Data Policy",
       consentTermsLabel: "Terms of Use",
+      trustNote: "This data is only used to calculate your health capital accurately — we don't sell it or share it with anyone.",
       start: "Show my count →",
     },
     regions: {
@@ -3568,6 +3576,10 @@ function renderWelcomeScreen() {
       </div>
       <p class="welcome-questions-note">${t("welcome.questionsNote")}</p>
       <p class="welcome-questions-note">${t("welcome.dataNote")} ${t("welcome.disclaimer")}</p>
+      <div class="welcome-trust-card">
+        <span class="welcome-trust-icon">🔒</span>
+        <p>${t("welcome.trustNote")}</p>
+      </div>
       <div class="field">
         <label class="checkbox-row"><input type="checkbox" id="welcome-consent"> ${consentHtml}</label>
       </div>

@@ -512,6 +512,32 @@ button {
   margin: 0 0 20px;
 }
 
+/* 11.09.2026, Welmi onboarding audit: a short trust beat right before the
+   consent checkbox — separate from the legal dataNote/disclaimer text
+   above it, and visually distinct (tinted card, not another muted
+   paragraph) so it reads as reassurance, not more fine print. */
+.welcome-trust-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(31, 111, 74, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+}
+
+.welcome-trust-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.welcome-trust-card p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
 .progress-dots {
   display: flex;
   gap: 6px;
