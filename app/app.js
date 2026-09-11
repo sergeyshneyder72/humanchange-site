@@ -1267,6 +1267,7 @@ const STRINGS = {
       genderOther: "Другое / не указывать",
       regionLabel: "Регион (страна)",
       basicsAlert: "Возраст, пол и регион обязательны для продолжения.",
+      under18Notice: "Приложение предназначено только для лиц старше 18 лет. Продолжить с этим возрастом нельзя.",
       activityFormTitle: "Активность и форма",
       activityLabel: "Физическая активность, мин/нед",
       activityHint:
@@ -1657,6 +1658,7 @@ const STRINGS = {
       genderOther: "Other / prefer not to say",
       regionLabel: "Region (country)",
       basicsAlert: "Age, gender, and region are required to continue.",
+      under18Notice: "The App is only for people 18 and older. You can't continue with this age.",
       activityFormTitle: "Activity & body stats",
       activityLabel: "Physical activity, min/week",
       activityHint:
@@ -3654,7 +3656,11 @@ function localizedDayWord(n) {
 // fields yet, so they're always valid.
 function isStepValid(step, draft) {
   if (step === "basics") {
-    return !!(draft.age && draft.gender && draft.region);
+    // 18+ hard gate (11.09.2026): app is not directed to minors and our
+    // privacy policy commits to deleting any account we learn belongs to
+    // someone under 18 — this stops that case from happening at all by
+    // blocking onboarding itself, not just relying on after-the-fact cleanup.
+    return !!(draft.age && draft.age >= 18 && draft.gender && draft.region);
   }
   if (step === "activity_form") {
     if (!draft.activityRange) return false;
@@ -4064,7 +4070,8 @@ function renderOnboarding() {
       </div>
       <div class="field">
         <label>${t("onboarding.ageLabel")} ${reqMark()}</label>
-        <input type="number" min="1" max="120" id="f_age" value="${escapeHtml(draft.age ?? "")}">
+        <input type="number" min="18" max="120" id="f_age" value="${escapeHtml(draft.age ?? "")}">
+        <div class="hint" id="f-age-under18-hint" style="display:none; color:var(--danger, #c0392b);">${t("onboarding.under18Notice")}</div>
       </div>
       <div class="field">
         <label>${t("onboarding.genderLabel")} ${reqMark()}</label>
@@ -4415,12 +4422,20 @@ function renderOnboarding() {
     const refreshNextState = () => {
       collectStepFields(step, draft);
       nextBtn.disabled = !isStepValid(step, draft);
+      if (step === "basics") {
+        const under18Hint = document.getElementById("f-age-under18-hint");
+        if (under18Hint) under18Hint.style.display = draft.age && draft.age < 18 ? "block" : "none";
+      }
     };
     wrapEl.addEventListener("input", refreshNextState);
     wrapEl.addEventListener("change", refreshNextState);
     refreshNextState();
     document.getElementById("ob-next").addEventListener("click", () => {
       collectStepFields(step, draft);
+      if (step === "basics" && draft.age && draft.age < 18) {
+        alert(t("onboarding.under18Notice"));
+        return;
+      }
       if (step === "basics" && (!draft.age || !draft.gender || !draft.region)) {
         alert(t("onboarding.basicsAlert"));
         return;
