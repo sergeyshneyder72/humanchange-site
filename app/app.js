@@ -6150,12 +6150,20 @@ function renderHistoryDay(screen) {
       <h3 style="margin-top:20px;">${entry ? t("history.changeDayTitle") : t("history.fillDayTitle")}</h3>
       <div class="factor-grid">
         ${ALL_FACTORS.filter((f) => isFactorVisible(f.key))
-          .map(
-            (f) => `
-              <button type="button" class="factor-card clickable" data-factor-key="${f.key}">
+          .map((f) => {
+            // 12.09.2026 fix: this grid never applied the "filled" state the
+            // dashboard's equivalent grid uses (isFactorFilledToday below,
+            // despite the name, just reads whatever entry it's given —
+            // see its own comment) — so a tile stayed visually unfilled
+            // even right after successfully saving real data for a past
+            // day, looking exactly like nothing had been entered.
+            const filled = isFactorFilledToday(f.key, entry);
+            return `
+              <button type="button" class="factor-card clickable${filled ? " filled" : ""}" data-factor-key="${f.key}">
                 <div class="name">${f.label}</div>
-              </button>`
-          )
+                ${filled ? `<div class="filled-check" aria-hidden="true">✓</div>` : ""}
+              </button>`;
+          })
           .join("")}
       </div>`
         : ""
