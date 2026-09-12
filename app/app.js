@@ -2853,15 +2853,22 @@ const SLEEP_DEBT_OVER_COEFF = SLEEP_DEBT_UNDER_COEFF * (13 / 6);
 // as the share of the model's own already-calibrated steady-state
 // undersleep penalty (~0.0138 days/day for a chronic 1h/day shortfall,
 // see SLEEP_DEBT_UNDER_COEFF comment) that a good sleeper "gets back."
-// Deliberately small per the user's own "минимальным" — at 2 decimal
-// places this will often display as 0.00 rather than a visible +figure;
-// flagged as a product/UX judgment call if a more visible number is
-// wanted later (that would no longer be strictly derived from a source).
 // Region-agnostic (unlike RU/US-split smoking/activity) because the rest
 // of this sleep-debt model doesn't vary by region either.
 const SLEEP_SHORT_PREVALENCE_US = 0.305;
 const SLEEP_DEBT_STEADY_STATE_PENALTY_REF = 0.0138;
-const SLEEP_DEBT_GOOD_BONUS = SLEEP_SHORT_PREVALENCE_US * SLEEP_DEBT_STEADY_STATE_PENALTY_REF;
+// 12.09.2026, Sergey hit exactly the flagged case above: retroactively
+// logged 8h sleep (a perfect on-target night), got no visible credit —
+// the derived value (0.305 × 0.0138 ≈ 0.0042 days, ~6 minutes) rounds to
+// 0.00 at the app's 2-decimal display/tile-coloring precision, so a
+// genuinely good night looked identical to no data at all. His call:
+// raise it to the minimum value that reliably displays as nonzero — 0.01
+// days, the smallest amount that survives Math.round(x*100)/100 — rather
+// than keep the population-prevalence-derived figure. No longer strictly
+// sourced (was already flagged as a judgment call above); the derivation
+// constants above are kept only as the historical rationale for the
+// mechanism's existence, not for this magnitude.
+const SLEEP_DEBT_GOOD_BONUS = 0.01;
 // "On target" band = the user's own framing, "сон в норме (7-8ч)" —
 // SLEEP_DEBT_NORM_HOURS (7.5h) ± 0.5h.
 const SLEEP_DEBT_GOOD_BAND_HOURS = 0.5;
